@@ -332,8 +332,8 @@ else:
             else: st.info("Aucun match ouvert aux pronostics pour l'instant.")
         except Exception as e: st.error(f"Erreur match : {e}")
 
-    # =====================================================================
-    # ONGLET 3 : RÉSULTATS & DIRECT (MIS À JOUR TOUTES LES 5 MIN SI LIVE)
+   # =====================================================================
+    # ONGLET 3 : RÉSULTATS & DIRECT (VERSION AVEC POINTS INDIVIDUELS)
     # =====================================================================
     with onglets_principaux[2]:
         st.title("📊 Résultats & Direct")
@@ -358,15 +358,43 @@ else:
                     label_live = "🔴 [EN DIRECT]" if m['statut'] == 'LIVE' else ""
                     st.write(f"### {m['equipe_dom']} {sc_dom} - {sc_ext} {m['equipe_ext']}  {label_live}")
                     
-                    with st.expander("👁️ Voir les pronostics en direct"):
+                    # --- DÉTERMINATION DU RÉSULTAT RÉEL POUR LE CALCUL VISUEL ---
+                    vrai_gagnant_brut = "home" if sc_dom > sc_ext else ("away" if sc_dom < sc_ext else "draw")
+                    vrai_ecart_points = abs(sc_dom - sc_ext)
+                    
+                    vraie_tranche = "1-6"
+                    if 7 <= vrai_ecart_points <= 10: vraie_tranche = "7-10"
+                    elif 11 <= vrai_ecart_points <= 15: vraie_tranche = "11-15"
+                    elif 16 <= vrai_ecart_points <= 20: vraie_tranche = "16-20"
+                    elif 21 <= vrai_ecart_points <= 30: vraie_tranche = "21-30"
+                    elif 31 <= vrai_ecart_points <= 40: vraie_tranche = "31-40"
+                    elif 41 <= vrai_ecart_points <= 50: vraie_tranche = "41-50"
+                    elif vrai_ecart_points >= 51: vraie_tranche = "51+"
+                    
+                    with st.expander("👁️ Voir les pronostics et points des joueurs"):
                         all_pronos = supabase.table("Pronostics").select("gagnant_prevu, ecart_prevu, Joueurs(pseudo)").eq("match_id", m['id']).execute().data
                         if all_pronos:
-                            vrai_gagnant_brut = "home" if sc_dom > sc_ext else ("away" if sc_dom < sc_ext else "draw")
                             for p in all_pronos:
                                 pseudo_j = p.get('Joueurs', {}).get('pseudo', 'Inconnu')
                                 nom_prevu = m['equipe_dom'] if p['gagnant_prevu'] == 'home' else (m['equipe_ext'] if p['gagnant_prevu'] == 'away' else "Match Nul")
-                                st.markdown(f"👤 **{pseudo_j}** : {nom_prevu} ({p['ecart_prevu']})")
-                        else: st.write("Aucun prono enregistré.")
+                                
+                                # --- LOGIQUE DE CALCUL VISUEL DES POINTS FILTRÉS ---
+                                pts_visuels = 0
+                                detail_badge = "❌ 0 pt"
+                                
+                                if m['score_dom'] is not None and m['score_ext'] is not None:
+                                    if p['gagnant_prevu'] == vrai_gagnant_brut:
+                                        pts_visuels += pts_gagnant_cfg
+                                        detail_badge = f"✅ +{pts_gagnant_cfg} pts (Vainqueur)"
+                                        
+                                        if p['ecart_prevu'] == vraie_tranche:
+                                            pts_visuels += pts_ecart_cfg
+                                            detail_badge = f"🔥 +{pts_parfait_cfg} pts (PARFAIT !)"
+                                
+                                # Affichage propre avec le badge de points à droite
+                                st.markdown(f"👤 **{pseudo_j}** : {nom_prevu} ({p['ecart_prevu']}) — `{detail_badge}`")
+                        else: 
+                            st.write("Aucun prono enregistré pour ce match.")
                     st.markdown("---")
             else: st.info("Aucun match n'a encore débuté.")
         except Exception as e: st.error(f"Erreur matchs clos : {e}")
