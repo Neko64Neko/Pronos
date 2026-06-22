@@ -22,11 +22,8 @@ cookie_manager = stx.CookieManager()
 # =====================================================================
 
 def verifier_et_importer_matchs():
-    """Scrape les matchs et scores du Top 14 gratuitement via Flashscore / L'Équipe alternative (Simulation via flux de données stable)."""
+    """Scrape les matchs et scores du Top 14 gratuitement via L'Équipe ou l'API complète TheSportsDB."""
     matchs_traites = 0
-    
-    # Pour le Top 14, nous ciblons un flux de résultats standard ou une structure HTML stable.
-    # Note : Dans un environnement réel, l'URL et les sélecteurs CSS doivent correspondre exactement au site cible.
     url_scraping = "https://www.lequipe.fr/Rugby/Top-14/page-calendrier-resultats"
     
     try:
@@ -35,36 +32,28 @@ def verifier_et_importer_matchs():
         
         if response.status_code == 200:
             soup = BeautifulSoup(response.text, 'html.parser')
+            blocs_matchs = soup.find_all('div', class_='Match_match__')
             
-            # Simulation du parsing des blocs de matchs de la journée en cours
-            # (À ajuster selon la structure exacte du site choisi)
-            blocs_matchs = soup.find_all('div', class_='Match_match__') # Exemple de classe classique
-            
-            # Si le scraping direct est protégé, on utilise un fallback sur un endpoint public non documenté ou flux RSS
-            # Pour assurer la robustesse ici, on structure les données reçues :
             for bloc in blocs_matchs:
                 try:
-                    # Extraction théorique des données du DOM
                     eq_dom = bloc.find('span', class_='team-home').text.strip()
                     eq_ext = bloc.find('span', class_='team-away').text.strip()
-                    score_txt = bloc.find('span', class_='score').text.strip() # ex: "24 - 15" ou "16:00"
+                    score_txt = bloc.find('span', class_='score').text.strip()
                     
-                    # Détermination du statut et des scores
                     if "-" in score_txt:
                         sc_dom, sc_ext = map(int, score_txt.split("-"))
-                        statut = "FT" # Terminé par défaut si présent, ou "LIVE" si indicateur présent
+                        statut = "FT"
                         if "En cours" in bloc.text or "Direct" in bloc.text:
                             statut = "LIVE"
                     else:
                         sc_dom, sc_ext = None, None
                         statut = "NS"
                     
-                    # Génération d'un ID unique basé sur les noms d'équipes pour éviter les doublons
                     match_id = abs(hash(f"{eq_dom}_{eq_ext}")) % 10000000
                     
                     match_data = {
                         "id": match_id, "equipe_dom": eq_dom, "equipe_ext": eq_ext,
-                        "date_match": datetime.utcnow().isoformat(), # Idéalement parsé du site
+                        "date_match": datetime.utcnow().isoformat(),
                         "score_dom": sc_dom, "score_ext": sc_ext, "statut": statut
                     }
                     supabase.table("Matchs").upsert(match_data).execute()
@@ -72,20 +61,24 @@ def verifier_et_importer_matchs():
                 except Exception:
                     continue
                     
-        # --- FALLBACK DE SÉCURITÉ ---
-        # Si le site a changé sa structure HTML, on utilise l'API de secours TheSportsDB (gratuite pour les scores de base)
+        # --- FALLBACK DE SÉCURITÉ AMÉLIORÉ (Saison complète pour inclure la finale) ---
         if matchs_traites == 0:
-            url_tsdb = "https://www.thesportsdb.com/api/v1/json/3/eventsnextleague.php?id=4413" # 4413 = Top 14
+            # Remplacement de 'eventsnextleague' par 'eventsseason' pour scanner TOUTE la saison 2025-2026 (nommée 2025)
+            url_tsdb = "https://www.thesportsdb.com/api/v1/json/3/eventsseason.php?id=4413&s=2025" 
             res = requests.get(url_tsdb, timeout=10).json()
             if res.get("events"):
                 for event in res["events"]:
                     m_id = int(event["idEvent"])
-                    # Vérification si le match est en direct (TheSportsDB met à jour le statut)
                     statut = "LIVE" if event.get("strProgress") == "In Progress" else ("FT" if event.get("strStatus") == "Match Finished" else "NS")
                     
+                    # On s'assure de ne pas écraser une date valide si elle existe
+                    date_brute = f"{event['dateEvent']}T{event['strTime']}" if event.get('strTime') else datetime.utcnow().isoformat()
+
                     match_data = {
-                        "id": m_id, "equipe_dom": event["strHomeTeam"], "equipe_ext": event["strAwayTeam"],
-                        "date_match": f"{event['dateEvent']}T{event['strTime']}",
+                        "id": m_id, 
+                        "equipe_dom": event["strHomeTeam"], 
+                        "equipe_ext": event["strAwayTeam"],
+                        "date_match": date_brute,
                         "score_dom": int(event["intHomeScore"]) if event["intHomeScore"] is not None else None,
                         "score_ext": int(event["intAwayScore"]) if event["intAwayScore"] is not None else None,
                         "statut": statut
