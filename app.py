@@ -410,6 +410,7 @@ else:
                         st.rerun()
 
             # --- TAB 2 : MATCHS MANUELS & SCORES ---
+            # --- TAB 2 : MATCHS MANUELS & SCORES (VERSION MISE À JOUR AVEC DISTRIBUTION DES POINTS) ---
             with tab2:
                 st.subheader("➕ Ajouter un Match manuellement")
                 with st.form("form_ajout_match"):
@@ -428,7 +429,7 @@ else:
                             st.rerun()
                 
                 st.markdown("---")
-                st.subheader("📝 Saisir le résultat d'un match (Manuel)")
+                st.subheader("📝 Saisir le résultat d'un match & Distribuer les points")
                 try:
                     tous_matchs = supabase.table("Matchs").select("*").order("date_match", desc=True).execute().data
                     if tous_matchs:
@@ -451,13 +452,66 @@ else:
                                 statut_index = liste_statuts.index(match_selectionne['statut']) if match_selectionne['statut'] in liste_statuts else 1
                                 nouveau_statut = st.selectbox("Statut du match", options=liste_statuts, index=statut_index)
                                 
-                                if st.form_submit_button("💾 Enregistrer le résultat"):
+                                valider_scores = st.form_submit_button("💾 1. Enregistrer le résultat & Clôturer le match")
+                                
+                                if valider_scores:
                                     supabase.table("Matchs").update({
                                         "score_dom": nouveau_score_dom, "score_ext": nouveau_score_ext, "statut": nouveau_statut
                                     }).eq("id", match_selectionne['id']).execute()
-                                    st.success("Résultat mis à jour !")
-                                    time.sleep(0.5)
+                                    st.success("Résultat enregistré en base de données !")
                                     st.rerun()
+
+                            # BOUTON DE DISTRIBUTION DES POINTS (Hors du formulaire pour éviter les conflits de soumission)
+                            if match_selectionne['statut'] == "FT":
+                                st.warning(f"🚨 Ce match est terminé. Clique ci-dessous pour calculer et attribuer les points aux joueurs.")
+                                if st.button(f"🎯 Calculer et Distribuer les points pour {match_selectionne['equipe_dom']} vs {match_selectionne['equipe_ext']}", type="primary"):
+                                    with st.spinner("Calcul des scores en cours..."):
+                                        sc_dom = match_selectionne['score_dom']
+                                        sc_ext = match_selectionne['score_ext']
+                                        
+                                        if sc_dom is not None and sc_ext is not None:
+                                            # 1. Déterminer le résultat réel
+                                            vrai_gagnant_brut = "home" if sc_dom > sc_ext else ("away" if sc_dom < sc_ext else "draw")
+                                            vrai_ecart_points = abs(sc_dom - sc_ext)
+                                            
+                                            # Trouver la tranche d'écart réelle
+                                            vraie_tranche = "1-6"
+                                            if 7 <= vrai_ecart_points <= 10: vraie_tranche = "7-10"
+                                            elif 11 <= vrai_ecart_points <= 15: vraie_tranche = "11-15"
+                                            elif 16 <= vrai_ecart_points <= 20: vraie_tranche = "16-20"
+                                            elif 21 <= vrai_ecart_points <= 30: vraie_tranche = "21-30"
+                                            elif 31 <= vrai_ecart_points <= 40: vraie_tranche = "31-40"
+                                            elif 41 <= vrai_ecart_points <= 50: vraie_tranche = "41-50"
+                                            elif vrai_ecart_points >= 51: vraie_tranche = "51+"
+                                            
+                                            # 2. Récupérer tous les pronos pour ce match
+                                            pronos = supabase.table("Pronostics").select("user_id, gagnant_prevu, ecart_prevu").eq("match_id", match_selectionne['id']).execute().data
+                                            
+                                            compteur_updates = 0
+                                            if pronos:
+                                                for p in pronos:
+                                                    pts_gagnes = 0
+                                                    # Calcul bon vainqueur
+                                                    if p['gagnant_prevu'] == vrai_gagnant_brut:
+                                                        pts_gagnes += pts_gagnant_cfg
+                                                        # Calcul bon écart (uniquement si le vainqueur est bon)
+                                                        if p['ecart_prevu'] == vraie_tranche:
+                                                            pts_gagnes += pts_ecart_cfg
+                                                    
+                                                    # Si le joueur a marqué des points, on met à jour son profil
+                                                    if pts_gagnes > 0:
+                                                        j_data = supabase.table("Joueurs").select("score").eq("id", p['user_id']).single().execute().data
+                                                        if j_data:
+                                                            nouveau_global = j_data.get('score', 0) + pts_gagnes
+                                                            supabase.table("Joueurs").update({"score": nouveau_global}).eq("id", p['user_id']).execute()
+                                                            compteur_updates += 1
+                                            
+                                            st.success(f"🎉 Points distribués ! {compteur_updates} joueurs ont vu leur score augmenter.")
+                                            st.balloons()
+                                            time.sleep(1)
+                                            st.rerun()
+                                        else:
+                                            st.error("Impossible de calculer : veuillez d'abord enregistrer un score chiffré pour ce match.")
                     else:
                         st.info("Aucun match disponible.")
                 except Exception as e: st.error(f"Erreur : {e}")
