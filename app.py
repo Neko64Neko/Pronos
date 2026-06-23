@@ -417,7 +417,7 @@ else:
                     st.markdown("---")
             else: st.info("Aucun match n'a encore débuté.")
         except Exception as e: st.error(f"Erreur matchs clos : {e}")
-=====================================================================
+#=====================================================================
     # ONGLET 4 : PANEL ADMINISTRATION GLOBAL (LOGIQUE OSÉ SUR VAINQUEUR)
     # =====================================================================
     if st.session_state.is_admin:
