@@ -248,95 +248,161 @@ else:
     pts_parfait_cfg = pts_gagnant_cfg + pts_ecart_cfg
 
 # =====================================================================
-    # ONGLET 1 : ACCUEIL - PROFIL & CLASSEMENT GÉNÉRAL
+    # ONGLET 1 : ACCUEIL - PROFIL & CLASSEMENT GÉNÉRAL (STYLE FIGMA COLORÉ)
     # =====================================================================
     with onglets_principaux[0]:
-        # --- EN-TÊTE PREMIUM STYLE FIGMA ---
         st.markdown(f"### 🏉 Bienvenue sur ton tableau de bord, **{st.session_state.pseudo}** !")
         
-        # Récupération des infos du joueur connecté pour l'en-tête
+        # --- 1. RÉCUPÉRATION DES DONNÉES EN BASE ---
         try:
             joueur_connecte = supabase.table("Joueurs").select("*").eq("id", st.session_state.user_id).single().execute().data
             tous_les_joueurs = supabase.table("Joueurs").select("*").order("score", desc=True).execute().data
             
-            # Calcul du rang du joueur
-            rang_joueur = 1
+            # Calcul du rang
+            rang_joueur = "-"
             if tous_les_joueurs:
                 for idx, j in enumerate(tous_les_joueurs):
                     if j['id'] == st.session_state.user_id:
                         rang_joueur = idx + 1
                         break
-        except Exception:
+            
+            # Récupération de tous les pronos du joueur pour calculer ses statistiques
+            pronos_joueur = supabase.table("Pronostics").select("*, Matchs(*)").eq("user_id", st.session_state.user_id).execute().data
+            
+            stats_bons_gagnants = 0
+            stats_parfaits = 0
+            stats_oses = 0
+            
+            # Récupération de la configuration pour les calculs de détection visuelle
+            cfg = supabase.table("Configuration").select("*").eq("id", "default_config").single().execute().data
+            pts_gagnant_cfg = cfg.get("pts_gagnant", 3) if cfg else 3
+            pts_ecart_cfg = cfg.get("pts_ecart", 2) if cfg else 2
+            seuil_ose_cfg = cfg.get("seuil_poursentage_ose", 20) if cfg else 20
+            
+            for p in pronos_joueur:
+                match = p.get('Matchs')
+                if match and match.get('score_dom') is not None and match.get('score_ext') is not None:
+                    sc_dom = match['score_dom']
+                    sc_ext = match['score_ext']
+                    
+                    # Détermination du résultat réel
+                    vrai_gagnant = "home" if sc_dom > sc_ext else ("away" if sc_dom < sc_ext else "draw")
+                    vrai_ecart_points = abs(sc_dom - sc_ext)
+                    
+                    # Tranche d'écart réelle
+                    vraie_tranche = "1-6"
+                    if 7 <= vrai_ecart_points <= 10: vraie_tranche = "7-10"
+                    elif 11 <= vrai_ecart_points <= 15: vraie_tranche = "11-15"
+                    elif 16 <= vrai_ecart_points <= 20: vraie_tranche = "16-20"
+                    elif 21 <= vrai_ecart_points <= 30: vraie_tranche = "21-30"
+                    elif 31 <= vrai_ecart_points <= 40: vraie_tranche = "31-40"
+                    elif 41 <= vrai_ecart_points <= 50: vraie_tranche = "41-50"
+                    elif vrai_ecart_points >= 51: vraie_tranche = "51+"
+                    
+                    # 1. Statistique : Bon Vainqueur
+                    if p['gagnant_prevu'] == vrai_gagnant:
+                        stats_bons_gagnants += 1
+                        
+                        # 2. Statistique : Match Parfait (Vainqueur + Écart)
+                        if p['ecart_prevu'] == vraie_tranche:
+                            stats_parfaits += 1
+                        
+                        # 3. Statistique : Prono Osé réussi (Vainqueur trouvé alors que le % global de réussite sur ce match est <= seuil)
+                        # Pour savoir s'il est osé, on compte le nombre total de pronos sur CE match
+                        tous_pronos_match = supabase.table("Pronostics").select("gagnant_prevu").eq("match_id", match['id']).execute().data
+                        if tous_pronos_match:
+                            total_m = len(tous_pronos_match)
+                            nb_bons_m = sum(1 for pm in tous_pronos_match if pm['gagnant_prevu'] == vrai_gagnant)
+                            pct_m = (nb_bons_m / total_m) * 100 if total_m > 0 else 0
+                            if pct_m <= seuil_ose_cfg:
+                                stats_oses += 1
+                                
+        except Exception as e:
             joueur_connecte = {"score": 0}
             tous_les_joueurs = []
             rang_joueur = "-"
+            stats_bons_gagnants, stats_parfaits, stats_oses = 0, 0, 0
 
-        # Carte de Profil Stylisée (Effet Carte Figma)
-        with st.container(border=True):
-            col_avatar, col_stat1, col_stat2, col_stat3 = st.columns([1, 1.5, 1.5, 1.5])
-            
-            with col_avatar:
-                # Un émoji en gros comme avatar par défaut
-                st.markdown("<h1 style='text-align: center; margin: 0;'>🏃‍♂️</h1>", unsafe_allow_html=True)
-                st.markdown(f"<p style='text-align: center; font-weight: bold; margin: 0;'>{st.session_state.pseudo}</p>", unsafe_allow_html=True)
-            
-            with col_stat1:
-                st.markdown("<p style='color: gray; margin-bottom: 0;'>Classement</p>", unsafe_allow_html=True)
-                suffixe = "er" if rang_joueur == 1 else "e"
-                st.markdown(f"## 🏆 {rang_joueur}{suffixe} <span style='font-size: 14px; color: gray;'>/ {len(tous_les_joueurs)}</span>", unsafe_allow_html=True)
-                
-            with col_stat2:
-                st.markdown("<p style='color: gray; margin-bottom: 0;'>Points Totaux</p>", unsafe_allow_html=True)
-                st.markdown(f"## 🎯 {joueur_connecte.get('score', 0)} <span style='font-size: 14px; color: gray;'>pts</span>", unsafe_allow_html=True)
-                
-            with col_stat3:
-                st.markdown("<p style='color: gray; margin-bottom: 0;'>Statut</p>", unsafe_allow_html=True)
-                if rang_joueur == 1:
-                    st.markdown("## 👑 <span style='font-size: 20px; font-weight: bold; color: #FFD700;'>Leader</span>", unsafe_allow_html=True)
-                elif rang_joueur <= 3:
-                    st.markdown("## 🥈 <span style='font-size: 20px; font-weight: bold; color: #C0C0C0;'>Podium</span>", unsafe_allow_html=True)
-                else:
-                    st.markdown("## 🏉 <span style='font-size: 20px; font-weight: bold; color: #1E3A8A;'>Challenger</span>", unsafe_allow_html=True)
+        # --- 2. BANDEAU DE PROFIL AVEC FOND COLORÉ (STYLE BLEU RUGBY TRÈS CLAIR) ---
+        suffixe = "er" if rang_joueur == 1 else "e"
+        
+        st.markdown(f"""
+        <div style="background-color: #f0f4f8; border-radius: 12px; padding: 20px; border: 1px solid #d3e2f2; margin-bottom: 25px;">
+            <div style="display: flex; justify-content: space-around; align-items: center; flex-wrap: wrap;">
+                <div style="text-align: center; min-width: 100px;">
+                    <h1 style="margin:0; font-size: 40px;">🏃‍♂️</h1>
+                    <b style="font-size: 16px; color:#1e3a8a;">{st.session_state.pseudo}</b>
+                </div>
+                <div style="text-align: center; min-width: 100px;">
+                    <span style="color: #627d98; font-size: 14px;">🏆 Rang</span>
+                    <h2 style="margin:5px 0 0 0; color:#1e3a8a;">{rang_joueur}{suffixe} <span style="font-size:14px; color:#627d98;">/{len(tous_les_joueurs)}</span></h2>
+                </div>
+                <div style="text-align: center; min-width: 100px;">
+                    <span style="color: #627d98; font-size: 14px;">🎯 Score Total</span>
+                    <h2 style="margin:5px 0 0 0; color:#1e3a8a;">{joueur_connecte.get('score', 0)} <span style="font-size:14px; color:#627d98;">pts</span></h2>
+                </div>
+                <div style="text-align: center; min-width: 100px;">
+                    <span style="color: #627d98; font-size: 14px;">✅ Vainqueurs seuls</span>
+                    <h2 style="margin:5px 0 0 0; color:#243b53;">{stats_bons_gagnants}</h2>
+                </div>
+                <div style="text-align: center; min-width: 100px;">
+                    <span style="color: #627d98; font-size: 14px;">⭐ Parfaits (V+É)</span>
+                    <h2 style="margin:5px 0 0 0; color:#b7791f;">{stats_parfaits}</h2>
+                </div>
+                <div style="text-align: center; min-width: 100px;">
+                    <span style="color: #627d98; font-size: 14px;">🔥 Pronos Osés</span>
+                    <h2 style="margin:5px 0 0 0; color:#c53030;">{stats_oses}</h2>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
-        st.markdown("---")
-
-        # --- LE CLASSEMENT GÉNÉRAL AVEC ICÔNES PODIUM ---
+        # --- 3. BLOC CLASSEMENT AVEC FOND COLORÉ ET STYLE FIGMA ---
         st.subheader("📊 Classement Général de la Communauté")
         
         if tous_les_joueurs:
-            # Création d'un tableau d'affichage propre
-            donnees_classement = []
-            
+            # Construction du code HTML pour un tableau de classement sur fond blanc/gris personnalisé
+            lignes_html = ""
             for index, joueur in enumerate(tous_les_joueurs):
                 rang = index + 1
                 
-                # Application de ta logique d'icônes pour les 3 premières places
-                if rang == 1:
-                    prefixe_rang = "🥇 1er"
-                elif rang == 2:
-                    prefixe_rang = "🥈 2e"
-                elif rang == 3:
-                    prefixe_rang = "🥉 3e"
-                else:
-                    prefixe_rang = f" {rang}e"
+                if rang == 1: prefixe_rang = "🥇 1er"
+                elif rang == 2: prefixe_rang = "🥈 2e"
+                elif rang == 3: prefixe_rang = "🥉 3e"
+                else: prefixe_rang = f"{rang}e"
                 
-                # Mise en valeur du joueur connecté dans la liste
-                pseudo_affiche = joueur['pseudo']
-                if joueur['id'] == st.session_state.user_id:
-                    pseudo_affiche = f"👉 {pseudo_affiche} (Toi)"
+                # Couleur de ligne spéciale si c'est le joueur connecté
+                style_ligne = "background-color: #e3eaf2; font-weight: bold; border-left: 5px solid #1e3a8a;" if joueur['id'] == st.session_state.user_id else ""
+                pseudo_affiche = f"{joueur['pseudo']} (Toi)" if joueur['id'] == st.session_state.user_id else joueur['pseudo']
                 
-                donnees_classement.append({
-                    "Position": prefixe_rang,
-                    "Joueur": pseudo_affiche,
-                    "Score (Points)": f"{joueur['score']} pts"
-                })
+                lignes_html += f"""
+                <tr style="{style_ligne} border-bottom: 1px solid #e2e8f0;">
+                    <td style="padding: 12px; text-align: left;">{prefixe_rang}</td>
+                    <td style="padding: 12px; text-align: left;">{pseudo_affiche}</td>
+                    <td style="padding: 12px; text-align: right; font-weight: bold; color: #2d3748;">{joueur['score']} pts</td>
+                </tr>
+                """
             
-            # Affichage sous forme de tableau Streamlit épuré
-            st.table(donnees_classement)
+            # Injection du tableau complet avec un fond global gris très doux pour la zone de classement
+            st.markdown(f"""
+            <div style="background-color: #f8fafc; border-radius: 12px; padding: 15px; border: 1px solid #e2e8f0;">
+                <table style="width: 100%; border-collapse: collapse; font-family: sans-serif;">
+                    <thead>
+                        <tr style="border-bottom: 2px solid #cbd5e1; color: #64748b; font-size: 14px;">
+                            <th style="padding: 10px; text-align: left;">Position</th>
+                            <th style="padding: 10px; text-align: left;">Joueur</th>
+                            <th style="padding: 10px; text-align: right;">Score</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {lignes_html}
+                    </tbody>
+                </table>
+            </div>
+            """, unsafe_allow_html=True)
             
         else:
-            st.info("Le classement est vide pour le moment. Les points arriveront dès les premiers matchs !")
-
+            st.info("Le classement est vide pour le moment.")
    # =====================================================================
     # ONGLET 2 : FAIRE MES PRONOSTICS (AVEC INFOBULLE DES RÈGLES)
     # =====================================================================
