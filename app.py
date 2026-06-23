@@ -251,11 +251,19 @@ else:
             else: st.info("Aucun joueur pour le moment.")
         except Exception as e: st.error(f"Erreur : {e}")
 
-    # =====================================================================
-    # ONGLET 2 : FAIRE MES PRONOSTICS
+   # =====================================================================
+    # ONGLET 2 : FAIRE MES PRONOSTICS (AVEC INFOBULLE DES RÈGLES)
     # =====================================================================
     with onglets_principaux[1]:
-        st.title("✍️ Saisir les Pronostics")
+        st.title("✍ *Saisir les Pronostics*")
+
+        # ℹ️ RETOUR DE L'INFOBULLE DES RÈGLES
+        with st.expander("ℹ️ Rappel des règles et du barème des points"):
+            st.markdown(f"""
+            * **Bon Vainqueur / Match Nul** : `{pts_gagnant_cfg} points`
+            * **Tranche d'écart exacte** : `+{pts_ecart_cfg} points` (soit `{pts_parfait_cfg} points` pour un prono parfait)
+            * **🔥 Mode OSÉ Actif** : Si moins de `{seuil_ose_cfg}%` des joueurs trouvent le score parfait (Vainqueur + Écart), leurs points sur ce match sont multipliés par `{mult_ose_cfg}` (soit `{pts_parfait_cfg * mult_ose_cfg} points` au lieu de `{pts_parfait_cfg}`) !
+            """)
 
         id_joueur_cible = st.session_state.user_id
         if st.session_state.is_admin:
@@ -264,13 +272,11 @@ else:
                 if liste_membres:
                     index_admin = 0
                     for idx, m in enumerate(liste_membres):
-                        if m['id'] == st.session_state.user_id:
-                            index_admin = idx
-                            break
-                    st.warning("🛠️ **Mode Admin actif** : Vous pouvez pronostiquer à la place d'un autre joueur.")
+                        if m['id'] == st.session_state.user_id: index_admin = idx; break
+                    st.warning("🛠 **Mode Admin actif** : Vous pouvez pronostiquer à la place d'un autre joueur.")
                     choix_membre = st.selectbox("Sélectionner le compte joueur à utiliser :", options=liste_membres, format_func=lambda x: x['pseudo'], index=index_admin)
                     if choix_membre: id_joueur_cible = choix_membre['id']
-            except Exception as e: st.error(f"Erreur récupération membres : {e}")
+            except Exception as e: st.error(f"Erreur membres : {e}")
 
         # --- QUESTIONS BONUS ---
         st.subheader("🎯 Questions Bonus du moment")
@@ -288,11 +294,7 @@ else:
                     st.markdown(f"**{q['question']}** *(Rapporte : {q.get('points', 5)} pts)*")
                     options_rep = ["..."] + ([opt.strip() for opt in q['choix_reponse'].split("/")] if q['choix_reponse'] else ["Oui", "Non"])
                     deja_repondu = supabase.table("Réponses_Questions").select("*").eq("user_id", id_joueur_cible).eq("question_id", q['id']).execute().data
-                    
-                    index_defaut = 0
-                    if deja_repondu and deja_repondu[0]['reponse_joueur'] in options_rep:
-                        index_defaut = options_rep.index(deja_repondu[0]['reponse_joueur'])
-                    
+                    index_defaut = options_rep.index(deja_repondu[0]['reponse_joueur']) if deja_repondu and deja_repondu[0]['reponse_joueur'] in options_rep else 0
                     st.radio("Ta réponse :", options=options_rep, index=index_defaut, key=f"bonus_q_{q['id']}", on_change=sauvegarder_bonus_auto, args=(q['id'], id_joueur_cible))
                     if deja_repondu: st.caption("✅ _Enregistré automatiquement_")
                     st.markdown("---")
@@ -308,13 +310,12 @@ else:
                 for m in matchs:
                     date_m_brute = m['date_match'].split("+")[0].split("Z")[0]
                     date_m_obj = datetime.fromisoformat(date_m_brute)
-                    if maintenant_paris < date_m_obj: matchs_ouverts.append(m)
+                    if maintenant_paris < date_m_obj or m['statut'] == "NS": matchs_ouverts.append(m)
             
             if matchs_ouverts:
                 for m in matchs_ouverts:
                     st.write(f"### {m['equipe_dom']} vs {m['equipe_ext']}")
                     prono_existant = supabase.table("Pronostics").select("*").eq("user_id", id_joueur_cible).eq("match_id", m['id']).execute().data
-                    
                     liste_vainqueurs = ["...", m['equipe_dom'], m['equipe_ext'], "Match Nul"]
                     liste_ecarts = ["..."] + TRANCHES_ECARTS
                     
@@ -332,8 +333,8 @@ else:
             else: st.info("Aucun match ouvert aux pronostics pour l'instant.")
         except Exception as e: st.error(f"Erreur match : {e}")
 
-   # =====================================================================
-    # ONGLET 3 : RÉSULTATS & DIRECT (VERSION AVEC POINTS INDIVIDUELS)
+ # =====================================================================
+    # ONGLET 3 : RÉSULTATS & DIRECT (VERSION FINALE AVEC AFFICHAGE MODE OSÉ)
     # =====================================================================
     with onglets_principaux[2]:
         st.title("📊 Résultats & Direct")
@@ -358,7 +359,7 @@ else:
                     label_live = "🔴 [EN DIRECT]" if m['statut'] == 'LIVE' else ""
                     st.write(f"### {m['equipe_dom']} {sc_dom} - {sc_ext} {m['equipe_ext']}  {label_live}")
                     
-                    # --- DÉTERMINATION DU RÉSULTAT RÉEL POUR LE CALCUL VISUEL ---
+                    # --- DÉTERMINATION DU RÉSULTAT RÉEL ---
                     vrai_gagnant_brut = "home" if sc_dom > sc_ext else ("away" if sc_dom < sc_ext else "draw")
                     vrai_ecart_points = abs(sc_dom - sc_ext)
                     
@@ -374,31 +375,37 @@ else:
                     with st.expander("👁️ Voir les pronostics et points des joueurs"):
                         all_pronos = supabase.table("Pronostics").select("gagnant_prevu, ecart_prevu, Joueurs(pseudo)").eq("match_id", m['id']).execute().data
                         if all_pronos:
+                            total_pronos = len(all_pronos)
+                            # On compte combien de joueurs ont vu juste sur ce match pour l'affichage OSÉ
+                            nb_parfaits = sum(1 for p in all_pronos if p['gagnant_prevu'] == vrai_gagnant_brut and p['ecart_prevu'] == vraie_tranche)
+                            pourcentage_parfait = (nb_parfaits / total_pronos) * 100 if total_pronos > 0 else 100
+                            
+                            # Est-ce que le critère OSÉ est rempli ?
+                            est_ose_ici = pourcentage_parfait <= seuil_ose_cfg and nb_parfaits > 0
+                            
                             for p in all_pronos:
                                 pseudo_j = p.get('Joueurs', {}).get('pseudo', 'Inconnu')
                                 nom_prevu = m['equipe_dom'] if p['gagnant_prevu'] == 'home' else (m['equipe_ext'] if p['gagnant_prevu'] == 'away' else "Match Nul")
                                 
-                                # --- LOGIQUE DE CALCUL VISUEL DES POINTS FILTRÉS ---
-                                pts_visuels = 0
                                 detail_badge = "❌ 0 pt"
                                 
                                 if m['score_dom'] is not None and m['score_ext'] is not None:
                                     if p['gagnant_prevu'] == vrai_gagnant_brut:
-                                        pts_visuels += pts_gagnant_cfg
                                         detail_badge = f"✅ +{pts_gagnant_cfg} pts (Vainqueur)"
                                         
                                         if p['ecart_prevu'] == vraie_tranche:
-                                            pts_visuels += pts_ecart_cfg
-                                            detail_badge = f"🔥 +{pts_parfait_cfg} pts (PARFAIT !)"
+                                            if est_ose_ici:
+                                                pts_final = pts_parfait_cfg * mult_ose_cfg
+                                                detail_badge = f"🔥 +{pts_final} pts (PRONO OSÉ !)"
+                                            else:
+                                                detail_badge = f"⭐ +{pts_parfait_cfg} pts (PARFAIT !)"
                                 
-                                # Affichage propre avec le badge de points à droite
                                 st.markdown(f"👤 **{pseudo_j}** : {nom_prevu} ({p['ecart_prevu']}) — `{detail_badge}`")
                         else: 
                             st.write("Aucun prono enregistré pour ce match.")
                     st.markdown("---")
             else: st.info("Aucun match n'a encore débuté.")
         except Exception as e: st.error(f"Erreur matchs clos : {e}")
-
     # =====================================================================
     # ONGLET 4 : PANEL ADMINISTRATION
     # =====================================================================
@@ -438,56 +445,62 @@ else:
                         st.rerun()
 
             # --- TAB 2 : MATCHS MANUELS & SCORES ---
-            # --- TAB 2 : MATCHS MANUELS & SCORES (VERSION MISE À JOUR AVEC DISTRIBUTION DES POINTS) ---
-            with tab2:
-                st.subheader("➕ Ajouter un Match manuellement")
-                with st.form("form_ajout_match"):
-                    eq_dom = st.text_input("Équipe Domicile")
-                    eq_ext = st.text_input("Équipe Extérieur")
-                    date_c = st.date_input("Date")
-                    heure_c = st.time_input("Heure")
-                    if st.form_submit_button("➕ Créer le match"):
-                        if eq_dom and eq_ext:
-                            dt_combine = datetime.combine(date_c, heure_c).isoformat()
-                            id_m = int(datetime.timestamp(datetime.combine(date_c, heure_c))) + random.randint(1, 1000)
-                            supabase.table("Matchs").insert({
-                                "id": id_m, "equipe_dom": eq_dom, "equipe_ext": eq_ext, "date_match": dt_combine, "score_dom": None, "score_ext": None, "statut": "NS"
-                            }).execute()
-                            st.success("Match créé de force !")
-                            st.rerun()
-                
-                st.markdown("---")
-                st.subheader("📝 Saisir le résultat d'un match & Distribuer les points")
-                try:
-                    tous_matchs = supabase.table("Matchs").select("*").order("date_match", desc=True).execute().data
-                    if tous_matchs:
-                        def format_match_choice(m):
-                            sc_d = m['score_dom'] if m['score_dom'] is not None else "?"
-                            sc_e = m['score_ext'] if m['score_ext'] is not None else "?"
-                            return f"{m['equipe_dom']} ({sc_d}) vs ({sc_e}) {m['equipe_ext']} - [{m['statut']}]"
-                        
-                        match_selectionne = st.selectbox("Sélectionner le match à mettre à jour :", options=tous_matchs, format_func=format_match_choice)
-                        
-                        if match_selectionne:
-                            with st.form(f"form_score_manual_{match_selectionne['id']}"):
-                                col_sc1, col_sc2 = st.columns(2)
-                                with col_sc1:
-                                    nouveau_score_dom = st.number_input(f"Score {match_selectionne['equipe_dom']}", min_value=0, value=match_selectionne['score_dom'] if match_selectionne['score_dom'] is not None else 0, step=1)
-                                with col_sc2:
-                                    nouveau_score_ext = st.number_input(f"Score {match_selectionne['equipe_ext']}", min_value=0, value=match_selectionne['score_ext'] if match_selectionne['score_ext'] is not None else 0, step=1)
-                                
-                                liste_statuts = ["NS", "FT", "LIVE"]
-                                statut_index = liste_statuts.index(match_selectionne['statut']) if match_selectionne['statut'] in liste_statuts else 1
-                                nouveau_statut = st.selectbox("Statut du match", options=liste_statuts, index=statut_index)
-                                
-                                valider_scores = st.form_submit_button("💾 1. Enregistrer le résultat & Clôturer le match")
-                                
-                                if valider_scores:
-                                    supabase.table("Matchs").update({
-                                        "score_dom": nouveau_score_dom, "score_ext": nouveau_score_ext, "statut": nouveau_statut
-                                    }).eq("id", match_selectionne['id']).execute()
-                                    st.success("Résultat enregistré en base de données !")
-                                    st.rerun()
+            # BOUTON DE DISTRIBUTION DES POINTS AVEC CALCUL DU MODE OSÉ
+                            if match_selectionne['statut'] == "FT":
+                                st.warning(f"🚨 Ce match est terminé. Clique ci-dessous pour distribuer les points (Calcul Osé inclus).")
+                                if st.button(f"🎯 Calculer et Distribuer les points pour {match_selectionne['equipe_dom']} vs {match_selectionne['equipe_ext']}", type="primary"):
+                                    with st.spinner("Calcul des scores en cours..."):
+                                        sc_dom = match_selectionne['score_dom']
+                                        sc_ext = match_selectionne['score_ext']
+                                        
+                                        if sc_dom is not None and sc_ext is not None:
+                                            vrai_gagnant_brut = "home" if sc_dom > sc_ext else ("away" if sc_dom < sc_ext else "draw")
+                                            vrai_ecart_points = abs(sc_dom - sc_ext)
+                                            
+                                            # Calcul de la tranche d'écart réelle
+                                            vraie_tranche = "1-6"
+                                            if 7 <= vrai_ecart_points <= 10: vraie_tranche = "7-10"
+                                            elif 11 <= vrai_ecart_points <= 15: vraie_tranche = "11-15"
+                                            elif 16 <= vrai_ecart_points <= 20: vraie_tranche = "16-20"
+                                            elif 21 <= vrai_ecart_points <= 30: vraie_tranche = "21-30"
+                                            elif 31 <= vrai_ecart_points <= 40: vraie_tranche = "31-40"
+                                            elif 41 <= vrai_ecart_points <= 50: vraie_tranche = "41-50"
+                                            elif vrai_ecart_points >= 51: vraie_tranche = "51+"
+                                            
+                                            # Récupérer tous les pronos
+                                            pronos = supabase.table("Pronostics").select("user_id, gagnant_prevu, ecart_prevu").eq("match_id", match_selectionne['id']).execute().data
+                                            
+                                            compteur_updates = 0
+                                            if pronos:
+                                                total_pronos = len(pronos)
+                                                # Compter combien ont eu le score parfait
+                                                nb_parfaits = sum(1 for p in pronos if p['gagnant_prevu'] == vrai_gagnant_brut and p['ecart_prevu'] == vraie_tranche)
+                                                
+                                                # Détermination si le bonus Osé s'applique
+                                                pourcentage_parfait = (nb_parfaits / total_pronos) * 100 if total_pronos > 0 else 100
+                                                est_ose = pourcentage_parfait <= seuil_ose_cfg and nb_parfaits > 0
+                                                
+                                                for p in pronos:
+                                                    pts_gagnes = 0
+                                                    if p['gagnant_prevu'] == vrai_gagnant_brut:
+                                                        pts_gagnes += pts_gagnant_cfg
+                                                        if p['ecart_prevu'] == vraie_tranche:
+                                                            pts_gagnes += pts_ecart_cfg
+                                                            # Application du multiplicateur OSÉ s'il est validé
+                                                            if est_ose:
+                                                                pts_gagnes = pts_gagnes * mult_ose_cfg
+                                                    
+                                                    if pts_gagnes > 0:
+                                                        j_data = supabase.table("Joueurs").select("score").eq("id", p['user_id']).single().execute().data
+                                                        if j_data:
+                                                            nouveau_global = j_data.get('score', 0) + pts_gagnes
+                                                            supabase.table("Joueurs").update({"score": nouveau_global}).eq("id", p['user_id']).execute()
+                                                            compteur_updates += 1
+                                            
+                                            st.success(f"🎉 Points distribués ! {compteur_updates} joueurs mis à jour. (Bonus Osé appliqué : {est_ose})")
+                                            st.balloons()
+                                            time.sleep(1)
+                                            st.rerun()
 
                             # BOUTON DE DISTRIBUTION DES POINTS (Hors du formulaire pour éviter les conflits de soumission)
                             if match_selectionne['statut'] == "FT":
