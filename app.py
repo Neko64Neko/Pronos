@@ -310,7 +310,12 @@ else:
                 for m in matchs:
                     date_m_brute = m['date_match'].split("+")[0].split("Z")[0]
                     date_m_obj = datetime.fromisoformat(date_m_brute)
-                    if maintenant_paris < date_m_obj or m['statut'] == "NS": matchs_ouverts.append(m)
+                    # Un joueur normal voit le match si l'heure n'est pas passée ou si le statut est NS
+                    if maintenant_paris < date_m_obj or m['statut'] == "NS":
+                        matchs_ouverts.append(m)
+                    # L'admin, lui, voit AUSSI les matchs qui sont actuellement en direct (LIVE) pour pouvoir dépanner
+                    elif st.session_state.is_admin and m['statut'] == "LIVE":
+                        matchs_ouverts.append(m)
             
             if matchs_ouverts:
                 for m in matchs_ouverts:
