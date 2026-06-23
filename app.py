@@ -247,16 +247,95 @@ else:
 
     pts_parfait_cfg = pts_gagnant_cfg + pts_ecart_cfg
 
-    # =====================================================================
-    # ONGLET 1 : CLASSEMENT
+# =====================================================================
+    # ONGLET 1 : ACCUEIL - PROFIL & CLASSEMENT GÉNÉRAL
     # =====================================================================
     with onglets_principaux[0]:
-        st.title("🏆 Classement Général")
+        # --- EN-TÊTE PREMIUM STYLE FIGMA ---
+        st.markdown(f"### 🏉 Bienvenue sur ton tableau de bord, **{st.session_state.pseudo}** !")
+        
+        # Récupération des infos du joueur connecté pour l'en-tête
         try:
-            joueurs = supabase.table("Joueurs").select("pseudo, score").order("score", desc=True).execute()
-            if joueurs.data: st.table(joueurs.data)
-            else: st.info("Aucun joueur pour le moment.")
-        except Exception as e: st.error(f"Erreur : {e}")
+            joueur_connecte = supabase.table("Joueurs").select("*").eq("id", st.session_state.user_id).single().execute().data
+            tous_les_joueurs = supabase.table("Joueurs").select("*").order("score", desc=True).execute().data
+            
+            # Calcul du rang du joueur
+            rang_joueur = 1
+            if tous_les_joueurs:
+                for idx, j in enumerate(tous_les_joueurs):
+                    if j['id'] == st.session_state.user_id:
+                        rang_joueur = idx + 1
+                        break
+        except Exception:
+            joueur_connecte = {"score": 0}
+            tous_les_joueurs = []
+            rang_joueur = "-"
+
+        # Carte de Profil Stylisée (Effet Carte Figma)
+        with st.container(border=True):
+            col_avatar, col_stat1, col_stat2, col_stat3 = st.columns([1, 1.5, 1.5, 1.5])
+            
+            with col_avatar:
+                # Un émoji en gros comme avatar par défaut
+                st.markdown("<h1 style='text-align: center; margin: 0;'>🏃‍♂️</h1>", unsafe_allow_html=True)
+                st.markdown(f"<p style='text-align: center; font-weight: bold; margin: 0;'>{st.session_state.pseudo}</p>", unsafe_allow_html=True)
+            
+            with col_stat1:
+                st.markdown("<p style='color: gray; margin-bottom: 0;'>Classement</p>", unsafe_allow_html=True)
+                suffixe = "er" if rang_joueur == 1 else "e"
+                st.markdown(f"## 🏆 {rang_joueur}{suffixe} <span style='font-size: 14px; color: gray;'>/ {len(tous_les_joueurs)}</span>", unsafe_allow_html=True)
+                
+            with col_stat2:
+                st.markdown("<p style='color: gray; margin-bottom: 0;'>Points Totaux</p>", unsafe_allow_html=True)
+                st.markdown(f"## 🎯 {joueur_connecte.get('score', 0)} <span style='font-size: 14px; color: gray;'>pts</span>", unsafe_allow_html=True)
+                
+            with col_stat3:
+                st.markdown("<p style='color: gray; margin-bottom: 0;'>Statut</p>", unsafe_allow_html=True)
+                if rang_joueur == 1:
+                    st.markdown("## 👑 <span style='font-size: 20px; font-weight: bold; color: #FFD700;'>Leader</span>", unsafe_allow_html=True)
+                elif rang_joueur <= 3:
+                    st.markdown("## 🥈 <span style='font-size: 20px; font-weight: bold; color: #C0C0C0;'>Podium</span>", unsafe_allow_html=True)
+                else:
+                    st.markdown("## 🏉 <span style='font-size: 20px; font-weight: bold; color: #1E3A8A;'>Challenger</span>", unsafe_allow_html=True)
+
+        st.markdown("---")
+
+        # --- LE CLASSEMENT GÉNÉRAL AVEC ICÔNES PODIUM ---
+        st.subheader("📊 Classement Général de la Communauté")
+        
+        if tous_les_joueurs:
+            # Création d'un tableau d'affichage propre
+            donnees_classement = []
+            
+            for index, joueur in enumerate(tous_les_joueurs):
+                rang = index + 1
+                
+                # Application de ta logique d'icônes pour les 3 premières places
+                if rang == 1:
+                    prefixe_rang = "🥇 1er"
+                elif rang == 2:
+                    prefixe_rang = "🥈 2e"
+                elif rang == 3:
+                    prefixe_rang = "🥉 3e"
+                else:
+                    prefixe_rang = f" {rang}e"
+                
+                # Mise en valeur du joueur connecté dans la liste
+                pseudo_affiche = joueur['pseudo']
+                if joueur['id'] == st.session_state.user_id:
+                    pseudo_affiche = f"👉 {pseudo_affiche} (Toi)"
+                
+                donnees_classement.append({
+                    "Position": prefixe_rang,
+                    "Joueur": pseudo_affiche,
+                    "Score (Points)": f"{joueur['score']} pts"
+                })
+            
+            # Affichage sous forme de tableau Streamlit épuré
+            st.table(donnees_classement)
+            
+        else:
+            st.info("Le classement est vide pour le moment. Les points arriveront dès les premiers matchs !")
 
    # =====================================================================
     # ONGLET 2 : FAIRE MES PRONOSTICS (AVEC INFOBULLE DES RÈGLES)
