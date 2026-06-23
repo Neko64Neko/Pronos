@@ -63,8 +63,8 @@ def verifier_et_importer_matchs():
         # On balaye la saison précédente (au cas où des matchs soient en retard) et la saison courante
         annees_a_tester = [str(annee_saison_courante - 1), str(annee_saison_courante)]
 
-# LIGNE DE TEST TEMPORAIRE (À ENLEVER APRÈS LE TEST)
-st.write("DEBUG API - URL appelée :", f"https://www.thesportsdb.com/api/v1/json/3/eventsseason.php?id=4413&s=2026")
+    # LIGNE DE TEST TEMPORAIRE (À ENLEVER APRÈS LE TEST)
+    st.write("DEBUG API - URL appelée :", f"https://www.thesportsdb.com/api/v1/json/3/eventsseason.php?id=4413&s=2026")
         
         for annee in annees_a_tester:
             try:
