@@ -339,7 +339,7 @@ else:
         except Exception as e: st.error(f"Erreur match : {e}")
 
 # =====================================================================
-    # ONGLET 3 : RÉSULTATS & DIRECT (SECTION GLOBALE COMPLÈTE)
+    # ONGLET 3 : RÉSULTATS & DIRECT (AFFICHAGE DE LA LOGIQUE OSÉ VAINQUEUR)
     # =====================================================================
     with onglets_principaux[2]:
         st.title("📊 Résultats & Direct")
@@ -381,11 +381,12 @@ else:
                         all_pronos = supabase.table("Pronostics").select("gagnant_prevu, ecart_prevu, Joueurs(pseudo)").eq("match_id", m['id']).execute().data
                         if all_pronos:
                             total_pronos = len(all_pronos)
-                            nb_parfaits = sum(1 for p in all_pronos if p['gagnant_prevu'] == vrai_gagnant_brut and p['ecart_prevu'] == vraie_tranche)
-                            pourcentage_parfait = (nb_parfaits / total_pronos) * 100 if total_pronos > 0 else 100
+                            # On regarde combien ont trouvé le bon vainqueur globalement
+                            nb_bons_vainqueurs = sum(1 for p in all_pronos if p['gagnant_prevu'] == vrai_gagnant_brut)
+                            pourcentage_vainqueur = (nb_bons_vainqueurs / total_pronos) * 100 if total_pronos > 0 else 0
                             
-                            # Match considéré comme "Osé" ?
-                            est_ose_ici = pourcentage_parfait <= seuil_ose_cfg and nb_parfaits > 0
+                            # Match considéré comme "Osé" selon TA logique
+                            est_ose_ici = pourcentage_vainqueur <= seuil_ose_cfg and nb_bons_vainqueurs > 0
                             
                             for p in all_pronos:
                                 pseudo_j = p.get('Joueurs', {}).get('pseudo', 'Inconnu')
@@ -402,7 +403,7 @@ else:
                                             pts_visuels += pts_ecart_cfg
                                             label_base = "PARFAIT !"
                                         
-                                        # Application du multiplicateur visuel sur l'étiquette
+                                        # Application du multiplicateur visuel
                                         if est_ose_ici:
                                             pts_visuels = pts_visuels * mult_ose_cfg
                                             detail_badge = f"🔥 +{pts_visuels} pts (OSÉ - {label_base})"
@@ -416,8 +417,8 @@ else:
                     st.markdown("---")
             else: st.info("Aucun match n'a encore débuté.")
         except Exception as e: st.error(f"Erreur matchs clos : {e}")
-# =====================================================================
-    # ONGLET 4 : PANEL ADMINISTRATION GLOBAL COMPLET
+=====================================================================
+    # ONGLET 4 : PANEL ADMINISTRATION GLOBAL (LOGIQUE OSÉ SUR VAINQUEUR)
     # =====================================================================
     if st.session_state.is_admin:
         with onglets_principaux[3]:
@@ -453,7 +454,7 @@ else:
                         st.success("Barème enregistré !")
                         st.rerun()
 
-            # --- TAB 2 : MATCHS MANUELS & CALCUL OSÉ GLOBAL ---
+            # --- TAB 2 : MATCHS MANUELS & CALCUL OSÉ ---
             with tab2:
                 st.subheader("➕ Ajouter un Match manuellement")
                 with st.form("form_ajout_match"):
@@ -505,7 +506,7 @@ else:
                                     st.rerun()
 
                             if match_selectionne['statut'] == "FT":
-                                st.warning(f"🚨 Ce match est terminé. Clique ci-dessous pour distribuer les points (Calcul Osé global inclus).")
+                                st.warning(f"🚨 Ce match est terminé. Clique ci-dessous pour distribuer les points (Calcul Osé sur Vainqueur).")
                                 if st.button(f"🎯 Calculer et Distribuer les points pour {match_selectionne['equipe_dom']} vs {match_selectionne['equipe_ext']}", type="primary"):
                                     with st.spinner("Calcul des scores en cours..."):
                                         sc_dom = match_selectionne['score_dom']
@@ -529,32 +530,39 @@ else:
                                             compteur_updates = 0
                                             if pronos:
                                                 total_pronos = len(pronos)
-                                                nb_parfaits = sum(1 for p in pronos if p['gagnant_prevu'] == vrai_gagnant_brut and p['ecart_prevu'] == vraie_tranche)
+                                                # TA LOGIQUE : On compte combien ont trouvé le bon VAINQUEUR
+                                                nb_bons_vainqueurs = sum(1 for p in pronos if p['gagnant_prevu'] == vrai_gagnant_brut)
                                                 
-                                                pourcentage_parfait = (nb_parfaits / total_pronos) * 100 if total_pronos > 0 else 100
-                                                est_ose = pourcentage_parfait <= seuil_ose_cfg and nb_parfaits > 0
+                                                pourcentage_vainqueur = (nb_bons_vainqueurs / total_pronos) * 100 if total_pronos > 0 else 0
+                                                
+                                                # Match OSÉ si le % de joueurs ayant trouvé le bon vainqueur est faible
+                                                est_ose = pourcentage_vainqueur <= seuil_ose_cfg and nb_bons_vainqueurs > 0
                                                 
                                                 for p in pronos:
                                                     pts_gagnes = 0
-                                                    # 1. Calcul bon Vainqueur
+                                                    # 1. Le joueur a le bon vainqueur
                                                     if p['gagnant_prevu'] == vrai_gagnant_brut:
-                                                        pts_gagnes += pts_gagnant_cfg
-                                                        # 2. Calcul bon Écart
+                                                        pts_base_match = pts_gagnant_cfg
+                                                        
+                                                        # 2. Le joueur a AUSSI le bon écart
                                                         if p['ecart_prevu'] == vraie_tranche:
-                                                            pts_gagnes += pts_ecart_cfg
-                                                    
-                                                    # 3. Application du multiplicateur global à TOUS les points du match
-                                                    if est_ose and pts_gagnes > 0:
-                                                        pts_gagnes = pts_gagnes * mult_ose_cfg
+                                                            pts_base_match += pts_ecart_cfg
+                                                        
+                                                        # 3. Application du multiplicateur global sur les points accumulés
+                                                        if est_ose:
+                                                            pts_gagnes = pts_base_match * mult_ose_cfg
+                                                        else:
+                                                            pts_gagnes = pts_base_match
                                                     
                                                     if pts_gagnes > 0:
-                                                        j_data = supabase.table("Joueurs").select("score").eq("id", p['user_id']).single().execute().data
+                                                        joueur_id = p['user_id']
+                                                        j_data = supabase.table("Joueurs").select("score").eq("id", joueur_id).single().execute().data
                                                         if j_data:
                                                             nouveau_global = j_data.get('score', 0) + pts_gagnes
-                                                            supabase.table("Joueurs").update({"score": nouveau_global}).eq("id", p['user_id']).execute()
+                                                            supabase.table("Joueurs").update({"score": nouveau_global}).eq("id", joueur_id).execute()
                                                             compteur_updates += 1
                                             
-                                            st.success(f"🎉 Points distribués ! {compteur_updates} joueurs mis à jour. (Bonus Osé global : {est_ose})")
+                                            st.success(f"🎉 Points distribués ! {compteur_updates} joueurs mis à jour. (Match Osé : {est_ose} | {pourcentage_vainqueur:.1f}% de réussite)")
                                             st.balloons()
                                             time.sleep(1)
                                             st.rerun()
@@ -620,18 +628,16 @@ else:
                 if st.button("⚡ Lancer la Synchronisation"):
                     with st.spinner("Scraping en cours..."):
                         nb = verifier_et_importer_matchs()
-                        st.success(f"Terminé ! {nb} matchs traités avec succès via la méthode gratuite.")
+                        st.success(f"Terminé ! {nb} matchs traités avec succès.")
                         st.rerun()
 
             # --- TAB 5 : CHANGEMENT DE SAISON ---
             with tab5:
                 st.subheader("🚨 Zone de Danger : Reset de fin de Saison")
-                st.error("⚠️ Attention : Cette action va effacer définitivement tous les matchs, pronostics et questions bonus. Les scores repasseront à 0.")
-                
-                confirmation_secu = st.checkbox("Je confirme vouloir tout réinitialiser pour la nouvelle saison.", key="danger_zone_confirm")
-                
+                st.error("⚠️ Attention : Cette action va effacer définitivement les données.")
+                confirmation_secu = st.checkbox("Je confirme vouloir tout réinitialiser.", key="danger_zone_confirm")
                 if st.button("🔥 Réinitialiser l'application", type="primary", disabled=not confirmation_secu):
-                    with st.spinner("Nettoyage complet..."):
+                    with st.spinner("Nettoyage..."):
                         try:
                             supabase.table("Pronostics").delete().not_.is_("id", "null").execute()
                             supabase.table("Réponses_Questions").delete().not_.is_("id", "null").execute()
