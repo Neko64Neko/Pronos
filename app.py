@@ -53,18 +53,18 @@ def verifier_et_importer_matchs():
                 except Exception: continue
     except Exception: pass
 
-    # 2. Sécurité TheSportsDB - CALCUL DYNAMIQUE DE LA SAISON
+# 2. Sécurité TheSportsDB - CALCUL DYNAMIQUE DE LA SAISON
     if matchs_traites == 0:
         maintenant = datetime.now()
         # Si on est entre janvier et juillet, la saison a démarré l'année précédente.
         # Si on est entre août et décembre, la saison démarre cette année.
         annee_saison_courante = maintenant.year - 1 if maintenant.month < 8 else maintenant.year
         
-        # On balaye la saison précédente (au cas où des matchs soient en retard) et la saison courante
+        # On balaye la saison précédente et la saison courante
         annees_a_tester = [str(annee_saison_courante - 1), str(annee_saison_courante)]
-
-    # LIGNE DE TEST TEMPORAIRE (À ENLEVER APRÈS LE TEST)
-    st.write("DEBUG API - URL appelée :", f"https://www.thesportsdb.com/api/v1/json/3/eventsseason.php?id=4413&s=2026")
+        
+        # LIGNE DE TEST PLACÉE ICI (SANS ERREUR D'INDENTATION)
+        st.write("DEBUG API - URL testée :", f"https://www.thesportsdb.com/api/v1/json/3/eventsseason.php?id=4413&s={annee_saison_courante}")
         
         for annee in annees_a_tester:
             try:
@@ -91,7 +91,6 @@ def verifier_et_importer_matchs():
             except Exception: pass
             
     return matchs_traites
-
 
 def sauvegarder_prono_auto(match_id, equipe_dom, equipe_ext, user_id_cible):
     """Sauvegarde instantanément le pronostic dès qu'un élément change."""
