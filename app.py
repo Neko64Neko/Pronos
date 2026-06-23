@@ -339,7 +339,7 @@ else:
         except Exception as e: st.error(f"Erreur match : {e}")
 
  # =====================================================================
-    # ONGLET 3 : RÉSULTATS & DIRECT (VERSION FINALE AVEC AFFICHAGE MODE OSÉ)
+    # ONGLET 3 : RÉSULTATS & DIRECT (SECTION GLOBALE COMPLÈTE)
     # =====================================================================
     with onglets_principaux[2]:
         st.title("📊 Résultats & Direct")
@@ -381,11 +381,10 @@ else:
                         all_pronos = supabase.table("Pronostics").select("gagnant_prevu, ecart_prevu, Joueurs(pseudo)").eq("match_id", m['id']).execute().data
                         if all_pronos:
                             total_pronos = len(all_pronos)
-                            # On compte combien de joueurs ont vu juste sur ce match pour l'affichage OSÉ
                             nb_parfaits = sum(1 for p in all_pronos if p['gagnant_prevu'] == vrai_gagnant_brut and p['ecart_prevu'] == vraie_tranche)
                             pourcentage_parfait = (nb_parfaits / total_pronos) * 100 if total_pronos > 0 else 100
                             
-                            # Est-ce que le critère OSÉ est rempli ?
+                            # Match considéré comme "Osé" ?
                             est_ose_ici = pourcentage_parfait <= seuil_ose_cfg and nb_parfaits > 0
                             
                             for p in all_pronos:
@@ -396,14 +395,20 @@ else:
                                 
                                 if m['score_dom'] is not None and m['score_ext'] is not None:
                                     if p['gagnant_prevu'] == vrai_gagnant_brut:
-                                        detail_badge = f"✅ +{pts_gagnant_cfg} pts (Vainqueur)"
+                                        pts_visuels = pts_gagnant_cfg
+                                        label_base = "Vainqueur"
                                         
                                         if p['ecart_prevu'] == vraie_tranche:
-                                            if est_ose_ici:
-                                                pts_final = pts_parfait_cfg * mult_ose_cfg
-                                                detail_badge = f"🔥 +{pts_final} pts (PRONO OSÉ !)"
-                                            else:
-                                                detail_badge = f"⭐ +{pts_parfait_cfg} pts (PARFAIT !)"
+                                            pts_visuels += pts_ecart_cfg
+                                            label_base = "PARFAIT !"
+                                        
+                                        # Application du multiplicateur visuel sur l'étiquette
+                                        if est_ose_ici:
+                                            pts_visuels = pts_visuels * mult_ose_cfg
+                                            detail_badge = f"🔥 +{pts_visuels} pts (OSÉ - {label_base})"
+                                        else:
+                                            badge_icon = "⭐" if label_base == "PARFAIT !" else "✅"
+                                            detail_badge = f"{badge_icon} +{pts_visuels} pts ({label_base})"
                                 
                                 st.markdown(f"👤 **{pseudo_j}** : {nom_prevu} ({p['ecart_prevu']}) — `{detail_badge}`")
                         else: 
@@ -411,10 +416,233 @@ else:
                     st.markdown("---")
             else: st.info("Aucun match n'a encore débuté.")
         except Exception as e: st.error(f"Erreur matchs clos : {e}")
-# =====================================================================
-    # ONGLET 4 : PANEL ADMINISTRATION COMPLET (SANS ERREUR D'INDENTATION)
+=====================================================================
+    # ONGLET 4 : PANEL ADMINISTRATION GLOBAL COMPLET
     # =====================================================================
     if st.session_state.is_admin:
+        with onglets_principaux[3]:
+            st.title("⚙️ Console d'Administration Privée")
+            
+            tab1, tab2, tab3, tab4, tab5 = st.tabs([
+                "🎯 Configuration", 
+                "➕ Matchs Manuels", 
+                "🎁 Questions Bonus", 
+                "🔄 Synchro Scraping",
+                "🚨 Changement de Saison"
+            ])
+            
+            # --- TAB 1 : CONFIGURATION ---
+            with tab1:
+                st.subheader("🎛️ Configuration du Barème")
+                try:
+                    current_config = supabase.table("Configuration").select("*").eq("id", "default_config").single().execute().data
+                except Exception:
+                    current_config = {}
+                
+                with st.form("form_points"):
+                    val_gagnant = st.number_input("Points pour le bon vainqueur", value=current_config.get("pts_gagnant", 3) if current_config else 3)
+                    val_ecart = st.number_input("Points pour le bon écart", value=current_config.get("pts_ecart", 2) if current_config else 2)
+                    val_seuil = st.number_input("Seuil de déclenchement du mode Osé (en %)", value=current_config.get("seuil_poursentage_ose", 20) if current_config else 20)
+                    val_mult = st.number_input("Multiplicateur Osé (ex: 2)", value=current_config.get("multiplicateur_ose", 2) if current_config else 2)
+                    
+                    if st.form_submit_button("💾 Sauvegarder"):
+                        supabase.table("Configuration").upsert({
+                            "id": "default_config", "pts_gagnant": val_gagnant, "pts_ecart": val_ecart, 
+                            "seuil_poursentage_ose": val_seuil, "multiplicateur_ose": val_mult
+                        }).execute()
+                        st.success("Barème enregistré !")
+                        st.rerun()
+
+            # --- TAB 2 : MATCHS MANUELS & CALCUL OSÉ GLOBAL ---
+            with tab2:
+                st.subheader("➕ Ajouter un Match manuellement")
+                with st.form("form_ajout_match"):
+                    eq_dom = st.text_input("Équipe Domicile")
+                    eq_ext = st.text_input("Équipe Extérieur")
+                    date_c = st.date_input("Date")
+                    heure_c = st.time_input("Heure")
+                    if st.form_submit_button("➕ Créer le match"):
+                        if eq_dom and eq_ext:
+                            dt_combine = datetime.combine(date_c, heure_c).isoformat()
+                            id_m = int(datetime.timestamp(datetime.combine(date_c, heure_c))) + random.randint(1, 1000)
+                            supabase.table("Matchs").insert({
+                                "id": id_m, "equipe_dom": eq_dom, "equipe_ext": eq_ext, "date_match": dt_combine, "score_dom": None, "score_ext": None, "statut": "NS"
+                            }).execute()
+                            st.success("Match créé de force !")
+                            st.rerun()
+                
+                st.markdown("---")
+                st.subheader("📝 Saisir le résultat d'un match & Distribuer les points")
+                try:
+                    tous_matchs = supabase.table("Matchs").select("*").order("date_match", desc=True).execute().data
+                    if tous_matchs:
+                        def format_match_choice(m):
+                            sc_d = m['score_dom'] if m['score_dom'] is not None else "?"
+                            sc_e = m['score_ext'] if m['score_ext'] is not None else "?"
+                            return f"{m['equipe_dom']} ({sc_d}) vs ({sc_e}) {m['equipe_ext']} - [{m['statut']}]"
+                        
+                        match_selectionne = st.selectbox("Sélectionner le match à mettre à jour :", options=tous_matchs, format_func=format_match_choice)
+                        
+                        if match_selectionne:
+                            with st.form(f"form_score_manual_{match_selectionne['id']}"):
+                                col_sc1, col_sc2 = st.columns(2)
+                                with col_sc1:
+                                    nouveau_score_dom = st.number_input(f"Score {match_selectionne['equipe_dom']}", min_value=0, value=match_selectionne['score_dom'] if match_selectionne['score_dom'] is not None else 0, step=1)
+                                with col_sc2:
+                                    nouveau_score_ext = st.number_input(f"Score {match_selectionne['equipe_ext']}", min_value=0, value=match_selectionne['score_ext'] if match_selectionne['score_ext'] is not None else 0, step=1)
+                                
+                                liste_statuts = ["NS", "FT", "LIVE"]
+                                statut_index = liste_statuts.index(match_selectionne['statut']) if match_selectionne['statut'] in liste_statuts else 1
+                                nouveau_statut = st.selectbox("Statut du match", options=liste_statuts, index=statut_index)
+                                
+                                valider_scores = st.form_submit_button("💾 1. Enregistrer le résultat & Clôturer le match")
+                                
+                                if valider_scores:
+                                    supabase.table("Matchs").update({
+                                        "score_dom": nouveau_score_dom, "score_ext": nouveau_score_ext, "statut": nouveau_statut
+                                    }).eq("id", match_selectionne['id']).execute()
+                                    st.success("Résultat enregistré en base de données !")
+                                    st.rerun()
+
+                            if match_selectionne['statut'] == "FT":
+                                st.warning(f"🚨 Ce match est terminé. Clique ci-dessous pour distribuer les points (Calcul Osé global inclus).")
+                                if st.button(f"🎯 Calculer et Distribuer les points pour {match_selectionne['equipe_dom']} vs {match_selectionne['equipe_ext']}", type="primary"):
+                                    with st.spinner("Calcul des scores en cours..."):
+                                        sc_dom = match_selectionne['score_dom']
+                                        sc_ext = match_selectionne['score_ext']
+                                        
+                                        if sc_dom is not None and sc_ext is not None:
+                                            vrai_gagnant_brut = "home" if sc_dom > sc_ext else ("away" if sc_dom < sc_ext else "draw")
+                                            vrai_ecart_points = abs(sc_dom - sc_ext)
+                                            
+                                            vraie_tranche = "1-6"
+                                            if 7 <= vrai_ecart_points <= 10: vraie_tranche = "7-10"
+                                            elif 11 <= vrai_ecart_points <= 15: vraie_tranche = "11-15"
+                                            elif 16 <= vrai_ecart_points <= 20: vraie_tranche = "16-20"
+                                            elif 21 <= vrai_ecart_points <= 30: vraie_tranche = "21-30"
+                                            elif 31 <= vrai_ecart_points <= 40: vraie_tranche = "31-40"
+                                            elif 41 <= vrai_ecart_points <= 50: vraie_tranche = "41-50"
+                                            elif vrai_ecart_points >= 51: vraie_tranche = "51+"
+                                            
+                                            pronos = supabase.table("Pronostics").select("user_id, gagnant_prevu, ecart_prevu").eq("match_id", match_selectionne['id']).execute().data
+                                            
+                                            compteur_updates = 0
+                                            if pronos:
+                                                total_pronos = len(pronos)
+                                                nb_parfaits = sum(1 for p in pronos if p['gagnant_prevu'] == vrai_gagnant_brut and p['ecart_prevu'] == vraie_tranche)
+                                                
+                                                pourcentage_parfait = (nb_parfaits / total_pronos) * 100 if total_pronos > 0 else 100
+                                                est_ose = pourcentage_parfait <= seuil_ose_cfg and nb_parfaits > 0
+                                                
+                                                for p in pronos:
+                                                    pts_gagnes = 0
+                                                    # 1. Calcul bon Vainqueur
+                                                    if p['gagnant_prevu'] == vrai_gagnant_brut:
+                                                        pts_gagnes += pts_gagnant_cfg
+                                                        # 2. Calcul bon Écart
+                                                        if p['ecart_prevu'] == vraie_tranche:
+                                                            pts_gagnes += pts_ecart_cfg
+                                                    
+                                                    # 3. Application du multiplicateur global à TOUS les points du match
+                                                    if est_ose and pts_gagnes > 0:
+                                                        pts_gagnes = pts_gagnes * mult_ose_cfg
+                                                    
+                                                    if pts_gagnes > 0:
+                                                        j_data = supabase.table("Joueurs").select("score").eq("id", p['user_id']).single().execute().data
+                                                        if j_data:
+                                                            nouveau_global = j_data.get('score', 0) + pts_gagnes
+                                                            supabase.table("Joueurs").update({"score": nouveau_global}).eq("id", p['user_id']).execute()
+                                                            compteur_updates += 1
+                                            
+                                            st.success(f"🎉 Points distribués ! {compteur_updates} joueurs mis à jour. (Bonus Osé global : {est_ose})")
+                                            st.balloons()
+                                            time.sleep(1)
+                                            st.rerun()
+                    else:
+                        st.info("Aucun match disponible.")
+                except Exception as e: st.error(f"Erreur : {e}")
+
+            # --- TAB 3 : QUESTIONS BONUS ---
+            with tab3:
+                st.subheader("📝 Créer une Question Bonus")
+                with st.form("form_bonus"):
+                    intitule = st.text_input("Intitulé de la question")
+                    choix = st.text_input("Choix possibles (séparés par un slash)", value="Oui / Non")
+                    pts_bonus = st.number_input("Points accordés", min_value=1, value=5)
+                    d_limite = st.date_input("Date limite")
+                    h_limite = st.time_input("Heure limite")
+                    
+                    if st.form_submit_button("🚀 Publier"):
+                        if intitule:
+                            dt_lim_combine = datetime.combine(d_limite, h_limite).isoformat()
+                            supabase.table("Questions_Bonus").insert({
+                                "question": intitule, "choix_reponse": choix, "date_limite": dt_lim_combine, "statut": "En cours", "points": pts_bonus
+                            }).execute()
+                            st.success("Question bonus en ligne !")
+                            st.rerun()
+                
+                st.markdown("---")
+                st.subheader("✅ Corriger et Valider une question bonus")
+                try:
+                    q_ouvertes = supabase.table("Questions_Bonus").select("*").eq("statut", "En cours").execute().data
+                    if q_ouvertes:
+                        q_choisie = st.selectbox("Sélectionner la question :", options=q_ouvertes, format_func=lambda x: f"{x['question']} ({x.get('points', 5)} pts)")
+                        options_validation = [opt.strip() for opt in q_choisie['choix_reponse'].split("/")] if q_choisie['choix_reponse'] else ["Oui", "Non"]
+                        bonne_rep = st.radio("Bonne réponse :", options=options_validation)
+                        
+                        if st.button("Clôturer et distribuer les points"):
+                            points_a_gagner = q_choisie.get('points', 5)
+                            reponses_joueurs = supabase.table("Réponses_Questions").select("user_id, reponse_joueur").eq("question_id", q_choisie['id']).execute().data
+                            
+                            compteur_gagnants = 0
+                            if reponses_joueurs:
+                                for r in reponses_joueurs:
+                                    if r['reponse_joueur'].strip() == bonne_rep.strip():
+                                        joueur_data = supabase.table("Joueurs").select("score").eq("id", r['user_id']).single().execute().data
+                                        if joueur_data:
+                                            nouveau_score = joueur_data.get('score', 0) + points_a_gagner
+                                            supabase.table("Joueurs").update({"score": nouveau_score}).eq("id", r['user_id']).execute()
+                                            compteur_gagnants += 1
+                            
+                            supabase.table("Questions_Bonus").update({"reponse_valide": bonne_rep, "statut": "Validé"}).eq("id", q_choisie['id']).execute()
+                            st.success(f"🎉 Validé ! {compteur_gagnants} joueur(s) récompensés.")
+                            st.balloons()
+                            time.sleep(1)
+                            st.rerun()
+                    else:
+                        st.write("Aucune question en cours de validation.")
+                except Exception as e: st.error(f"Erreur bonus : {e}")
+
+            # --- TAB 4 : SYNCHRO SCRAPING ---
+            with tab4:
+                st.subheader("🔄 Lanceur de Scraping Manuel")
+                st.write("Le système se met à jour tout seul pendant les matchs, mais tu peux forcer un scan global ici.")
+                if st.button("⚡ Lancer la Synchronisation"):
+                    with st.spinner("Scraping en cours..."):
+                        nb = verifier_et_importer_matchs()
+                        st.success(f"Terminé ! {nb} matchs traités avec succès via la méthode gratuite.")
+                        st.rerun()
+
+            # --- TAB 5 : CHANGEMENT DE SAISON ---
+            with tab5:
+                st.subheader("🚨 Zone de Danger : Reset de fin de Saison")
+                st.error("⚠️ Attention : Cette action va effacer définitivement tous les matchs, pronostics et questions bonus. Les scores repasseront à 0.")
+                
+                confirmation_secu = st.checkbox("Je confirme vouloir tout réinitialiser pour la nouvelle saison.", key="danger_zone_confirm")
+                
+                if st.button("🔥 Réinitialiser l'application", type="primary", disabled=not confirmation_secu):
+                    with st.spinner("Nettoyage complet..."):
+                        try:
+                            supabase.table("Pronostics").delete().not_.is_("id", "null").execute()
+                            supabase.table("Réponses_Questions").delete().not_.is_("id", "null").execute()
+                            supabase.table("Matchs").delete().not_.is_("id", "null").execute()
+                            supabase.table("Questions_Bonus").delete().not_.is_("id", "null").execute()
+                            supabase.table("Joueurs").update({"score": 0}).not_.is_("id", "null").execute()
+                            st.success("🎉 Reset saison terminé !")
+                            st.balloons()
+                            time.sleep(1)
+                            st.rerun()
+                        except Exception as e: st.error(f"Erreur reset : {e}").session_state.is_admin:
         with onglets_principaux[3]:
             st.title("⚙️ Console d'Administration Privée")
             
