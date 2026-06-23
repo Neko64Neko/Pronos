@@ -357,11 +357,10 @@ else:
         </div>
         """, unsafe_allow_html=True)
 
-        # --- 3. BLOC CLASSEMENT AVEC FOND COLORÉ ET STYLE FIGMA ---
+# --- 3. BLOC CLASSEMENT AVEC FOND COLORÉ ET STYLE FIGMA ---
         st.subheader("📊 Classement Général de la Communauté")
         
         if tous_les_joueurs:
-            # Construction du code HTML pour un tableau de classement sur fond blanc/gris personnalisé
             lignes_html = ""
             for index, joueur in enumerate(tous_les_joueurs):
                 rang = index + 1
@@ -371,20 +370,18 @@ else:
                 elif rang == 3: prefixe_rang = "🥉 3e"
                 else: prefixe_rang = f"{rang}e"
                 
-                # Couleur de ligne spéciale si c'est le joueur connecté
-                style_ligne = "background-color: #e3eaf2; font-weight: bold; border-left: 5px solid #1e3a8a;" if joueur['id'] == st.session_state.user_id else ""
-                pseudo_affiche = f"{joueur['pseudo']} (Toi)" if joueur['id'] == st.session_state.user_id else joueur['pseudo']
+                # Style spécial pour le joueur connecté
+                if joueur['id'] == st.session_state.user_id:
+                    style_ligne = "background-color: #e3eaf2; font-weight: bold; border-left: 5px solid #1e3a8a;"
+                    pseudo_affiche = f"{joueur['pseudo']} (Toi)"
+                else:
+                    style_ligne = ""
+                    pseudo_affiche = joueur['pseudo']
                 
-                lignes_html += f"""
-                <tr style="{style_ligne} border-bottom: 1px solid #e2e8f0;">
-                    <td style="padding: 12px; text-align: left;">{prefixe_rang}</td>
-                    <td style="padding: 12px; text-align: left;">{pseudo_affiche}</td>
-                    <td style="padding: 12px; text-align: right; font-weight: bold; color: #2d3748;">{joueur['score']} pts</td>
-                </tr>
-                """
+                lignes_html += f'<tr style="{style_ligne} border-bottom: 1px solid #e2e8f0;"><td style="padding: 12px; text-align: left;">{prefixe_rang}</td><td style="padding: 12px; text-align: left;">{pseudo_affiche}</td><td style="padding: 12px; text-align: right; font-weight: bold; color: #2d3748;">{joueur["score"]} pts</td></tr>'
             
-            # Injection du tableau complet avec un fond global gris très doux pour la zone de classement
-            st.markdown(f"""
+            # Assemblage final sans aucun saut de ligne parasite pour forcer l'affichage HTML propre
+            tableau_complet = f"""
             <div style="background-color: #f8fafc; border-radius: 12px; padding: 15px; border: 1px solid #e2e8f0;">
                 <table style="width: 100%; border-collapse: collapse; font-family: sans-serif;">
                     <thead>
@@ -399,7 +396,9 @@ else:
                     </tbody>
                 </table>
             </div>
-            """, unsafe_allow_html=True)
+            """.replace("\n", "")  # La feinte magique pour Streamlit
+            
+            st.markdown(tableau_complet, unsafe_allow_html=True)
             
         else:
             st.info("Le classement est vide pour le moment.")
