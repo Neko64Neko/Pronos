@@ -323,36 +323,43 @@ else:
             rang_joueur = "-"
             stats_bons_gagnants, stats_parfaits, stats_oses = 0, 0, 0
 
-# --- 2. BANDEAU DE PROFIL RESPONSIVE ET COLORÉ (STYLE FIGMA) ---
+# --- 2. BANDEAU DE PROFIL EN BULLES RESPONSIVES (STYLE FIGMA) ---
         suffixe = "er" if rang_joueur == 1 else "e"
         
         st.markdown(f"""
-        <div style="background-color: #f0f4f8; border-radius: 12px; padding: 15px; border: 1px solid #d3e2f2; margin-bottom: 25px;">
-            <div style="display: flex; justify-content: space-around; align-items: center; flex-wrap: wrap; gap: 15px;">
-                <div style="text-align: center; min-width: 80px; flex: 1;">
-                    <h1 style="margin:0; font-size: 32px;">🏃‍♂️</h1>
-                    <b style="font-size: 15px; color:#1e3a8a;">{st.session_state.pseudo}</b>
+        <div style="background-color: #f0f4f8; border-radius: 16px; padding: 20px; border: 1px solid #d3e2f2; margin-bottom: 25px;">
+            <div style="display: flex; justify-content: center; align-items: stretch; flex-wrap: wrap; gap: 12px;">
+                
+                <div style="background-color: #ffffff; border-radius: 12px; padding: 12px; min-width: 105px; flex: 1; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.04); border: 1px solid #e2e8f0; display: flex; flex-direction: column; justify-content: center;">
+                    <h1 style="margin:0; font-size: 28px;">🏃‍♂️</h1>
+                    <b style="font-size: 14px; color:#1e3a8a; margin-top: 5px; word-break: break-word;">{st.session_state.pseudo}</b>
                 </div>
-                <div style="text-align: center; min-width: 80px; flex: 1;">
-                    <span style="color: #627d98; font-size: 13px; display: block;">🏆 Rang</span>
-                    <h3 style="margin:5px 0 0 0; color:#1e3a8a; font-size: 20px;">{rang_joueur}{suffixe} <span style="font-size:11px; color:#627d98;">/{len(tous_les_joueurs)}</span></h3>
+                
+                <div style="background-color: #ffffff; border-radius: 12px; padding: 12px; min-width: 105px; flex: 1; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.04); border: 1px solid #e2e8f0; display: flex; flex-direction: column; justify-content: center;">
+                    <span style="color: #627d98; font-size: 12px; font-weight: 500;">🏆 Rang</span>
+                    <h3 style="margin:5px 0 0 0; color:#1e3a8a; font-size: 20px; font-weight: bold;">{rang_joueur}{suffixe}<span style="font-size:11px; color:#627d98; font-weight: normal;">/{len(tous_les_joueurs)}</span></h3>
                 </div>
-                <div style="text-align: center; min-width: 80px; flex: 1;">
-                    <span style="color: #627d98; font-size: 13px; display: block;">🎯 Score Total</span>
-                    <h3 style="margin:5px 0 0 0; color:#1e3a8a; font-size: 20px;">{joueur_connecte.get('score', 0)} <span style="font-size:11px; color:#627d98;">pts</span></h3>
+                
+                <div style="background-color: #ffffff; border-radius: 12px; padding: 12px; min-width: 105px; flex: 1; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.04); border: 1px solid #e2e8f0; display: flex; flex-direction: column; justify-content: center;">
+                    <span style="color: #627d98; font-size: 12px; font-weight: 500;">🎯 Score Total</span>
+                    <h3 style="margin:5px 0 0 0; color:#1e3a8a; font-size: 20px; font-weight: bold;">{joueur_connecte.get('score', 0)}<span style="font-size:11px; color:#627d98; font-weight: normal;"> pts</span></h3>
                 </div>
-                <div style="text-align: center; min-width: 95px; flex: 1;">
-                    <span style="color: #2e7d32; font-size: 13px; display: block; font-weight: 500;">✅ Vainqueurs seuls</span>
-                    <h2 style="margin:5px 0 0 0; color: #2e7d32; font-size: 26px;">{stats_bons_gagnants}</h2>
+                
+                <div style="background-color: #ffffff; border-radius: 12px; padding: 12px; min-width: 120px; flex: 1; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.04); border: 1px solid #e2e8f0; display: flex; flex-direction: column; justify-content: center;">
+                    <span style="color: #43a047; font-size: 12px; font-weight: bold;">✅ Vainqueurs seuls</span>
+                    <h2 style="margin:5px 0 0 0; color: #43a047; font-size: 28px; font-weight: bold;">{stats_bons_gagnants}</h2>
                 </div>
-                <div style="text-align: center; min-width: 110px; flex: 1;">
-                    <span style="color: #1b5e20; font-size: 13px; display: block; font-weight: 500;">⭐ Vainqueur + Écart</span>
-                    <h2 style="margin:5px 0 0 0; color: #1b5e20; font-size: 26px;">{stats_parfaits}</h2>
+                
+                <div style="background-color: #ffffff; border-radius: 12px; padding: 12px; min-width: 130px; flex: 1; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.04); border: 1px solid #e2e8f0; display: flex; flex-direction: column; justify-content: center;">
+                    <span style="color: #0a3613; font-size: 12px; font-weight: bold;">⭐ Vainqueur + Écart</span>
+                    <h2 style="margin:5px 0 0 0; color: #0a3613; font-size: 28px; font-weight: bold;">{stats_parfaits}</h2>
                 </div>
-                <div style="text-align: center; min-width: 95px; flex: 1;">
-                    <span style="color: #b7791f; font-size: 13px; display: block; font-weight: 500;">🔥 Pronos Osés</span>
-                    <h2 style="margin:5px 0 0 0; color: #b7791f; font-size: 26px;">{stats_oses}</h2>
+                
+                <div style="background-color: #ffffff; border-radius: 12px; padding: 12px; min-width: 110px; flex: 1; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.04); border: 1px solid #e2e8f0; display: flex; flex-direction: column; justify-content: center;">
+                    <span style="color: #b7791f; font-size: 12px; font-weight: bold;">🔥 Pronos Osés</span>
+                    <h2 style="margin:5px 0 0 0; color: #b7791f; font-size: 28px; font-weight: bold;">{stats_oses}</h2>
                 </div>
+                
             </div>
         </div>
         """.replace("\n", ""), unsafe_allow_html=True)
