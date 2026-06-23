@@ -406,14 +406,13 @@ else:
                     st.markdown("---")
             else: st.info("Aucun match n'a encore débuté.")
         except Exception as e: st.error(f"Erreur matchs clos : {e}")
-    # =====================================================================
-    # ONGLET 4 : PANEL ADMINISTRATION
+# =====================================================================
+    # ONGLET 4 : PANEL ADMINISTRATION COMPLET (SANS ERREUR D'INDENTATION)
     # =====================================================================
     if st.session_state.is_admin:
         with onglets_principaux[3]:
             st.title("⚙️ Console d'Administration Privée")
             
-            # ICI : Ajout du 5ème onglet dans la liste
             tab1, tab2, tab3, tab4, tab5 = st.tabs([
                 "🎯 Configuration", 
                 "➕ Matchs Manuels", 
@@ -444,8 +443,58 @@ else:
                         st.success("Barème enregistré !")
                         st.rerun()
 
-            # --- TAB 2 : MATCHS MANUELS & SCORES ---
-            # BOUTON DE DISTRIBUTION DES POINTS AVEC CALCUL DU MODE OSÉ
+            # --- TAB 2 : MATCHS MANUELS & SCORES & DISTRIBUTION ---
+            with tab2:
+                st.subheader("➕ Ajouter un Match manuellement")
+                with st.form("form_ajout_match"):
+                    eq_dom = st.text_input("Équipe Domicile")
+                    eq_ext = st.text_input("Équipe Extérieur")
+                    date_c = st.date_input("Date")
+                    heure_c = st.time_input("Heure")
+                    if st.form_submit_button("➕ Créer le match"):
+                        if eq_dom and eq_ext:
+                            dt_combine = datetime.combine(date_c, heure_c).isoformat()
+                            id_m = int(datetime.timestamp(datetime.combine(date_c, heure_c))) + random.randint(1, 1000)
+                            supabase.table("Matchs").insert({
+                                "id": id_m, "equipe_dom": eq_dom, "equipe_ext": eq_ext, "date_match": dt_combine, "score_dom": None, "score_ext": None, "statut": "NS"
+                            }).execute()
+                            st.success("Match créé de force !")
+                            st.rerun()
+                
+                st.markdown("---")
+                st.subheader("📝 Saisir le résultat d'un match & Distribuer les points")
+                try:
+                    tous_matchs = supabase.table("Matchs").select("*").order("date_match", desc=True).execute().data
+                    if tous_matchs:
+                        def format_match_choice(m):
+                            sc_d = m['score_dom'] if m['score_dom'] is not None else "?"
+                            sc_e = m['score_ext'] if m['score_ext'] is not None else "?"
+                            return f"{m['equipe_dom']} ({sc_d}) vs ({sc_e}) {m['equipe_ext']} - [{m['statut']}]"
+                        
+                        match_selectionne = st.selectbox("Sélectionner le match à mettre à jour :", options=tous_matchs, format_func=format_match_choice)
+                        
+                        if match_selectionne:
+                            with st.form(f"form_score_manual_{match_selectionne['id']}"):
+                                col_sc1, col_sc2 = st.columns(2)
+                                with col_sc1:
+                                    nouveau_score_dom = st.number_input(f"Score {match_selectionne['equipe_dom']}", min_value=0, value=match_selectionne['score_dom'] if match_selectionne['score_dom'] is not None else 0, step=1)
+                                with col_sc2:
+                                    nouveau_score_ext = st.number_input(f"Score {match_selectionne['equipe_ext']}", min_value=0, value=match_selectionne['score_ext'] if match_selectionne['score_ext'] is not None else 0, step=1)
+                                
+                                liste_statuts = ["NS", "FT", "LIVE"]
+                                statut_index = liste_statuts.index(match_selectionne['statut']) if match_selectionne['statut'] in liste_statuts else 1
+                                nouveau_statut = st.selectbox("Statut du match", options=liste_statuts, index=statut_index)
+                                
+                                valider_scores = st.form_submit_button("💾 1. Enregistrer le résultat & Clôturer le match")
+                                
+                                if valider_scores:
+                                    supabase.table("Matchs").update({
+                                        "score_dom": nouveau_score_dom, "score_ext": nouveau_score_ext, "statut": nouveau_statut
+                                    }).eq("id", match_selectionne['id']).execute()
+                                    st.success("Résultat enregistré en base de données !")
+                                    st.rerun()
+
+                            # Alignement parfait pour le bouton de calcul des points
                             if match_selectionne['statut'] == "FT":
                                 st.warning(f"🚨 Ce match est terminé. Clique ci-dessous pour distribuer les points (Calcul Osé inclus).")
                                 if st.button(f"🎯 Calculer et Distribuer les points pour {match_selectionne['equipe_dom']} vs {match_selectionne['equipe_ext']}", type="primary"):
@@ -457,7 +506,6 @@ else:
                                             vrai_gagnant_brut = "home" if sc_dom > sc_ext else ("away" if sc_dom < sc_ext else "draw")
                                             vrai_ecart_points = abs(sc_dom - sc_ext)
                                             
-                                            # Calcul de la tranche d'écart réelle
                                             vraie_tranche = "1-6"
                                             if 7 <= vrai_ecart_points <= 10: vraie_tranche = "7-10"
                                             elif 11 <= vrai_ecart_points <= 15: vraie_tranche = "11-15"
@@ -467,16 +515,13 @@ else:
                                             elif 41 <= vrai_ecart_points <= 50: vraie_tranche = "41-50"
                                             elif vrai_ecart_points >= 51: vraie_tranche = "51+"
                                             
-                                            # Récupérer tous les pronos
                                             pronos = supabase.table("Pronostics").select("user_id, gagnant_prevu, ecart_prevu").eq("match_id", match_selectionne['id']).execute().data
                                             
                                             compteur_updates = 0
                                             if pronos:
                                                 total_pronos = len(pronos)
-                                                # Compter combien ont eu le score parfait
                                                 nb_parfaits = sum(1 for p in pronos if p['gagnant_prevu'] == vrai_gagnant_brut and p['ecart_prevu'] == vraie_tranche)
                                                 
-                                                # Détermination si le bonus Osé s'applique
                                                 pourcentage_parfait = (nb_parfaits / total_pronos) * 100 if total_pronos > 0 else 100
                                                 est_ose = pourcentage_parfait <= seuil_ose_cfg and nb_parfaits > 0
                                                 
@@ -486,7 +531,6 @@ else:
                                                         pts_gagnes += pts_gagnant_cfg
                                                         if p['ecart_prevu'] == vraie_tranche:
                                                             pts_gagnes += pts_ecart_cfg
-                                                            # Application du multiplicateur OSÉ s'il est validé
                                                             if est_ose:
                                                                 pts_gagnes = pts_gagnes * mult_ose_cfg
                                                     
@@ -497,62 +541,10 @@ else:
                                                             supabase.table("Joueurs").update({"score": nouveau_global}).eq("id", p['user_id']).execute()
                                                             compteur_updates += 1
                                             
-                                            st.success(f"🎉 Points distribués ! {compteur_updates} joueurs mis à jour. (Bonus Osé appliqué : {est_ose})")
+                                            st.success(f"🎉 Points distribués ! {compteur_updates} joueurs mis à jour. (Bonus Osé : {est_ose})")
                                             st.balloons()
                                             time.sleep(1)
                                             st.rerun()
-
-                            # BOUTON DE DISTRIBUTION DES POINTS (Hors du formulaire pour éviter les conflits de soumission)
-                            if match_selectionne['statut'] == "FT":
-                                st.warning(f"🚨 Ce match est terminé. Clique ci-dessous pour calculer et attribuer les points aux joueurs.")
-                                if st.button(f"🎯 Calculer et Distribuer les points pour {match_selectionne['equipe_dom']} vs {match_selectionne['equipe_ext']}", type="primary"):
-                                    with st.spinner("Calcul des scores en cours..."):
-                                        sc_dom = match_selectionne['score_dom']
-                                        sc_ext = match_selectionne['score_ext']
-                                        
-                                        if sc_dom is not None and sc_ext is not None:
-                                            # 1. Déterminer le résultat réel
-                                            vrai_gagnant_brut = "home" if sc_dom > sc_ext else ("away" if sc_dom < sc_ext else "draw")
-                                            vrai_ecart_points = abs(sc_dom - sc_ext)
-                                            
-                                            # Trouver la tranche d'écart réelle
-                                            vraie_tranche = "1-6"
-                                            if 7 <= vrai_ecart_points <= 10: vraie_tranche = "7-10"
-                                            elif 11 <= vrai_ecart_points <= 15: vraie_tranche = "11-15"
-                                            elif 16 <= vrai_ecart_points <= 20: vraie_tranche = "16-20"
-                                            elif 21 <= vrai_ecart_points <= 30: vraie_tranche = "21-30"
-                                            elif 31 <= vrai_ecart_points <= 40: vraie_tranche = "31-40"
-                                            elif 41 <= vrai_ecart_points <= 50: vraie_tranche = "41-50"
-                                            elif vrai_ecart_points >= 51: vraie_tranche = "51+"
-                                            
-                                            # 2. Récupérer tous les pronos pour ce match
-                                            pronos = supabase.table("Pronostics").select("user_id, gagnant_prevu, ecart_prevu").eq("match_id", match_selectionne['id']).execute().data
-                                            
-                                            compteur_updates = 0
-                                            if pronos:
-                                                for p in pronos:
-                                                    pts_gagnes = 0
-                                                    # Calcul bon vainqueur
-                                                    if p['gagnant_prevu'] == vrai_gagnant_brut:
-                                                        pts_gagnes += pts_gagnant_cfg
-                                                        # Calcul bon écart (uniquement si le vainqueur est bon)
-                                                        if p['ecart_prevu'] == vraie_tranche:
-                                                            pts_gagnes += pts_ecart_cfg
-                                                    
-                                                    # Si le joueur a marqué des points, on met à jour son profil
-                                                    if pts_gagnes > 0:
-                                                        j_data = supabase.table("Joueurs").select("score").eq("id", p['user_id']).single().execute().data
-                                                        if j_data:
-                                                            nouveau_global = j_data.get('score', 0) + pts_gagnes
-                                                            supabase.table("Joueurs").update({"score": nouveau_global}).eq("id", p['user_id']).execute()
-                                                            compteur_updates += 1
-                                            
-                                            st.success(f"🎉 Points distribués ! {compteur_updates} joueurs ont vu leur score augmenter.")
-                                            st.balloons()
-                                            time.sleep(1)
-                                            st.rerun()
-                                        else:
-                                            st.error("Impossible de calculer : veuillez d'abord enregistrer un score chiffré pour ce match.")
                     else:
                         st.info("Aucun match disponible.")
                 except Exception as e: st.error(f"Erreur : {e}")
@@ -616,22 +608,20 @@ else:
                         st.success(f"Terminé ! {nb} matchs traités avec succès via la méthode gratuite.")
                         st.rerun()
 
-            # --- TAB 5 : CHANGEMENT DE SAISON (RETROUVÉ !) ---
+            # --- TAB 5 : CHANGEMENT DE SAISON ---
             with tab5:
                 st.subheader("🚨 Zone de Danger : Reset de fin de Saison")
-                st.error("⚠️ Attention : Cette action va effacer définitivement tous les matchs, pronostics et questions bonus de la base de données Supabase. Les profils des joueurs seront conservés mais leurs scores repasseront à 0.")
+                st.error("⚠️ Attention : Cette action va effacer définitivement tous les matchs, pronostics et questions bonus de la base de données. Les profils des joueurs seront conservés mais leurs scores repasseront à 0.")
                 
                 confirmation_secu = st.checkbox("Je confirme vouloir tout réinitialiser pour la nouvelle saison.", key="danger_zone_confirm")
                 
                 if st.button("🔥 Réinitialiser l'application pour la nouvelle saison", type="primary", disabled=not confirmation_secu):
                     with st.spinner("Nettoyage complet de la base de données..."):
                         try:
-                            # Purge complète des tables liées à la saison passée
                             supabase.table("Pronostics").delete().not_.is_("id", "null").execute()
                             supabase.table("Réponses_Questions").delete().not_.is_("id", "null").execute()
                             supabase.table("Matchs").delete().not_.is_("id", "null").execute()
                             supabase.table("Questions_Bonus").delete().not_.is_("id", "null").execute()
-                            # Remise à zéro des scores mais conservation des utilisateurs
                             supabase.table("Joueurs").update({"score": 0}).not_.is_("id", "null").execute()
                             
                             st.success("🎉 L'application a été nettoyée avec succès pour la prochaine saison !")
