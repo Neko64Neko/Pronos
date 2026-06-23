@@ -22,7 +22,7 @@ cookie_manager = stx.CookieManager()
 # =====================================================================
 
 def verifier_et_importer_matchs():
-    """Version force brute : scanne L'Équipe et TheSportsDB sur plusieurs années."""
+    """Version robuste : scanne L'Équipe et dynamiquement TheSportsDB selon la saison en cours."""
     matchs_traites = 0
     url_scraping = "https://www.lequipe.fr/Rugby/Top-14/page-calendrier-resultats"
     
@@ -46,27 +46,32 @@ def verifier_et_importer_matchs():
                     match_id = abs(hash(f"{eq_dom}_{eq_ext}")) % 10000000
                     supabase.table("Matchs").upsert({
                         "id": match_id, "equipe_dom": eq_dom, "equipe_ext": eq_ext,
-                        "date_match": (datetime.utcnow() + timedelta(days=2)).isoformat(), # Date forcée dans le futur pour le prono
+                        "date_match": (datetime.utcnow() + timedelta(days=2)).isoformat(),
                         "score_dom": sc_dom, "score_ext": sc_ext, "statut": statut
                     }).execute()
                     matchs_traites += 1
                 except Exception: continue
     except Exception: pass
 
-    # 2. Sécurité TheSportsDB : On teste 2025 ET 2026 pour être sûr de capter la finale
+    # 2. Sécurité TheSportsDB - CALCUL DYNAMIQUE DE LA SAISON
     if matchs_traites == 0:
-        for annee in ["2025", "2026"]:
+        maintenant = datetime.now()
+        # Si on est entre janvier et juillet, la saison a démarré l'année précédente.
+        # Si on est entre août et décembre, la saison démarre cette année.
+        annee_saison_courante = maintenant.year - 1 if maintenant.month < 8 else maintenant.year
+        
+        # On balaye la saison précédente (au cas où des matchs soient en retard) et la saison courante
+        annees_a_tester = [str(annee_saison_courante - 1), str(annee_saison_courante)]
+        
+        for annee in annees_a_tester:
             try:
                 url_tsdb = f"https://www.thesportsdb.com/api/v1/json/3/eventsseason.php?id=4413&s={annee}"
                 res = requests.get(url_tsdb, timeout=10).json()
                 if res.get("events"):
                     for event in res["events"]:
-                        # On cherche spécifiquement si c'est un match de phase finale ou si les scores sont vides
                         m_id = int(event["idEvent"])
                         statut = "LIVE" if event.get("strProgress") == "In Progress" else ("FT" if event.get("strStatus") == "Match Finished" else "NS")
                         
-                        # FORCE DATE FUTURE : Si le match n'a pas encore de score, on le pousse artificiellement dans le futur 
-                        # pour contourner le filtre d'affichage Streamlit
                         if event["intHomeScore"] is None:
                             date_match = (datetime.utcnow() + timedelta(days=5)).isoformat()
                         else:
