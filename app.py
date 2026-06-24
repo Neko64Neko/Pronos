@@ -240,7 +240,112 @@ else:
         pts_gagnant_cfg, pts_ecart_cfg, seuil_ose_cfg, mult_ose_cfg = 3, 2, 20, 2
 
     pts_parfait_cfg = pts_gagnant_cfg + pts_ecart_cfg
+# --- APPLICATION PRINCIPALE CONNECTÉE ---
+else:
+    # --- 1. INITIALISATION DE L'ONGLET ACTIF ---
+    if "onglet_actif" not in st.session_state:
+        st.session_state.onglet_actif = "📊"
 
+    # --- 2. CONFIGURATION DES ONGLETS DE NAVIGATION ---
+    icones_navigation = ["📊", "🏉", "📅"]
+    if st.session_state.is_admin:
+        icones_navigation.append("⚙️")
+
+    # --- 3. INJECTION DU CSS POUR VERROUILLER LE BANDEAU EN HAUT SUR TOUTE LA LARGEUR ---
+    st.markdown("""
+    <style>
+        /* Supprime les marges de l'application pour coller le bandeau tout en haut */
+        .main .block-container {
+            padding-top: 0px !important;
+            max-width: 100% !important;
+        }
+        
+        /* Cible le premier st.radio de la page (notre navigation) */
+        div[data-testid="stRadio"] {
+            position: sticky !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            margin-left: calc(-50vw + 50%) !important; /* Astuce pour forcer le plein écran même dans un conteneur centré */
+            background-color: #ffffff !important;
+            padding: 12px 20px !important;
+            z-index: 999999 !important;
+            border-bottom: 2px solid #e2e8f0 !important;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05) !important;
+        }
+        
+        /* Masque le titre du widget */
+        div[data-testid="stRadio"] label[data-testid="stWidgetLabel"] {
+            display: none !important;
+        }
+
+        /* Aligne horizontalement les boutons sur une seule ligne stricte */
+        div[data-testid="stRadio"] div[role="radiogroup"] {
+            display: flex !important;
+            flex-direction: row !important;
+            flex-wrap: nowrap !important;
+            justify-content: space-around !important;
+            width: 100% !important;
+            gap: 10px !important;
+        }
+
+        /* Donne un look de gros onglets tactiles parfaits pour smartphone */
+        div[data-testid="stRadio"] div[role="radiogroup"] label {
+            flex: 1 !important;
+            text-align: center !important;
+            padding: 12px 0 !important;
+            background-color: #f1f5f9 !important;
+            border: 1px solid #cbd5e1 !important;
+            border-radius: 10px !important;
+            margin: 0 !important;
+            display: block !important;
+            cursor: pointer !important;
+        }
+
+        /* Supprime le petit point radio rond natif */
+        div[data-testid="stRadio"] div[role="radiogroup"] label div[data-testid="stMarkdownContainer"]::before {
+            display: none !important;
+        }
+
+        /* Colore magnifiquement l'onglet sélectionné en Bleu Top 14 */
+        div[data-testid="stRadio"] div[role="radiogroup"] label[data-checked="true"] {
+            background-color: #1e3a8a !important;
+            color: #ffffff !important;
+            border-color: #1e3a8a !important;
+            font-weight: bold !important;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+
+    # --- 4. AFFICHAGE DU BANDEAU DE NAVIGATION (PLUGGING EN HAUT) ---
+    try:
+        index_defaut = icones_navigation.index(st.session_state.onglet_actif)
+    except ValueError:
+        index_defaut = 0
+
+    choix_onglet = st.radio(
+        "MenuPrincipal",
+        options=icones_navigation,
+        index=index_defaut,
+        horizontal=True,
+        key="radio_nav_bar"
+    )
+
+    # Déclencheur ultra-rapide si clic détecté
+    if choix_onglet != st.session_state.onglet_actif:
+        st.session_state.onglet_actif = choix_onglet
+        st.rerun()
+
+    # --- 5. EN-TÊTE ÉPURÉ AVEC BOUTON DÉCONNEXION (Placé juste en dessous du menu) ---
+    col_vide, col_deco = st.columns([4, 1])
+    with col_deco:
+        if st.button("🚪 Déconnexion", key="btn_logout", use_container_width=True):
+            st.session_state.user_id = None
+            st.session_state.is_admin = False
+            st.session_state.pseudo = ""
+            st.rerun()
+            
+    st.markdown("---") # Ligne de séparation sous le menu et la déconnexion
 
     # =====================================================================
     # CONTENU ONGLET 1 : ACCUEIL - PROFIL & CLASSEMENT GÉNÉRAL
@@ -752,90 +857,3 @@ else:
                     except Exception as e: st.error(f"Erreur reset : {e}")
 
 
-# =====================================================================
-    # --- 5. BARRE DE NAVIGATION COMMUNE (ST.RADIO CAPSULE EN HAUT) ---
-    # =====================================================================
-    
-    # 1. Injection du CSS pour transformer st.radio en barre d'onglets moderne TOUT EN HAUT
-    st.markdown("""
-    <style>
-        /* Supprime les marges inutiles en haut pour coller les onglets */
-        .main .block-container {
-            padding-top: 15px !important;
-            padding-bottom: 40px !important;
-        }
-        
-        /* Cible le st.radio de navigation et le fixe tout en haut de l'application */
-        div[data-testid="stRadio"] {
-            position: sticky !important;
-            top: 0 !important;
-            left: 0 !important;
-            width: 100% !important;
-            background-color: #ffffff !important;
-            padding: 10px 0px !important;
-            z-index: 999999 !important;
-            border-bottom: 1px solid #e2e8f0 !important;
-            margin-bottom: 20px !important;
-        }
-        
-        /* Masque le titre "Navigation" du st.radio */
-        div[data-testid="stRadio"] label[data-testid="stWidgetLabel"] {
-            display: none !important;
-        }
-
-        /* Aligne horizontalement les options sur une seule ligne sans retour à la ligne */
-        div[data-testid="stRadio"] div[role="radiogroup"] {
-            display: flex !important;
-            flex-direction: row !important;
-            flex-wrap: nowrap !important;
-            justify-content: space-around !important;
-            width: 100% !important;
-            gap: 6px !important;
-        }
-
-        /* Donne un look de boutons/onglets designs et tactiles */
-        div[data-testid="stRadio"] div[role="radiogroup"] label {
-            flex: 1 !important;
-            text-align: center !important;
-            padding: 10px 0 !important;
-            background-color: #f1f5f9 !important;
-            border: 1px solid #cbd5e1 !important;
-            border-radius: 8px !important;
-            margin: 0 !important;
-            display: block !important;
-            cursor: pointer !important;
-        }
-
-        /* Supprime le petit bouton radio rond natif de Streamlit */
-        div[data-testid="stRadio"] div[role="radiogroup"] label div[data-testid="stMarkdownContainer"]::before {
-            display: none !important;
-        }
-
-        /* Style optionnel : change la couleur de fond quand on clique/sélectionne un onglet */
-        div[data-testid="stRadio"] div[role="radiogroup"] label[data-checked="true"] {
-            background-color: #1e3a8a !important;
-            color: white !important;
-            border-color: #1e3a8a !important;
-        }
-    </style>
-    """, unsafe_allow_html=True)
-
-    # 2. Récupération de l'index actif pour la cohérence visuelle
-    try:
-        index_defaut = icones_navigation.index(st.session_state.onglet_actif)
-    except ValueError:
-        index_defaut = 0
-
-    # 3. Le st.radio horizontal (Placé tout en bas du script, mais poussé graphiquement tout en haut !)
-    choix_onglet = st.radio(
-        "Navigation",
-        options=icones_navigation,
-        index=index_defaut,
-        horizontal=True,
-        key="radio_nav_bar"
-    )
-
-    # 4. Changement d'onglet instantané au clic
-    if choix_onglet != st.session_state.onglet_actif:
-        st.session_state.onglet_actif = choix_onglet
-        st.rerun()
