@@ -228,52 +228,6 @@ else:
         icones_navigation.append("⚙️")
 
 # --- 3. INJECTION DU CODE CSS ULTRA-CIBLÉ POUR BARRE MOBILE HORIZONTALE ---
-    st.markdown("""
-    <style>
-        /* Laisse de la place en bas pour le contenu */
-        .main .block-container {
-            padding-bottom: 110px !important;
-        }
-        
-        /* Conteneur de la barre fixé tout en bas */
-        div.barre-mobile {
-            position: fixed !important;
-            bottom: 0 !important;
-            left: 0 !important;
-            width: 100% !important;
-            background-color: #ffffff !important;
-            border-top: 1px solid #e2e8f0 !important;
-            padding: 10px !important;
-            box-shadow: 0 -4px 15px rgba(0,0,0,0.1) !important;
-            z-index: 999999 !important;
-        }
-
-        /* FORCE l'alignement horizontal de TOUT ce qui est mis dans la barre mobile */
-        div.barre-mobile > div[data-testid="stHorizontalBlock"] {
-            display: flex !important;
-            flex-direction: row !important;
-            flex-wrap: nowrap !important;
-            justify-content: space-around !important;
-            align-items: center !important;
-            width: 100% !important;
-        }
-
-        /* Force chaque colonne Streamlit à ne pas occuper 100% de largeur sur mobile */
-        div.barre-mobile div[data-testid="column"] {
-            flex: 1 !important;
-            min-width: 0 !important;
-            width: auto !important;
-            margin-bottom: 0px !important;
-        }
-        
-        /* Donne un look d'onglet aux boutons */
-        div.barre-mobile button {
-            border: 1px solid #e2e8f0 !important;
-            border-radius: 8px !important;
-            padding: 8px 0px !important;
-        }
-    </style>
-    """, unsafe_allow_html=True)
 
     # Récupération globale de la configuration pour les barèmes
     try:
