@@ -753,24 +753,49 @@ else:
 
 
 # =====================================================================
-    # --- 5. LA BARRE DE NAVIGATION COMMUNE (VERSION BOUTONS INSTANTANÉS) ---
+    # --- 5. BARRE DE NAVIGATION COMMUNE (ANT-DESIGN COMPONENT) ---
     # =====================================================================
-    
-    # On ouvre la div fixe stylisée par notre CSS personnalisé
-    st.markdown('<div class="barre-mobile">', unsafe_allow_html=True)
-    
-    # On génère les colonnes Streamlit à l'intérieur de cette div
-    cols_nav = st.columns(len(icones_navigation))
+    import streamlit_antd_components as sac
 
-    for idx, icone in enumerate(icones_navigation):
-        with cols_nav[idx]:
-            est_actif = st.session_state.onglet_actif == icone
-            label_bouton = f"● {icone}" if est_actif else icone
-            
-            # C'est un vrai bouton Streamlit : la navigation redevient instantanée
-            if st.button(label_bouton, key=f"nav_mob_{icone}", use_container_width=True):
-                st.session_state.onglet_actif = icone
-                st.rerun()
+    # Enrobage CSS minimal uniquement pour fixer le composant tout en bas de l'écran
+    st.markdown("""
+    <style>
+        .main .block-container {
+            padding-bottom: 80px !important;
+        }
+        /* Fixe le composant tout en bas de la page web mobile */
+        iframe[title="streamlit_antd_components.sac.tabs.tabs"] {
+            position: fixed !important;
+            bottom: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            z-index: 999999 !important;
+            background-color: #ffffff !important;
+            border-top: 1px solid #e2e8f0 !important;
+            box-shadow: 0 -4px 15px rgba(0,0,0,0.08) !important;
+        }
+    </style>
+    """, unsafe_allow_html=True)
 
-    # On ferme proprement la div HTML
-    st.markdown('</div>', unsafe_allow_html=True)
+    # Dictionnaire pour lier les index (0, 1, 2, 3) à nos icônes de session_state
+    mapping_onglets = {idx: icone for idx, icone in enumerate(icones_navigation)}
+    mapping_inverse = {icone: idx for idx, icone in enumerate(icones_navigation)}
+    
+    # Récupère l'index de l'onglet actuellement actif
+    index_actuel = mapping_inverse.get(st.session_state.onglet_actif, 0)
+
+    # Génération des boutons d'onglets (sac.tabs force l'alignement horizontal par défaut)
+    index_selectionne = sac.tabs(
+        items=[sac.TabsItem(icon=icone) for icone in icones_navigation],
+        index=index_actuel,
+        align='center',
+        grow=True, # Force les onglets à occuper 100% de la largeur mobile équitablement
+        return_index=True,
+        key="bottom_nav_bar"
+    )
+
+    # Si le joueur clique sur un onglet, on change l'état et on recharge INSTANTANÉMENT
+    onglet_choisi = mapping_onglets.get(index_selectionne)
+    if onglet_choisi != st.session_state.onglet_actif:
+        st.session_state.onglet_actif = onglet_choisi
+        st.rerun()
