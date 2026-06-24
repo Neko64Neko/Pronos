@@ -819,4 +819,4 @@ else:
                 st.rerun()
 
     # On ferme proprement la div HTML
-    st.markdown('</div>', unsafe_allow_html=True)low_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
