@@ -1,3 +1,8 @@
+Voici l'intégralité de votre code app.py corrigé, nettoyé et avec des indentations parfaitement alignées pour éviter toute erreur.
+
+Vous pouvez copier tout ce bloc et remplacer à 100% le contenu de votre fichier actuel :
+
+Python
 import streamlit as st
 from supabase import create_client
 from datetime import datetime, timedelta
@@ -217,8 +222,8 @@ else:
     if st.session_state.is_admin:
         icones_navigation.append("⚙️")
 
-    # --- INJECTION DU STYLE CSS POUR LE BANDEAU EN HAUT DE L'ÉCRAN MOBILE ---
-st.markdown("""
+    # --- INJECTION DU STYLE CSS POUR LE BANDEAU PARFAITEMENT CENTRÉ EN HAUT ---
+    st.markdown("""
     <style>
         /* Ajustement des marges hautes globales */
         .main .block-container {
