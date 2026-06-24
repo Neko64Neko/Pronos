@@ -1,10 +1,3 @@
-Ce problème de SyntaxError se produit parce que les copier-coller successifs ont mélangé l'ancienne structure (qui utilisait des composants with st.tabs()) et la nouvelle structure par if/elif. Du code se retrouve "orphelin" avec des mauvaises indentations au milieu et à la fin du fichier, ce qui fait planter l'application.
-
-Pour tout remettre en ordre, retrouver la barre de navigation horizontale tout en haut, la vitesse maximale, et corriger définitivement ce bug, voici le code complet et nettoyé de ton fichier app.py.
-
-Tu peux tout effacer dans ton fichier actuel et le remplacer entièrement par ce code parfaitement structuré :
-
-Python
 import streamlit as st
 from supabase import create_client
 from datetime import datetime, timedelta
