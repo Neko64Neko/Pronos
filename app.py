@@ -323,11 +323,8 @@ else:
             rang_joueur = "-"
             stats_bons_gagnants, stats_parfaits, stats_oses = 0, 0, 0
 
-# --- 2. BANDEAU DE PROFIL EN PETITES BULLES (STYLE FIGMA) ---
+# --- 2. BANDEAU DE PROFIL EN PETITES BULLES COMPACTES (STYLE FIGMA) ---
         suffixe = "er" if rang_joueur == 1 else "e"
-        
-        # Titre avec le pseudo sorti des bulles, écrit en gros
-        st.markdown(f"<h3 style='margin-bottom: 15px; color: #1e3a8a;'>🏃‍♂️ Espace de {st.session_state.pseudo}</h3>", unsafe_allow_html=True)
         
         st.markdown(f"""
         <div style="background-color: #f0f4f8; border-radius: 16px; padding: 15px; border: 1px solid #d3e2f2; margin-bottom: 25px;">
@@ -364,7 +361,7 @@ else:
         </div>
         """.replace("\n", ""), unsafe_allow_html=True)
 
-        # --- 3. BLOC CLASSEMENT SÉCURISÉ POUR MODE SOMBRE (TEXTES FORCÉS EN NOIR) ---
+        # --- 3. BLOC CLASSEMENT SÉCURISÉ POUR MODE SOMBRE ---
         st.subheader("📊 Classement Général de la Communauté")
         
         if tous_les_joueurs:
@@ -377,17 +374,15 @@ else:
                 elif rang == 3: prefixe_rang = "🥉 3e"
                 else: prefixe_rang = f"{rang}e"
                 
-                # Style spécial pour le joueur connecté (on force la couleur du texte en noir)
                 if joueur['id'] == st.session_state.user_id:
                     style_ligne = "background-color: #cbd5e1; font-weight: bold; border-left: 5px solid #1e3a8a; color: #000000;"
                     pseudo_affiche = f"{joueur['pseudo']} (Toi)"
                 else:
-                    style_ligne = "color: #2d3748;" # Gris très sombre/noir pour les autres joueurs
+                    style_ligne = "color: #2d3748;"
                     pseudo_affiche = joueur['pseudo']
                 
                 lignes_html += f'<tr style="{style_ligne} border-bottom: 1px solid #e2e8f0;"><td style="padding: 12px; text-align: left; color: inherit;">{prefixe_rang}</td><td style="padding: 12px; text-align: left; color: inherit;">{pseudo_affiche}</td><td style="padding: 12px; text-align: right; font-weight: bold; color: #000000;">{joueur["score"]} pts</td></tr>'
             
-            # Encapsulation finale avec styles de texte verrouillés contre le mode sombre
             tableau_complet = f"""
             <div style="background-color: #f8fafc; border-radius: 12px; padding: 15px; border: 1px solid #e2e8f0;">
                 <table style="width: 100%; border-collapse: collapse; font-family: sans-serif; color: #2d3748;">
