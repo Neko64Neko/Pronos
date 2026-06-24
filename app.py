@@ -800,36 +800,37 @@ else:
 
 
 # =====================================================================
-    # --- 5. LA BARRE DE NAVIGATION COMMUNE (VERSION SANS BUG MOBILE) ---
+    # --- 5. LA BARRE DE NAVIGATION COMMUNE (VERSION SÉCURISÉE) ---
     # =====================================================================
     
-    # A. Détection du clic (Intercepte le changement d'URL)
+    # 1. Écoute et détection du changement de paramètre dans l'URL
     queryParams = st.query_params
     if "tab" in queryParams:
         if queryParams["tab"] in icones_navigation and queryParams["tab"] != st.session_state.onglet_actif:
             st.session_state.onglet_actif = queryParams["tab"]
             st.rerun()
 
-    # B. Génération dynamique des liens HTML selon l'onglet actif
-    liens_navigation_html = ""
+    # 2. Construction propre des éléments HTML sans conflit de guillemets
+    liens_list = []
     for icone in icones_navigation:
         est_actif = st.session_state.onglet_actif == icone
+        
+        # Configuration des styles textuels
         label = f"<b>● {icone}</b>" if est_actif else icone
         couleur_texte = "#1e3a8a" if est_actif else "#64748b"
         poids_texte = "bold" if est_actif else "normal"
         fond_case = "#e3eaf2" if est_actif else "transparent"
         
-        liens_navigation_html += f"""
-        <a href="?tab={icone}" target="_self" style="display: block; flex: 1; text-align: center; text-decoration: none; color: {couleur_texte}; font-weight: {poids_texte}; background-color: {fond_case}; padding: 12px 0; border-radius: 8px; font-size: 18px; margin: 0 4px; border: 1px solid #e2e8f0; box-sizing: border-box;">
-            {label}
-        </a>
-        """
+        # Génération de la balise <a> pour l'onglet
+        html_lien = f'<a href="?tab={icone}" target="_self" style="display: block; flex: 1; text-align: center; text-decoration: none; color: {couleur_texte}; font-weight: {poids_texte}; background-color: {fond_case}; padding: 12px 0; border-radius: 8px; font-size: 18px; margin: 0 4px; border: 1px solid #e2e8f0; box-sizing: border-box;">{label}</a>'
+        liens_list.append(html_lien)
 
-    # C. Affichage final (Vérifie bien le unsafe_allow_html=True à la fin)
-    st.markdown(f"""
-    <div class="bottom-nav" style="position: fixed; bottom: 0; left: 0; width: 100%; background-color: #ffffff; border-top: 1px solid #e2e8f0; padding: 10px 8px; box-shadow: 0 -4px 15px rgba(0,0,0,0.1); z-index: 999999; display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; justify-content: space-around !important; align-items: center !important; box-sizing: border-box;">
-        {liens_navigation_html}
-    </div>
-    """, unsafe_allow_html=True) # <-- C'est ce paramètre qui transforme le texte en boutons !
+    # Fusion de tous les liens créés
+    liens_navigation_html = "".join(liens_list)
 
+    # 3. Injection finale dans le conteneur principal fixé en bas
+    st.markdown(
+        f'<div class="bottom-nav" style="position: fixed; bottom: 0; left: 0; width: 100%; background-color: #ffffff; border-top: 1px solid #e2e8f0; padding: 10px 8px; box-shadow: 0 -4px 15px rgba(0,0,0,0.1); z-index: 999999; display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; justify-content: space-around !important; align-items: center !important; box-sizing: border-box;">{liens_navigation_html}</div>',
+        unsafe_allow_html=True
+    )
     st.markdown('</div>', unsafe_allow_html=True)
