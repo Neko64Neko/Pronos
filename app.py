@@ -216,19 +216,16 @@ if st.session_state.user_id is None:
                 except Exception as e: st.error(f"Erreur : {e}")
             else: st.warning("Veuillez renseigner votre adresse email.")
 
-# ---- APPLICATION CONNECTÉE ----
-else:
-    col_user, col_logout = st.columns([4, 1])
-    with col_user:
-        st.markdown(f"👤 Connecté en tant que **{st.session_state.pseudo}**")
-    with col_logout:
-        if st.button("Déconnexion 🚪", use_container_width=True):
-            supabase.auth.sign_out()
-            st.session_state.user_id = None
-            cookie_manager.delete("top14_user_id")
-            st.rerun()
+# --- EN-TÊTE ÉPURÉ AVEC BOUTON DÉCONNEXION EN HAUT À DROITE ---
+col_vide, col_deco = st.columns([4, 1])
 
-    st.markdown("---")
+with col_deco:
+    # Un petit bouton compact qui prend tout l'espace de sa colonne à droite
+    if st.button("🚪 Déconnexion", key="btn_logout", use_container_width=True):
+        st.session_state.connected = False
+        st.session_state.pseudo = None
+        st.session_state.user_id = None
+        st.rerun()
 
     liste_onglets = ["🏆 Classement", "✍️ Faire mes Pronostics", "📊 Résultats & Direct"]
     if st.session_state.is_admin:
