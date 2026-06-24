@@ -227,41 +227,51 @@ else:
     if st.session_state.is_admin:
         icones_navigation.append("⚙️")
 
-   # --- 3. INJECTION DU CODE CSS POUR FIXER LA BARRE EN BAS ET FORCER L'HORIZONTAL ---
+# --- 3. INJECTION DU CODE CSS ULTRA-RENFORCÉ POUR FIXER LA BARRE EN HORIZONTAL ---
     st.markdown("""
     <style>
-        /* Laisse de la place en bas pour ne pas masquer le contenu */
+        /* Laisse de la place en bas pour ne pas masquer le contenu du classement */
         .main .block-container {
-            padding-bottom: 110px !important;
+            padding-bottom: 120px !important;
         }
         
-        /* Conteneur principal de la barre fixe */
+        /* Conteneur principal de la barre fixe tout en bas */
         .bottom-nav {
             position: fixed;
             bottom: 0;
             left: 0;
             width: 100%;
-            background-color: #ffffff;
+            background-color: #ffffff !important;
             border-top: 1px solid #e2e8f0;
-            padding: 10px 15px;
-            box-shadow: 0 -4px 12px rgba(0,0,0,0.08);
-            z-index: 999999;
+            padding: 12px 10px;
+            box-shadow: 0 -4px 15px rgba(0,0,0,0.1);
+            z-index: 999999 !important;
         }
         
-        /* FORCE Streamlit à garder les colonnes alignées horizontalement sur mobile */
-        .bottom-nav div[data-testid="stHorizontalBlock"] {
+        /* CIBLE LES GRIDS DE STREAMLIT : Brise le mode empilé vertical (stacked) imposé par mobile */
+        .bottom-nav div[data-testid="stHorizontalBlock"],
+        .bottom-nav div[data-testid="column"] {
             display: flex !important;
             flex-direction: row !important;
             flex-wrap: nowrap !important;
-            justify-content: space-around !important;
-            align-items: center !important;
-            gap: 5px !important;
+            width: auto !important;
+            min-width: 0 !important;
+            flex: 1 !important;
+            gap: 4px !important;
         }
         
-        /* Ajustement optionnel pour rendre les boutons plus tactiles */
+        /* Force les colonnes individuelles de Streamlit à rester côte à côte sans revenir à la ligne */
+        .bottom-nav div[data-testid="column"] {
+            margin-bottom: 0px !important;
+        }
+        
+        /* Optimisation visuelle des boutons pour qu'ils ressemblent à des onglets mobiles */
         .bottom-nav button {
-            padding: 8px 0px !important;
+            padding: 10px 0px !important;
             font-size: 16px !important;
+            border-radius: 8px !important;
+            border: 1px solid #e2e8f0 !important;
+            background-color: #f8fafc !important;
         }
     </style>
     """, unsafe_allow_html=True)
