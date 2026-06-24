@@ -231,7 +231,91 @@ with col_deco:
     if st.session_state.is_admin:
         liste_onglets.append("⚙️ Administration")
         
-    onglets_principaux = st.tabs(liste_onglets)
+# --- 1. INITIALISATION DE L'ONGLET ACTIF (SI PAS DÉJÀ FAIT) ---
+if "onglet_actif" not in st.session_state:
+    st.session_state.onglet_actif = "📊"  # Onglet par défaut (Accueil/Classement)
+
+# --- 2. CONFIGURATION DES ONGLETS (AVEC OU SANS ADMIN) ---
+# On définit les icônes et les titres associés
+icones_navigation = ["📊", "🏉", "📅"]
+if st.session_state.pseudo == "Admin":  # Devient 4 onglets si c'est l'admin
+    icones_navigation.append("⚙️")
+
+# --- 3. INJECTION DU CODE CSS POUR FIXER LA BARRE EN BAS ---
+st.markdown("""
+<style>
+    /* Force le conteneur Streamlit à laisser de la place en bas pour ne pas masquer le contenu */
+    .main .block-container {
+        padding-bottom: 80px !important;
+    }
+    /* Style de la barre de navigation basse fixe */
+    .bottom-nav {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        background-color: #ffffff;
+        border-top: 1px solid #e2e8f0;
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        padding: 10px 0;
+        box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+        z-index: 999999;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# --- 4. AFFICHAGE DES CONTENUS SELON L'ONGLET SÉLECTIONNÉ ---
+# Au lieu de "with onglets_principaux[0]:", on fait des conditions standards python :
+
+if st.session_state.onglet_actif == "📊":
+    # =====================================================================
+    # CONTENU ONGLET 1 : ACCUEIL & CLASSEMENT (Le code qu'on a fait ensemble)
+    # =====================================================================
+    st.write("") # Ton code de classement complet ici...
+
+elif st.session_state.onglet_actif == "🏉":
+    # =====================================================================
+    # CONTENU ONGLET 2 : PRONOSTIQUER
+    # =====================================================================
+    st.title("🏉 Pronostiquer les matchs")
+    # Ton code pour pronostiquer ici...
+
+elif st.session_state.onglet_actif == "📅":
+    # =====================================================================
+    # CONTENU ONGLET 3 : RÉSULTATS / HISTORIQUE
+    # =====================================================================
+    st.title("📅 Résultats & Historique")
+    # Ton code pour l'historique ici...
+
+elif st.session_state.onglet_actif == "⚙️" and st.session_state.pseudo == "Admin":
+    # =====================================================================
+    # CONTENU ONGLET 4 : ADMIN
+    # =====================================================================
+    st.title("⚙️ Panel Administration")
+    # Ton code admin ici...
+
+
+# --- 5. LA BARRE DE NAVIGATION BASSE EN GRID STREAMLIT ---
+# On crée une fausse barre en bas en utilisant st.columns tout en bas du script
+st.markdown('<div class="bottom-nav">', unsafe_allow_html=True)
+
+# On crée autant de colonnes que d'icônes nécessaires (3 ou 4)
+cols_nav = st.columns(len(icones_navigation))
+
+for idx, icone in enumerate(icones_navigation):
+    with cols_nav[idx]:
+        # Si l'onglet est actif, on met une couleur ou un style distinct sur le bouton
+        est_actif = st.session_state.onglet_actif == icone
+        label_bouton = f"● {icone}" if est_actif else icone
+        
+        # Le bouton Streamlit qui sert de déclencheur de navigation
+        if st.button(label_bouton, key=f"nav_{icone}", use_container_width=True):
+            st.session_state.onglet_actif = icone
+            st.rerun()
+
+st.markdown('</div>', unsafe_allow_html=True)
 
     try:
         conf = supabase.table("Configuration").select("*").eq("id", "default_config").single().execute().data
