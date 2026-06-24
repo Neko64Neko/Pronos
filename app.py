@@ -286,7 +286,7 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
     # --- BARRE DE NAVIGATION SUPÉRIEURE ---
-try:
+    try:
         index_defaut = icones_navigation.index(st.session_state.onglet_actif)
     except ValueError:
         index_defaut = 0
