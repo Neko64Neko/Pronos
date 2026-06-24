@@ -323,48 +323,48 @@ else:
             rang_joueur = "-"
             stats_bons_gagnants, stats_parfaits, stats_oses = 0, 0, 0
 
-# --- 2. BANDEAU DE PROFIL EN BULLES RESPONSIVES (STYLE FIGMA) ---
+# --- 2. BANDEAU DE PROFIL EN PETITES BULLES (STYLE FIGMA) ---
         suffixe = "er" if rang_joueur == 1 else "e"
         
+        # Titre avec le pseudo sorti des bulles, écrit en gros
+        st.markdown(f"<h3 style='margin-bottom: 15px; color: #1e3a8a;'>🏃‍♂️ Espace de {st.session_state.pseudo}</h3>", unsafe_allow_html=True)
+        
         st.markdown(f"""
-        <div style="background-color: #f0f4f8; border-radius: 16px; padding: 20px; border: 1px solid #d3e2f2; margin-bottom: 25px;">
-            <div style="display: flex; justify-content: center; align-items: stretch; flex-wrap: wrap; gap: 12px;">
+        <div style="background-color: #f0f4f8; border-radius: 16px; padding: 15px; border: 1px solid #d3e2f2; margin-bottom: 25px;">
+            <div style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 10px;">
                 
-                <div style="background-color: #ffffff; border-radius: 12px; padding: 12px; min-width: 105px; flex: 1; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.04); border: 1px solid #e2e8f0; display: flex; flex-direction: column; justify-content: center;">
-                    <h1 style="margin:0; font-size: 28px;">🏃‍♂️</h1>
-                    <b style="font-size: 14px; color:#1e3a8a; margin-top: 5px; word-break: break-word;">{st.session_state.pseudo}</b>
+                <div style="background-color: #ffffff; border-radius: 10px; padding: 8px; min-width: 90px; max-width: 110px; flex: 1; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;">
+                    <span style="color: #627d98; font-size: 11px; font-weight: bold; display:block; margin-bottom:2px;">🏆 Rang</span>
+                    <span style="color:#1e3a8a; font-size: 26px; font-weight: 900;">{rang_joueur}{suffixe}</span>
+                    <span style="display:block; font-size:10px; color:#627d98;">/{len(tous_les_joueurs)}</span>
                 </div>
                 
-                <div style="background-color: #ffffff; border-radius: 12px; padding: 12px; min-width: 105px; flex: 1; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.04); border: 1px solid #e2e8f0; display: flex; flex-direction: column; justify-content: center;">
-                    <span style="color: #627d98; font-size: 12px; font-weight: 500;">🏆 Rang</span>
-                    <h3 style="margin:5px 0 0 0; color:#1e3a8a; font-size: 20px; font-weight: bold;">{rang_joueur}{suffixe}<span style="font-size:11px; color:#627d98; font-weight: normal;">/{len(tous_les_joueurs)}</span></h3>
+                <div style="background-color: #ffffff; border-radius: 10px; padding: 8px; min-width: 90px; max-width: 110px; flex: 1; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;">
+                    <span style="color: #627d98; font-size: 11px; font-weight: bold; display:block; margin-bottom:2px;">🎯 Score</span>
+                    <span style="color:#1e3a8a; font-size: 26px; font-weight: 900;">{joueur_connecte.get('score', 0)}</span>
+                    <span style="display:block; font-size:10px; color:#627d98;">pts</span>
                 </div>
                 
-                <div style="background-color: #ffffff; border-radius: 12px; padding: 12px; min-width: 105px; flex: 1; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.04); border: 1px solid #e2e8f0; display: flex; flex-direction: column; justify-content: center;">
-                    <span style="color: #627d98; font-size: 12px; font-weight: 500;">🎯 Score Total</span>
-                    <h3 style="margin:5px 0 0 0; color:#1e3a8a; font-size: 20px; font-weight: bold;">{joueur_connecte.get('score', 0)}<span style="font-size:11px; color:#627d98; font-weight: normal;"> pts</span></h3>
+                <div style="background-color: #ffffff; border-radius: 10px; padding: 8px; min-width: 100px; max-width: 120px; flex: 1; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;">
+                    <span style="color: #43a047; font-size: 11px; font-weight: bold; display:block; margin-bottom:2px;">✅ Vainqueurs</span>
+                    <span style="color: #43a047; font-size: 32px; font-weight: 900;">{stats_bons_gagnants}</span>
                 </div>
                 
-                <div style="background-color: #ffffff; border-radius: 12px; padding: 12px; min-width: 120px; flex: 1; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.04); border: 1px solid #e2e8f0; display: flex; flex-direction: column; justify-content: center;">
-                    <span style="color: #43a047; font-size: 12px; font-weight: bold;">✅ Vainqueurs seuls</span>
-                    <h2 style="margin:5px 0 0 0; color: #43a047; font-size: 28px; font-weight: bold;">{stats_bons_gagnants}</h2>
+                <div style="background-color: #ffffff; border-radius: 10px; padding: 8px; min-width: 100px; max-width: 120px; flex: 1; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;">
+                    <span style="color: #0a3613; font-size: 11px; font-weight: bold; display:block; margin-bottom:2px;">⭐ + Écart</span>
+                    <span style="color: #0a3613; font-size: 32px; font-weight: 900;">{stats_parfaits}</span>
                 </div>
                 
-                <div style="background-color: #ffffff; border-radius: 12px; padding: 12px; min-width: 130px; flex: 1; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.04); border: 1px solid #e2e8f0; display: flex; flex-direction: column; justify-content: center;">
-                    <span style="color: #0a3613; font-size: 12px; font-weight: bold;">⭐ Vainqueur + Écart</span>
-                    <h2 style="margin:5px 0 0 0; color: #0a3613; font-size: 28px; font-weight: bold;">{stats_parfaits}</h2>
-                </div>
-                
-                <div style="background-color: #ffffff; border-radius: 12px; padding: 12px; min-width: 110px; flex: 1; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.04); border: 1px solid #e2e8f0; display: flex; flex-direction: column; justify-content: center;">
-                    <span style="color: #b7791f; font-size: 12px; font-weight: bold;">🔥 Pronos Osés</span>
-                    <h2 style="margin:5px 0 0 0; color: #b7791f; font-size: 28px; font-weight: bold;">{stats_oses}</h2>
+                <div style="background-color: #ffffff; border-radius: 10px; padding: 8px; min-width: 100px; max-width: 120px; flex: 1; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;">
+                    <span style="color: #b7791f; font-size: 11px; font-weight: bold; display:block; margin-bottom:2px;">🔥 Osés</span>
+                    <span style="color: #b7791f; font-size: 32px; font-weight: 900;">{stats_oses}</span>
                 </div>
                 
             </div>
         </div>
         """.replace("\n", ""), unsafe_allow_html=True)
-        
-# --- 3. BLOC CLASSEMENT AVEC FOND COLORÉ ET STYLE FIGMA ---
+
+        # --- 3. BLOC CLASSEMENT SÉCURISÉ POUR MODE SOMBRE (TEXTES FORCÉS EN NOIR) ---
         st.subheader("📊 Classement Général de la Communauté")
         
         if tous_les_joueurs:
@@ -377,25 +377,25 @@ else:
                 elif rang == 3: prefixe_rang = "🥉 3e"
                 else: prefixe_rang = f"{rang}e"
                 
-                # Style spécial pour le joueur connecté
+                # Style spécial pour le joueur connecté (on force la couleur du texte en noir)
                 if joueur['id'] == st.session_state.user_id:
-                    style_ligne = "background-color: #e3eaf2; font-weight: bold; border-left: 5px solid #1e3a8a;"
+                    style_ligne = "background-color: #cbd5e1; font-weight: bold; border-left: 5px solid #1e3a8a; color: #000000;"
                     pseudo_affiche = f"{joueur['pseudo']} (Toi)"
                 else:
-                    style_ligne = ""
+                    style_ligne = "color: #2d3748;" # Gris très sombre/noir pour les autres joueurs
                     pseudo_affiche = joueur['pseudo']
                 
-                lignes_html += f'<tr style="{style_ligne} border-bottom: 1px solid #e2e8f0;"><td style="padding: 12px; text-align: left;">{prefixe_rang}</td><td style="padding: 12px; text-align: left;">{pseudo_affiche}</td><td style="padding: 12px; text-align: right; font-weight: bold; color: #2d3748;">{joueur["score"]} pts</td></tr>'
+                lignes_html += f'<tr style="{style_ligne} border-bottom: 1px solid #e2e8f0;"><td style="padding: 12px; text-align: left; color: inherit;">{prefixe_rang}</td><td style="padding: 12px; text-align: left; color: inherit;">{pseudo_affiche}</td><td style="padding: 12px; text-align: right; font-weight: bold; color: #000000;">{joueur["score"]} pts</td></tr>'
             
-            # Assemblage final sans aucun saut de ligne parasite pour forcer l'affichage HTML propre
+            # Encapsulation finale avec styles de texte verrouillés contre le mode sombre
             tableau_complet = f"""
             <div style="background-color: #f8fafc; border-radius: 12px; padding: 15px; border: 1px solid #e2e8f0;">
-                <table style="width: 100%; border-collapse: collapse; font-family: sans-serif;">
+                <table style="width: 100%; border-collapse: collapse; font-family: sans-serif; color: #2d3748;">
                     <thead>
                         <tr style="border-bottom: 2px solid #cbd5e1; color: #64748b; font-size: 14px;">
-                            <th style="padding: 10px; text-align: left;">Position</th>
-                            <th style="padding: 10px; text-align: left;">Joueur</th>
-                            <th style="padding: 10px; text-align: right;">Score</th>
+                            <th style="padding: 10px; text-align: left; color: #64748b;">Position</th>
+                            <th style="padding: 10px; text-align: left; color: #64748b;">Joueur</th>
+                            <th style="padding: 10px; text-align: right; color: #64748b;">Score</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -403,7 +403,7 @@ else:
                     </tbody>
                 </table>
             </div>
-            """.replace("\n", "")  # La feinte magique pour Streamlit
+            """.replace("\n", "")
             
             st.markdown(tableau_complet, unsafe_allow_html=True)
             
