@@ -227,51 +227,50 @@ else:
     if st.session_state.is_admin:
         icones_navigation.append("⚙️")
 
-# --- 3. INJECTION DU CODE CSS ULTRA-RENFORCÉ POUR FIXER LA BARRE EN HORIZONTAL ---
+# --- 3. INJECTION DU CODE CSS ULTRA-CIBLÉ POUR BARRE MOBILE HORIZONTALE ---
     st.markdown("""
     <style>
-        /* Laisse de la place en bas pour ne pas masquer le contenu du classement */
+        /* Laisse de la place en bas pour le contenu */
         .main .block-container {
-            padding-bottom: 120px !important;
+            padding-bottom: 110px !important;
         }
         
-        /* Conteneur principal de la barre fixe tout en bas */
-        .bottom-nav {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            width: 100%;
+        /* Conteneur de la barre fixé tout en bas */
+        div.barre-mobile {
+            position: fixed !important;
+            bottom: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
             background-color: #ffffff !important;
-            border-top: 1px solid #e2e8f0;
-            padding: 12px 10px;
-            box-shadow: 0 -4px 15px rgba(0,0,0,0.1);
+            border-top: 1px solid #e2e8f0 !important;
+            padding: 10px !important;
+            box-shadow: 0 -4px 15px rgba(0,0,0,0.1) !important;
             z-index: 999999 !important;
         }
-        
-        /* CIBLE LES GRIDS DE STREAMLIT : Brise le mode empilé vertical (stacked) imposé par mobile */
-        .bottom-nav div[data-testid="stHorizontalBlock"],
-        .bottom-nav div[data-testid="column"] {
+
+        /* FORCE l'alignement horizontal de TOUT ce qui est mis dans la barre mobile */
+        div.barre-mobile > div[data-testid="stHorizontalBlock"] {
             display: flex !important;
             flex-direction: row !important;
             flex-wrap: nowrap !important;
-            width: auto !important;
-            min-width: 0 !important;
-            flex: 1 !important;
-            gap: 4px !important;
+            justify-content: space-around !important;
+            align-items: center !important;
+            width: 100% !important;
         }
-        
-        /* Force les colonnes individuelles de Streamlit à rester côte à côte sans revenir à la ligne */
-        .bottom-nav div[data-testid="column"] {
+
+        /* Force chaque colonne Streamlit à ne pas occuper 100% de largeur sur mobile */
+        div.barre-mobile div[data-testid="column"] {
+            flex: 1 !important;
+            min-width: 0 !important;
+            width: auto !important;
             margin-bottom: 0px !important;
         }
         
-        /* Optimisation visuelle des boutons pour qu'ils ressemblent à des onglets mobiles */
-        .bottom-nav button {
-            padding: 10px 0px !important;
-            font-size: 16px !important;
-            border-radius: 8px !important;
+        /* Donne un look d'onglet aux boutons */
+        div.barre-mobile button {
             border: 1px solid #e2e8f0 !important;
-            background-color: #f8fafc !important;
+            border-radius: 8px !important;
+            padding: 8px 0px !important;
         }
     </style>
     """, unsafe_allow_html=True)
@@ -800,37 +799,24 @@ else:
 
 
 # =====================================================================
-    # --- 5. LA BARRE DE NAVIGATION COMMUNE (VERSION SÉCURISÉE) ---
+    # --- 5. LA BARRE DE NAVIGATION COMMUNE (VERSION BOUTONS INSTANTANÉS) ---
     # =====================================================================
     
-    # 1. Écoute et détection du changement de paramètre dans l'URL
-    queryParams = st.query_params
-    if "tab" in queryParams:
-        if queryParams["tab"] in icones_navigation and queryParams["tab"] != st.session_state.onglet_actif:
-            st.session_state.onglet_actif = queryParams["tab"]
-            st.rerun()
+    # On ouvre la div fixe stylisée par notre CSS personnalisé
+    st.markdown('<div class="barre-mobile">', unsafe_allow_html=True)
+    
+    # On génère les colonnes Streamlit à l'intérieur de cette div
+    cols_nav = st.columns(len(icones_navigation))
 
-    # 2. Construction propre des éléments HTML sans conflit de guillemets
-    liens_list = []
-    for icone in icones_navigation:
-        est_actif = st.session_state.onglet_actif == icone
-        
-        # Configuration des styles textuels
-        label = f"<b>● {icone}</b>" if est_actif else icone
-        couleur_texte = "#1e3a8a" if est_actif else "#64748b"
-        poids_texte = "bold" if est_actif else "normal"
-        fond_case = "#e3eaf2" if est_actif else "transparent"
-        
-        # Génération de la balise <a> pour l'onglet
-        html_lien = f'<a href="?tab={icone}" target="_self" style="display: block; flex: 1; text-align: center; text-decoration: none; color: {couleur_texte}; font-weight: {poids_texte}; background-color: {fond_case}; padding: 12px 0; border-radius: 8px; font-size: 18px; margin: 0 4px; border: 1px solid #e2e8f0; box-sizing: border-box;">{label}</a>'
-        liens_list.append(html_lien)
+    for idx, icone in enumerate(icones_navigation):
+        with cols_nav[idx]:
+            est_actif = st.session_state.onglet_actif == icone
+            label_bouton = f"● {icone}" if est_actif else icone
+            
+            # C'est un vrai bouton Streamlit : la navigation redevient instantanée
+            if st.button(label_bouton, key=f"nav_mob_{icone}", use_container_width=True):
+                st.session_state.onglet_actif = icone
+                st.rerun()
 
-    # Fusion de tous les liens créés
-    liens_navigation_html = "".join(liens_list)
-
-    # 3. Injection finale dans le conteneur principal fixé en bas
-    st.markdown(
-        f'<div class="bottom-nav" style="position: fixed; bottom: 0; left: 0; width: 100%; background-color: #ffffff; border-top: 1px solid #e2e8f0; padding: 10px 8px; box-shadow: 0 -4px 15px rgba(0,0,0,0.1); z-index: 999999; display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; justify-content: space-around !important; align-items: center !important; box-sizing: border-box;">{liens_navigation_html}</div>',
-        unsafe_allow_html=True
-    )
-    st.markdown('</div>', unsafe_allow_html=True)
+    # On ferme proprement la div HTML
+    st.markdown('</div>', unsafe_allow_html=True)low_html=True)
