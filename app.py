@@ -227,12 +227,15 @@ else:
     if st.session_state.is_admin:
         icones_navigation.append("⚙️")
 
-    # --- 3. INJECTION DU CODE CSS POUR FIXER LA BARRE EN BAS ---
+   # --- 3. INJECTION DU CODE CSS POUR FIXER LA BARRE EN BAS ET FORCER L'HORIZONTAL ---
     st.markdown("""
     <style>
+        /* Laisse de la place en bas pour ne pas masquer le contenu */
         .main .block-container {
-            padding-bottom: 90px !important;
+            padding-bottom: 110px !important;
         }
+        
+        /* Conteneur principal de la barre fixe */
         .bottom-nav {
             position: fixed;
             bottom: 0;
@@ -240,12 +243,25 @@ else:
             width: 100%;
             background-color: #ffffff;
             border-top: 1px solid #e2e8f0;
-            display: flex;
-            justify-content: space-around;
-            align-items: center;
-            padding: 10px 0;
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+            padding: 10px 15px;
+            box-shadow: 0 -4px 12px rgba(0,0,0,0.08);
             z-index: 999999;
+        }
+        
+        /* FORCE Streamlit à garder les colonnes alignées horizontalement sur mobile */
+        .bottom-nav div[data-testid="stHorizontalBlock"] {
+            display: flex !important;
+            flex-direction: row !important;
+            flex-wrap: nowrap !important;
+            justify-content: space-around !important;
+            align-items: center !important;
+            gap: 5px !important;
+        }
+        
+        /* Ajustement optionnel pour rendre les boutons plus tactiles */
+        .bottom-nav button {
+            padding: 8px 0px !important;
+            font-size: 16px !important;
         }
     </style>
     """, unsafe_allow_html=True)
@@ -773,15 +789,18 @@ else:
                     except Exception as e: st.error(f"Erreur reset : {e}")
 
 
-    # =====================================================================
-    # --- 5. LA BARRE DE NAVIGATION COMMUNE (TOUT EN BAS DE PAGE) ---
+# =====================================================================
+    # --- 5. LA BARRE DE NAVIGATION COMMUNE (FORCÉE EN HORIZONTAL) ---
     # =====================================================================
     st.markdown('<div class="bottom-nav">', unsafe_allow_html=True)
+    
+    # Crée les colonnes à l'intérieur du conteneur HTML fixe
     cols_nav = st.columns(len(icones_navigation))
 
     for idx, icone in enumerate(icones_navigation):
         with cols_nav[idx]:
             est_actif = st.session_state.onglet_actif == icone
+            # Un look épuré : le point en dessous ou devant pour l'onglet actif
             label_bouton = f"● {icone}" if est_actif else icone
             
             if st.button(label_bouton, key=f"nav_{icone}", use_container_width=True):
