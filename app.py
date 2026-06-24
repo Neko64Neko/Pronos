@@ -218,26 +218,27 @@ else:
         icones_navigation.append("⚙️")
 
     # --- INJECTION DU STYLE CSS POUR LE BANDEAU EN HAUT DE L'ÉCRAN MOBILE ---
-    st.markdown("""
+st.markdown("""
     <style>
         /* Ajustement des marges hautes globales */
         .main .block-container {
-            padding-top: 0px !important;
+            padding-top: 55px !important; /* Laisse de la place sous la barre fixe */
             max-width: 100% !important;
         }
         
-        /* Fixation du st.radio en haut de l'écran en pleine largeur */
+        /* Fixation du st.radio en haut de l'écran et centrage absolu */
         div[data-testid="stRadio"] {
-            position: sticky !important;
+            position: fixed !important;
             top: 0 !important;
             left: 0 !important;
-            width: 100vw !important;
-            margin-left: calc(-50vw + 50%) !important;
+            right: 0 !important;
+            width: 100% !important;
             background-color: #ffffff !important;
-            padding: 12px 15px !important;
+            padding: 10px 10px !important;
             z-index: 999999 !important;
             border-bottom: 2px solid #e2e8f0 !important;
             box-shadow: 0 4px 12px rgba(0,0,0,0.05) !important;
+            box-sizing: border-box !important;
         }
         
         /* Masquage de l'étiquette par défaut du widget */
@@ -252,20 +253,21 @@ else:
             flex-wrap: nowrap !important;
             justify-content: space-around !important;
             width: 100% !important;
-            gap: 8px !important;
+            gap: 6px !important;
         }
 
         /* Look design d'onglets pour smartphone */
         div[data-testid="stRadio"] div[role="radiogroup"] label {
             flex: 1 !important;
             text-align: center !important;
-            padding: 12px 0 !important;
+            padding: 10px 0 !important;
             background-color: #f1f5f9 !important;
             border: 1px solid #cbd5e1 !important;
-            border-radius: 10px !important;
+            border-radius: 8px !important;
             margin: 0 !important;
             display: block !important;
             cursor: pointer !important;
+            font-size: 16px !important;
         }
 
         /* Retrait du rond radio par défaut de Streamlit */
