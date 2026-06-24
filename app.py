@@ -800,39 +800,17 @@ else:
 
 
 # =====================================================================
-    # --- 5. LA BARRE DE NAVIGATION COMMUNE (VERSION EMBEDDED SANS ST.COLUMNS) ---
+    # --- 5. LA BARRE DE NAVIGATION COMMUNE (VERSION SANS BUG MOBILE) ---
     # =====================================================================
     
-    # On génère dynamiquement les boutons d'onglets en HTML pur
-    boutons_html = ""
-    for icone in icones_navigation:
-        est_actif = st.session_state.onglet_actif == icone
-        label_bouton = f"● {icone}" if est_actif else icone
-        
-        # Style dynamique : fond bleu léger et bordure marquée si l'onglet est sélectionné
-        style_bouton = """
-            background-color: #1e3a8a; color: white; font-weight: bold; border: 1px solid #1e3a8a;
-        """ if est_actif else """
-            background-color: #f8fafc; color: #64748b; border: 1px solid #e2e8f0;
-        """
-        
-        # Chaque bouton appelle un mini-formulaire ou est un bouton de soumission stylisé
-        boutons_html += f"""
-        <button onclick="window.parent.postMessage({{type: 'streamlit:set_page_config', active: '{icone}'}}, '*')" 
-                style="flex: 1; text-align: center; padding: 12px 0; font-size: 16px; border-radius: 8px; cursor: pointer; margin: 0 4px; transition: all 0.2s; {style_bouton}">
-            {label_bouton}
-        </button>
-        """
-
-    # Pour éviter le conflit et le re-rendu vertical de Streamlit, on utilise des query_params natifs
-    # C'est la méthode ultime et approuvée : on écoute les changements d'URL de Streamlit
+    # A. Détection du clic (Intercepte le changement d'URL)
     queryParams = st.query_params
     if "tab" in queryParams:
         if queryParams["tab"] in icones_navigation and queryParams["tab"] != st.session_state.onglet_actif:
             st.session_state.onglet_actif = queryParams["tab"]
             st.rerun()
 
-    # Création du code HTML final de la barre de navigation basse
+    # B. Génération dynamique des liens HTML selon l'onglet actif
     liens_navigation_html = ""
     for icone in icones_navigation:
         est_actif = st.session_state.onglet_actif == icone
@@ -841,19 +819,17 @@ else:
         poids_texte = "bold" if est_actif else "normal"
         fond_case = "#e3eaf2" if est_actif else "transparent"
         
-        # Astuce absolue : un vrai lien HTML (<a href="...">) qui change le paramètre d'URL de l'application
-        # Comme l'URL change, Streamlit recharge instantanément la page et notre code ci-dessus détecte le nouvel onglet actif !
         liens_navigation_html += f"""
-        <a href="?tab={icone}" target="_self" style="flex: 1; text-align: center; text-decoration: none; color: {couleur_texte}; font-weight: {poids_texte}; background-color: {fond_case}; padding: 12px 0; border-radius: 8px; font-size: 18px; margin: 0 4px; border: 1px solid #e2e8f0;">
+        <a href="?tab={icone}" target="_self" style="display: block; flex: 1; text-align: center; text-decoration: none; color: {couleur_texte}; font-weight: {poids_texte}; background-color: {fond_case}; padding: 12px 0; border-radius: 8px; font-size: 18px; margin: 0 4px; border: 1px solid #e2e8f0; box-sizing: border-box;">
             {label}
         </a>
         """
 
-    # Injection du bandeau figé en bas (sans aucun st.columns pour perturber le CSS mobile)
+    # C. Affichage final (Vérifie bien le unsafe_allow_html=True à la fin)
     st.markdown(f"""
-    <div class="bottom-nav" style="position: fixed; bottom: 0; left: 0; width: 100%; background-color: #ffffff; border-top: 1px solid #e2e8f0; padding: 10px 5px; box-shadow: 0 -4px 15px rgba(0,0,0,0.1); z-index: 999999; display: flex !important; flex-direction: row !important; justify-content: space-around !important; align-items: center !important; box-sizing: border-box;">
+    <div class="bottom-nav" style="position: fixed; bottom: 0; left: 0; width: 100%; background-color: #ffffff; border-top: 1px solid #e2e8f0; padding: 10px 8px; box-shadow: 0 -4px 15px rgba(0,0,0,0.1); z-index: 999999; display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; justify-content: space-around !important; align-items: center !important; box-sizing: border-box;">
         {liens_navigation_html}
     </div>
-    """, unsafe_allow_html=True)
+    """, unsafe_allow_html=True) # <-- C'est ce paramètre qui transforme le texte en boutons !
 
     st.markdown('</div>', unsafe_allow_html=True)
