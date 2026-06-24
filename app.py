@@ -1,8 +1,3 @@
-Voici l'intégralité de votre code app.py corrigé, nettoyé et avec des indentations parfaitement alignées pour éviter toute erreur.
-
-Vous pouvez copier tout ce bloc et remplacer à 100% le contenu de votre fichier actuel :
-
-Python
 import streamlit as st
 from supabase import create_client
 from datetime import datetime, timedelta
