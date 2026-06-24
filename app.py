@@ -800,21 +800,60 @@ else:
 
 
 # =====================================================================
-    # --- 5. LA BARRE DE NAVIGATION COMMUNE (FORCÉE EN HORIZONTAL) ---
+    # --- 5. LA BARRE DE NAVIGATION COMMUNE (VERSION EMBEDDED SANS ST.COLUMNS) ---
     # =====================================================================
-    st.markdown('<div class="bottom-nav">', unsafe_allow_html=True)
     
-    # Crée les colonnes à l'intérieur du conteneur HTML fixe
-    cols_nav = st.columns(len(icones_navigation))
+    # On génère dynamiquement les boutons d'onglets en HTML pur
+    boutons_html = ""
+    for icone in icones_navigation:
+        est_actif = st.session_state.onglet_actif == icone
+        label_bouton = f"● {icone}" if est_actif else icone
+        
+        # Style dynamique : fond bleu léger et bordure marquée si l'onglet est sélectionné
+        style_bouton = """
+            background-color: #1e3a8a; color: white; font-weight: bold; border: 1px solid #1e3a8a;
+        """ if est_actif else """
+            background-color: #f8fafc; color: #64748b; border: 1px solid #e2e8f0;
+        """
+        
+        # Chaque bouton appelle un mini-formulaire ou est un bouton de soumission stylisé
+        boutons_html += f"""
+        <button onclick="window.parent.postMessage({{type: 'streamlit:set_page_config', active: '{icone}'}}, '*')" 
+                style="flex: 1; text-align: center; padding: 12px 0; font-size: 16px; border-radius: 8px; cursor: pointer; margin: 0 4px; transition: all 0.2s; {style_bouton}">
+            {label_bouton}
+        </button>
+        """
 
-    for idx, icone in enumerate(icones_navigation):
-        with cols_nav[idx]:
-            est_actif = st.session_state.onglet_actif == icone
-            # Un look épuré : le point en dessous ou devant pour l'onglet actif
-            label_bouton = f"● {icone}" if est_actif else icone
-            
-            if st.button(label_bouton, key=f"nav_{icone}", use_container_width=True):
-                st.session_state.onglet_actif = icone
-                st.rerun()
+    # Pour éviter le conflit et le re-rendu vertical de Streamlit, on utilise des query_params natifs
+    # C'est la méthode ultime et approuvée : on écoute les changements d'URL de Streamlit
+    queryParams = st.query_params
+    if "tab" in queryParams:
+        if queryParams["tab"] in icones_navigation and queryParams["tab"] != st.session_state.onglet_actif:
+            st.session_state.onglet_actif = queryParams["tab"]
+            st.rerun()
+
+    # Création du code HTML final de la barre de navigation basse
+    liens_navigation_html = ""
+    for icone in icones_navigation:
+        est_actif = st.session_state.onglet_actif == icone
+        label = f"<b>● {icone}</b>" if est_actif else icone
+        couleur_texte = "#1e3a8a" if est_actif else "#64748b"
+        poids_texte = "bold" if est_actif else "normal"
+        fond_case = "#e3eaf2" if est_actif else "transparent"
+        
+        # Astuce absolue : un vrai lien HTML (<a href="...">) qui change le paramètre d'URL de l'application
+        # Comme l'URL change, Streamlit recharge instantanément la page et notre code ci-dessus détecte le nouvel onglet actif !
+        liens_navigation_html += f"""
+        <a href="?tab={icone}" target="_self" style="flex: 1; text-align: center; text-decoration: none; color: {couleur_texte}; font-weight: {poids_texte}; background-color: {fond_case}; padding: 12px 0; border-radius: 8px; font-size: 18px; margin: 0 4px; border: 1px solid #e2e8f0;">
+            {label}
+        </a>
+        """
+
+    # Injection du bandeau figé en bas (sans aucun st.columns pour perturber le CSS mobile)
+    st.markdown(f"""
+    <div class="bottom-nav" style="position: fixed; bottom: 0; left: 0; width: 100%; background-color: #ffffff; border-top: 1px solid #e2e8f0; padding: 10px 5px; box-shadow: 0 -4px 15px rgba(0,0,0,0.1); z-index: 999999; display: flex !important; flex-direction: row !important; justify-content: space-around !important; align-items: center !important; box-sizing: border-box;">
+        {liens_navigation_html}
+    </div>
+    """, unsafe_allow_html=True)
 
     st.markdown('</div>', unsafe_allow_html=True)
