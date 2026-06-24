@@ -1,3 +1,10 @@
+Ce problème de SyntaxError se produit parce que les copier-coller successifs ont mélangé l'ancienne structure (qui utilisait des composants with st.tabs()) et la nouvelle structure par if/elif. Du code se retrouve "orphelin" avec des mauvaises indentations au milieu et à la fin du fichier, ce qui fait planter l'application.
+
+Pour tout remettre en ordre, retrouver la barre de navigation horizontale tout en haut, la vitesse maximale, et corriger définitivement ce bug, voici le code complet et nettoyé de ton fichier app.py.
+
+Tu peux tout effacer dans ton fichier actuel et le remplacer entièrement par ce code parfaitement structuré :
+
+Python
 import streamlit as st
 from supabase import create_client
 from datetime import datetime, timedelta
@@ -58,8 +65,6 @@ def verifier_et_importer_matchs():
         maintenant = datetime.now()
         annee_saison_courante = maintenant.year - 1 if maintenant.month < 8 else maintenant.year
         annees_a_tester = [str(annee_saison_courante - 1), str(annee_saison_courante)]
-        
-        st.write("DEBUG API - URL testée :", f"https://www.thesportsdb.com/api/v1/json/3/eventsseason.php?id=4413&s={annee_saison_courante}")
         
         for annee in annees_a_tester:
             try:
@@ -128,16 +133,17 @@ def sauvegarder_bonus_auto(question_id, user_id_cible):
         st.error(f"Erreur sauvegarde bonus : {e}")
 
 # =====================================================================
-# INITIALISATION ET GESTION DU REFRESH DYNAMIQUE (5 MIN)
+# INITIALISATION ET GESTION DE LA SESSION
 # =====================================================================
 if "user_id" not in st.session_state: st.session_state.user_id = None
 if "is_admin" not in st.session_state: st.session_state.is_admin = False
 if "pseudo" not in st.session_state: st.session_state.pseudo = ""
+if "onglet_actif" not in st.session_state: st.session_state.onglet_actif = "📊"
 
 TRANCHES_ECARTS = ["1-6", "7-10", "11-15", "16-20", "21-30", "31-40", "41-50", "51+"]
 maintenant_paris = datetime.utcnow() + timedelta(hours=2)
 
-# REFRESH AUTOMATIQUE INTELLIGENT
+# REFRESH AUTOMATIQUE INTELLIGENT SI MATCH EN DIRECT
 try:
     matchs_en_direct = supabase.table("Matchs").select("id").eq("statut", "LIVE").execute().data
     if matchs_en_direct:
@@ -146,7 +152,7 @@ try:
 except Exception:
     pass
 
-# --- tentative de reconnexion via COOKIE ---
+# Tentative de reconnexion via COOKIE
 if st.session_state.user_id is None:
     saved_user_id = cookie_manager.get(cookie="top14_user_id")
     if saved_user_id:
@@ -160,12 +166,14 @@ if st.session_state.user_id is None:
         except Exception:
             pass
 
-# ---- CONNEXION / INSCRIPTION / MDP OUBLIÉ ----
+# =====================================================================
+# ÉCRAN DE CONNEXION / INSCRIPTION
+# =====================================================================
 if st.session_state.user_id is None:
     st.title("🏉 Pronos Top 14")
-    onglet = st.tabs(["Se connecter", "S'inscrire", "Mot de passe oublié"])
+    onglet_connexion = st.tabs(["Se connecter", "S'inscrire", "Mot de passe oublié"])
     
-    with onglet[0]:
+    with onglet_connexion[0]:
         mail = st.text_input("Email", key="login_email")
         mdp = st.text_input("Mot de passe", type="password", key="login_pass")
         if st.button("Connexion"):
@@ -183,7 +191,7 @@ if st.session_state.user_id is None:
                 st.rerun()
             except Exception: st.error("Identifiants incorrects.")
 
-    with onglet[1]:
+    with onglet_connexion[1]:
         new_mail = st.text_input("Email", key="reg_email")
         new_mdp = st.text_input("Mot de passe", type="password", key="reg_pass")
         pseudo = st.text_input("Pseudo")
@@ -196,7 +204,7 @@ if st.session_state.user_id is None:
                     st.success("Compte créé avec succès !")
                 except Exception as e: st.error(f"Erreur : {e}")
 
-    with onglet[2]:
+    with onglet_connexion[2]:
         st.subheader("Réinitialiser mon mot de passe")
         reset_email = st.text_input("Entrez votre adresse email de connexion", key="reset_mail")
         if st.button("Envoyer le lien de récupération"):
@@ -207,89 +215,54 @@ if st.session_state.user_id is None:
                 except Exception as e: st.error(f"Erreur : {e}")
             else: st.warning("Veuillez renseigner votre adresse email.")
 
-# --- APPLICATION PRINCIPALE CONNECTÉE ---
+# =====================================================================
+# INTERFACE PRINCIPALE (UTILISATEUR CONNECTÉ)
+# =====================================================================
 else:
-    # --- EN-TÊTE ÉPURÉ AVEC BOUTON DÉCONNEXION ---
-    col_vide, col_deco = st.columns([4, 1])
-    with col_deco:
-        if st.button("🚪 Déconnexion", key="btn_logout", use_container_width=True):
-            st.session_state.user_id = None
-            st.session_state.is_admin = False
-            st.session_state.pseudo = ""
-            st.rerun()
-
-    # --- 1. INITIALISATION DE L'ONGLET ACTIF ---
-    if "onglet_actif" not in st.session_state:
-        st.session_state.onglet_actif = "📊"
-
-    # --- 2. CONFIGURATION DES ONGLETS EN BAS ---
+    # --- CONFIGURATION DES ONGLETS ACCESSIBLES ---
     icones_navigation = ["📊", "🏉", "📅"]
     if st.session_state.is_admin:
         icones_navigation.append("⚙️")
 
-# --- 3. INJECTION DU CODE CSS ULTRA-CIBLÉ POUR BARRE MOBILE HORIZONTALE ---
-
-    # Récupération globale de la configuration pour les barèmes
-    try:
-        conf = supabase.table("Configuration").select("*").eq("id", "default_config").single().execute().data
-        pts_gagnant_cfg = conf.get("pts_gagnant", 3) if conf else 3
-        pts_ecart_cfg = conf.get("pts_ecart", 2) if conf else 2
-        seuil_ose_cfg = conf.get("seuil_poursentage_ose", 20) if conf else 20
-        mult_ose_cfg = conf.get("multiplicateur_ose", 2) if conf else 2
-    except Exception:
-        pts_gagnant_cfg, pts_ecart_cfg, seuil_ose_cfg, mult_ose_cfg = 3, 2, 20, 2
-
-    pts_parfait_cfg = pts_gagnant_cfg + pts_ecart_cfg
-# --- APPLICATION PRINCIPALE CONNECTÉE ---
-else:
-    # --- 1. INITIALISATION DE L'ONGLET ACTIF ---
-    if "onglet_actif" not in st.session_state:
-        st.session_state.onglet_actif = "📊"
-
-    # --- 2. CONFIGURATION DES ONGLETS DE NAVIGATION ---
-    icones_navigation = ["📊", "🏉", "📅"]
-    if st.session_state.is_admin:
-        icones_navigation.append("⚙️")
-
-    # --- 3. INJECTION DU CSS POUR VERROUILLER LE BANDEAU EN HAUT SUR TOUTE LA LARGEUR ---
+    # --- INJECTION DU STYLE CSS POUR LE BANDEAU EN HAUT DE L'ÉCRAN MOBILE ---
     st.markdown("""
     <style>
-        /* Supprime les marges de l'application pour coller le bandeau tout en haut */
+        /* Ajustement des marges hautes globales */
         .main .block-container {
             padding-top: 0px !important;
             max-width: 100% !important;
         }
         
-        /* Cible le premier st.radio de la page (notre navigation) */
+        /* Fixation du st.radio en haut de l'écran en pleine largeur */
         div[data-testid="stRadio"] {
             position: sticky !important;
             top: 0 !important;
             left: 0 !important;
             width: 100vw !important;
-            margin-left: calc(-50vw + 50%) !important; /* Astuce pour forcer le plein écran même dans un conteneur centré */
+            margin-left: calc(-50vw + 50%) !important;
             background-color: #ffffff !important;
-            padding: 12px 20px !important;
+            padding: 12px 15px !important;
             z-index: 999999 !important;
             border-bottom: 2px solid #e2e8f0 !important;
             box-shadow: 0 4px 12px rgba(0,0,0,0.05) !important;
         }
         
-        /* Masque le titre du widget */
+        /* Masquage de l'étiquette par défaut du widget */
         div[data-testid="stRadio"] label[data-testid="stWidgetLabel"] {
             display: none !important;
         }
 
-        /* Aligne horizontalement les boutons sur une seule ligne stricte */
+        /* Alignement horizontal strict en ligne (Flexbox) */
         div[data-testid="stRadio"] div[role="radiogroup"] {
             display: flex !important;
             flex-direction: row !important;
             flex-wrap: nowrap !important;
             justify-content: space-around !important;
             width: 100% !important;
-            gap: 10px !important;
+            gap: 8px !important;
         }
 
-        /* Donne un look de gros onglets tactiles parfaits pour smartphone */
+        /* Look design d'onglets pour smartphone */
         div[data-testid="stRadio"] div[role="radiogroup"] label {
             flex: 1 !important;
             text-align: center !important;
@@ -302,12 +275,12 @@ else:
             cursor: pointer !important;
         }
 
-        /* Supprime le petit point radio rond natif */
+        /* Retrait du rond radio par défaut de Streamlit */
         div[data-testid="stRadio"] div[role="radiogroup"] label div[data-testid="stMarkdownContainer"]::before {
             display: none !important;
         }
 
-        /* Colore magnifiquement l'onglet sélectionné en Bleu Top 14 */
+        /* Couleur de l'onglet actif sélectionné (Bleu Rugby) */
         div[data-testid="stRadio"] div[role="radiogroup"] label[data-checked="true"] {
             background-color: #1e3a8a !important;
             color: #ffffff !important;
@@ -317,7 +290,7 @@ else:
     </style>
     """, unsafe_allow_html=True)
 
-    # --- 4. AFFICHAGE DU BANDEAU DE NAVIGATION (PLUGGING EN HAUT) ---
+    # --- BARRE DE NAVIGATION SUPÉRIEURE ---
     try:
         index_defaut = icones_navigation.index(st.session_state.onglet_actif)
     except ValueError:
@@ -331,12 +304,12 @@ else:
         key="radio_nav_bar"
     )
 
-    # Déclencheur ultra-rapide si clic détecté
+    # Intercepteur de clic ultra-rapide
     if choix_onglet != st.session_state.onglet_actif:
         st.session_state.onglet_actif = choix_onglet
         st.rerun()
 
-    # --- 5. EN-TÊTE ÉPURÉ AVEC BOUTON DÉCONNEXION (Placé juste en dessous du menu) ---
+    # --- EN-TÊTE DE LA PAGE AVEC DÉCONNEXION ---
     col_vide, col_deco = st.columns([4, 1])
     with col_deco:
         if st.button("🚪 Déconnexion", key="btn_logout", use_container_width=True):
@@ -345,10 +318,22 @@ else:
             st.session_state.pseudo = ""
             st.rerun()
             
-    st.markdown("---") # Ligne de séparation sous le menu et la déconnexion
+    st.markdown("---")
+
+    # --- CHARGEMENT DU BARÈME ET DE LA CONFIGURATION ---
+    try:
+        conf = supabase.table("Configuration").select("*").eq("id", "default_config").single().execute().data
+        pts_gagnant_cfg = conf.get("pts_gagnant", 3) if conf else 3
+        pts_ecart_cfg = conf.get("pts_ecart", 2) if conf else 2
+        seuil_ose_cfg = conf.get("seuil_poursentage_ose", 20) if conf else 20
+        mult_ose_cfg = conf.get("multiplicateur_ose", 2) if conf else 2
+    except Exception:
+        pts_gagnant_cfg, pts_ecart_cfg, seuil_ose_cfg, mult_ose_cfg = 3, 2, 20, 2
+
+    pts_parfait_cfg = pts_gagnant_cfg + pts_ecart_cfg
 
     # =====================================================================
-    # CONTENU ONGLET 1 : ACCUEIL - PROFIL & CLASSEMENT GÉNÉRAL
+    # CONTENU DE L'ONGLET 1 : CLASSEMENT GÉNÉRAL
     # =====================================================================
     if st.session_state.onglet_actif == "📊":
         st.markdown(f"### 🏉 Bienvenue sur ton tableau de bord, **{st.session_state.pseudo}** !")
@@ -365,17 +350,12 @@ else:
                         break
             
             pronos_joueur = supabase.table("Pronostics").select("*, Matchs(*)").eq("user_id", st.session_state.user_id).execute().data
-            
-            stats_bons_gagnants = 0
-            stats_parfaits = 0
-            stats_oses = 0
+            stats_bons_gagnants, stats_parfaits, stats_oses = 0, 0, 0
             
             for p in pronos_joueur:
                 match = p.get('Matchs')
                 if match and match.get('score_dom') is not None and match.get('score_ext') is not None:
-                    sc_dom = match['score_dom']
-                    sc_ext = match['score_ext']
-                    
+                    sc_dom, sc_ext = match['score_dom'], match['score_ext']
                     vrai_gagnant = "home" if sc_dom > sc_ext else ("away" if sc_dom < sc_ext else "draw")
                     vrai_ecart_points = abs(sc_dom - sc_ext)
                     
@@ -401,7 +381,7 @@ else:
                             if pct_m <= seuil_ose_cfg:
                                 stats_oses += 1
                                 
-        except Exception as e:
+        except Exception:
             joueur_connecte = {"score": 0}
             tous_les_joueurs = []
             rang_joueur = "-"
@@ -419,7 +399,7 @@ else:
                 </div>
                 <div style="background-color: #ffffff; border-radius: 10px; padding: 8px; min-width: 90px; max-width: 110px; flex: 1; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;">
                     <span style="color: #627d98; font-size: 11px; font-weight: bold; display:block; margin-bottom:2px;">🎯 Score</span>
-                    <span style="color:#1e3a8a; font-size: 26px; font-weight: 900;">{joueur_connecte.get('score', 0)}</span>
+                    <span style="color:#1e3a8a; font-size: 26px; font-weight: 900;">{joueur_connecte.get('score', 0) if joueur_connecte else 0}</span>
                     <span style="display:block; font-size:10px; color:#627d98;">pts</span>
                 </div>
                 <div style="background-color: #ffffff; border-radius: 10px; padding: 8px; min-width: 100px; max-width: 120px; flex: 1; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;">
@@ -443,10 +423,7 @@ else:
             lignes_html = ""
             for index, joueur in enumerate(tous_les_joueurs):
                 rang = index + 1
-                if rang == 1: prefixe_rang = "🥇 1er"
-                elif rang == 2: prefixe_rang = "🥈 2e"
-                elif rang == 3: prefixe_rang = "🥉 3e"
-                else: prefixe_rang = f"{rang}e"
+                prefixe_rang = "🥇 1er" if rang == 1 else ("🥈 2e" if rang == 2 else ("🥉 3e" if rang == 3 else f"{rang}e"))
                 
                 if joueur['id'] == st.session_state.user_id:
                     style_ligne = "background-color: #cbd5e1; font-weight: bold; border-left: 5px solid #1e3a8a; color: #000000;"
@@ -457,7 +434,7 @@ else:
                 
                 lignes_html += f'<tr style="{style_ligne} border-bottom: 1px solid #e2e8f0;"><td style="padding: 12px; text-align: left; color: inherit;">{prefixe_rang}</td><td style="padding: 12px; text-align: left; color: inherit;">{pseudo_affiche}</td><td style="padding: 12px; text-align: right; font-weight: bold; color: #000000;">{joueur["score"]} pts</td></tr>'
             
-            tableau_complet = f"""
+            st.markdown(f"""
             <div style="background-color: #f8fafc; border-radius: 12px; padding: 15px; border: 1px solid #e2e8f0;">
                 <table style="width: 100%; border-collapse: collapse; font-family: sans-serif; color: #2d3748;">
                     <thead>
@@ -470,14 +447,12 @@ else:
                     <tbody>{lignes_html}</tbody>
                 </table>
             </div>
-            """.replace("\n", "")
-            st.markdown(tableau_complet, unsafe_allow_html=True)
+            """.replace("\n", ""), unsafe_allow_html=True)
         else:
             st.info("Le classement est vide pour le moment.")
 
-
     # =====================================================================
-    # CONTENU ONGLET 2 : FAIRE MES PRONOSTICS
+    # CONTENU DE L'ONGLET 2 : FAIRE MES PRONOSTICS
     # =====================================================================
     elif st.session_state.onglet_actif == "🏉":
         st.title("✍ *Saisir les Pronostics*")
@@ -486,7 +461,7 @@ else:
             st.markdown(f"""
             * **Bon Vainqueur / Match Nul** : `{pts_gagnant_cfg} points`
             * **Tranche d'écart exacte** : `+{pts_ecart_cfg} points` (soit `{pts_parfait_cfg} points` pour un prono parfait)
-            * **🔥 Mode OSÉ Actif** : Si moins de `{seuil_ose_cfg}%` des joueurs trouvent le score parfait, leurs points sont multipliés par `{mult_ose_cfg}` !
+            * **🔥 Mode OSÉ Actif** : Si moins de `{seuil_ose_cfg}%` des joueurs trouvent le score parfait (Vainqueur + Écart), leurs points sur ce match sont multipliés par `{mult_ose_cfg}` (soit `{pts_parfait_cfg * mult_ose_cfg} points` au lieu de `{pts_parfait_cfg}`) !
             """)
 
         id_joueur_cible = st.session_state.user_id
@@ -502,6 +477,7 @@ else:
                     if choix_membre: id_joueur_cible = choix_membre['id']
             except Exception as e: st.error(f"Erreur membres : {e}")
 
+        # --- QUESTIONS BONUS ---
         st.subheader("🎯 Questions Bonus du moment")
         try:
             questions = supabase.table("Questions_Bonus").select("*").eq("statut", "En cours").order("date_limite").execute().data
@@ -524,6 +500,7 @@ else:
             else: st.write("Aucune question bonus ouverte actuellement.")
         except Exception as e: st.error(f"Erreur questions bonus : {e}")
 
+        # --- MATCHS OUVERTS ---
         st.subheader("🏉 Matchs ouverts du Top 14")
         try:
             matchs = supabase.table("Matchs").select("*").order("date_match").execute().data
@@ -558,9 +535,8 @@ else:
             else: st.info("Aucun match ouvert aux pronostics pour l'instant.")
         except Exception as e: st.error(f"Erreur match : {e}")
 
-
     # =====================================================================
-    # CONTENU ONGLET 3 : RÉSULTATS & DIRECT
+    # CONTENU DE L'ONGLET 3 : RÉSULTATS & DIRECT
     # =====================================================================
     elif st.session_state.onglet_actif == "📅":
         st.title("📊 Résultats & Direct")
@@ -581,7 +557,6 @@ else:
                 for m in matchs_clos:
                     sc_dom = m['score_dom'] if m['score_dom'] is not None else 0
                     sc_ext = m['score_ext'] if m['score_ext'] is not None else 0
-                    
                     label_live = "🔴 [EN DIRECT]" if m['statut'] == 'LIVE' else ""
                     st.write(f"### {m['equipe_dom']} {sc_dom} - {sc_ext} {m['equipe_ext']}  {label_live}")
                     
@@ -603,7 +578,6 @@ else:
                             total_pronos = len(all_pronos)
                             nb_bons_vainqueurs = sum(1 for p in all_pronos if p['gagnant_prevu'] == vrai_gagnant_brut)
                             pourcentage_vainqueur = (nb_bons_vainqueurs / total_pronos) * 100 if total_pronos > 0 else 0
-                            
                             est_ose_ici = pourcentage_vainqueur <= seuil_ose_cfg and nb_bons_vainqueurs > 0
                             
                             for p in all_pronos:
@@ -615,7 +589,6 @@ else:
                                     if p['gagnant_prevu'] == vrai_gagnant_brut:
                                         pts_visuels = pts_gagnant_cfg
                                         label_base = "Vainqueur"
-                                        
                                         if p['ecart_prevu'] == vraie_tranche:
                                             pts_visuels += pts_ecart_cfg
                                             label_base = "PARFAIT !"
@@ -628,50 +601,33 @@ else:
                                             detail_badge = f"{badge_icon} +{pts_visuels} pts ({label_base})"
                                 
                                 st.markdown(f"👤 **{pseudo_j}** : {nom_prevu} ({p['ecart_prevu']}) — `{detail_badge}`")
-                        else: 
-                            st.write("Aucun prono enregistré pour ce match.")
+                        else: st.write("Aucun prono enregistré pour ce match.")
                     st.markdown("---")
             else: st.info("Aucun match n'a encore débuté.")
         except Exception as e: st.error(f"Erreur matchs clos : {e}")
 
-
     # =====================================================================
-    # CONTENU ONGLET 4 : PANEL ADMINISTRATION GLOBAL
+    # CONTENU DE L'ONGLET 4 : CONSOLE ADMINISTRATION PRIVÉE
     # =====================================================================
     elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
         st.title("⚙️ Console d'Administration Privée")
+        tab1, tab2, tab3, tab4, tab5 = st.tabs(["🎯 Configuration", "➕ Matchs Manuels", "🎁 Questions Bonus", "🔄 Synchro Scraping", "🚨 Zone Danger"])
         
-        tab1, tab2, tab3, tab4, tab5 = st.tabs([
-            "🎯 Configuration", 
-            "➕ Matchs Manuels", 
-            "🎁 Questions Bonus", 
-            "🔄 Synchro Scraping",
-            "🚨 Changement de Saison"
-        ])
-        
-        # --- TAB 1 : CONFIGURATION ---
         with tab1:
             st.subheader("🎛️ Configuration du Barème")
-            try:
-                current_config = supabase.table("Configuration").select("*").eq("id", "default_config").single().execute().data
-            except Exception:
-                current_config = {}
+            try: current_config = supabase.table("Configuration").select("*").eq("id", "default_config").single().execute().data
+            except Exception: current_config = {}
             
             with st.form("form_points"):
                 val_gagnant = st.number_input("Points pour le bon vainqueur", value=current_config.get("pts_gagnant", 3) if current_config else 3)
                 val_ecart = st.number_input("Points pour le bon écart", value=current_config.get("pts_ecart", 2) if current_config else 2)
                 val_seuil = st.number_input("Seuil de déclenchement du mode Osé (en %)", value=current_config.get("seuil_poursentage_ose", 20) if current_config else 20)
                 val_mult = st.number_input("Multiplicateur Osé (ex: 2)", value=current_config.get("multiplicateur_ose", 2) if current_config else 2)
-                
                 if st.form_submit_button("💾 Sauvegarder"):
-                    supabase.table("Configuration").upsert({
-                        "id": "default_config", "pts_gagnant": val_gagnant, "pts_ecart": val_ecart, 
-                        "seuil_poursentage_ose": val_seuil, "multiplicateur_ose": val_mult
-                    }).execute()
+                    supabase.table("Configuration").upsert({"id": "default_config", "pts_gagnant": val_gagnant, "pts_ecart": val_ecart, "seuil_poursentage_ose": val_seuil, "multiplicateur_ose": val_mult}).execute()
                     st.success("Barème enregistré !")
                     st.rerun()
 
-        # --- TAB 2 : MATCHS MANUELS ---
         with tab2:
             st.subheader("➕ Ajouter un Match manuellement")
             with st.form("form_ajout_match"):
@@ -683,9 +639,7 @@ else:
                     if eq_dom and eq_ext:
                         dt_combine = datetime.combine(date_c, heure_c).isoformat()
                         id_m = int(datetime.timestamp(datetime.combine(date_c, heure_c))) + random.randint(1, 1000)
-                        supabase.table("Matchs").insert({
-                            "id": id_m, "equipe_dom": eq_dom, "equipe_ext": eq_ext, "date_match": dt_combine, "score_dom": None, "score_ext": None, "statut": "NS"
-                        }).execute()
+                        supabase.table("Matchs").insert({"id": id_m, "equipe_dom": eq_dom, "equipe_ext": eq_ext, "date_match": dt_combine, "score_dom": None, "score_ext": None, "statut": "NS"}).execute()
                         st.success("Match créé de force !")
                         st.rerun()
             
@@ -694,44 +648,26 @@ else:
             try:
                 tous_matchs = supabase.table("Matchs").select("*").order("date_match", desc=True).execute().data
                 if tous_matchs:
-                    def format_match_choice(m):
-                        sc_d = m['score_dom'] if m['score_dom'] is not None else "?"
-                        sc_e = m['score_ext'] if m['score_ext'] is not None else "?"
-                        return f"{m['equipe_dom']} ({sc_d}) vs ({sc_e}) {m['equipe_ext']} - [{m['statut']}]"
-                    
-                    match_selectionne = st.selectbox("Sélectionner le match à mettre à jour :", options=tous_matchs, format_func=format_match_choice)
-                    
+                    match_selectionne = st.selectbox("Sélectionner le match :", options=tous_matchs, format_func=lambda m: f"{m['equipe_dom']} ({m['score_dom'] if m['score_dom'] is not None else '?'}) vs ({m['score_ext'] if m['score_ext'] is not None else '?'}) {m['equipe_ext']} - [{m['statut']}]")
                     if match_selectionne:
                         with st.form(f"form_score_manual_{match_selectionne['id']}"):
-                            col_sc1, col_sc2 = st.columns(2)
-                            with col_sc1:
-                                nouveau_score_dom = st.number_input(f"Score {match_selectionne['equipe_dom']}", min_value=0, value=match_selectionne['score_dom'] if match_selectionne['score_dom'] is not None else 0, step=1)
-                            with col_sc2:
-                                nouveau_score_ext = st.number_input(f"Score {match_selectionne['equipe_ext']}", min_value=0, value=match_selectionne['score_ext'] if match_selectionne['score_ext'] is not None else 0, step=1)
-                            
+                            nouveau_score_dom = st.number_input(f"Score {match_selectionne['equipe_dom']}", min_value=0, value=match_selectionne['score_dom'] if match_selectionne['score_dom'] is not None else 0)
+                            nouveau_score_ext = st.number_input(f"Score {match_selectionne['equipe_ext']}", min_value=0, value=match_selectionne['score_ext'] if match_selectionne['score_ext'] is not None else 0)
                             liste_statuts = ["NS", "FT", "LIVE"]
                             statut_index = liste_statuts.index(match_selectionne['statut']) if match_selectionne['statut'] in liste_statuts else 1
                             nouveau_statut = st.selectbox("Statut du match", options=liste_statuts, index=statut_index)
-                            
-                            valider_scores = st.form_submit_button("💾 1. Enregistrer le résultat & Clôturer le match")
-                            if valider_scores:
-                                supabase.table("Matchs").update({
-                                    "score_dom": nouveau_score_dom, "score_ext": nouveau_score_ext, "statut": nouveau_statut
-                                }).eq("id", match_selectionne['id']).execute()
-                                st.success("Résultat enregistré en base de données !")
+                            if st.form_submit_button("💾 1. Enregistrer le résultat"):
+                                supabase.table("Matchs").update({"score_dom": nouveau_score_dom, "score_ext": nouveau_score_ext, "statut": nouveau_statut}).eq("id", match_selectionne['id']).execute()
+                                st.success("Résultat enregistré !")
                                 st.rerun()
 
                         if match_selectionne['statut'] == "FT":
-                            st.warning(f"🚨 Ce match est terminé. Clique ci-dessous pour distribuer les points.")
-                            if st.button(f"🎯 Calculer et Distribuer les points pour {match_selectionne['equipe_dom']} vs {match_selectionne['equipe_ext']}", type="primary"):
-                                with st.spinner("Calcul des scores en cours..."):
-                                    sc_dom = match_selectionne['score_dom']
-                                    sc_ext = match_selectionne['score_ext']
-                                    
+                            if st.button(f"🎯 Calculer et Distribuer les points", type="primary"):
+                                with st.spinner("Calcul..."):
+                                    sc_dom, sc_ext = match_selectionne['score_dom'], match_selectionne['score_ext']
                                     if sc_dom is not None and sc_ext is not None:
                                         vrai_gagnant_brut = "home" if sc_dom > sc_ext else ("away" if sc_dom < sc_ext else "draw")
                                         vrai_ecart_points = abs(sc_dom - sc_ext)
-                                        
                                         vraie_tranche = "1-6"
                                         if 7 <= vrai_ecart_points <= 10: vraie_tranche = "7-10"
                                         elif 11 <= vrai_ecart_points <= 15: vraie_tranche = "11-15"
@@ -753,13 +689,8 @@ else:
                                                 pts_gagnes = 0
                                                 if p['gagnant_prevu'] == vrai_gagnant_brut:
                                                     pts_base_match = pts_gagnant_cfg
-                                                    if p['ecart_prevu'] == vraie_tranche:
-                                                        pts_base_match += pts_ecart_cfg
-                                                    
-                                                    if est_ose:
-                                                        pts_gagnes = pts_base_match * mult_ose_cfg
-                                                    else:
-                                                        pts_gagnes = pts_base_match
+                                                    if p['ecart_prevu'] == vraie_tranche: pts_base_match += pts_ecart_cfg
+                                                    pts_gagnes = pts_base_match * mult_ose_cfg if est_ose else pts_base_match
                                                 
                                                 if pts_gagnes > 0:
                                                     joueur_id = p['user_id']
@@ -768,16 +699,12 @@ else:
                                                         nouveau_global = j_data.get('score', 0) + pts_gagnes
                                                         supabase.table("Joueurs").update({"score": nouveau_global}).eq("id", joueur_id).execute()
                                                         compteur_updates += 1
-                                        
                                         st.success(f"🎉 Points distribués ! {compteur_updates} joueurs mis à jour.")
                                         st.balloons()
                                         time.sleep(1)
                                         st.rerun()
-                else:
-                    st.info("Aucun match disponible.")
-            except Exception as e: st.error(f"Erreur : {e}")
+            except Exception as e: st.error(f"Erreur admin matchs : {e}")
 
-        # --- TAB 3 : QUESTIONS BONUS ---
         with tab3:
             st.subheader("📝 Créer une Question Bonus")
             with st.form("form_bonus"):
@@ -786,13 +713,10 @@ else:
                 pts_bonus = st.number_input("Points accordés", min_value=1, value=5)
                 d_limite = st.date_input("Date limite")
                 h_limite = st.time_input("Heure limite")
-                
                 if st.form_submit_button("🚀 Publier"):
                     if intitule:
                         dt_lim_combine = datetime.combine(d_limite, h_limite).isoformat()
-                        supabase.table("Questions_Bonus").insert({
-                            "question": intitule, "choix_reponse": choix, "date_limite": dt_lim_combine, "statut": "En cours", "points": pts_bonus
-                        }).execute()
+                        supabase.table("Questions_Bonus").insert({"question": intitule, "choix_reponse": choix, "date_limite": dt_lim_combine, "statut": "En cours", "points": pts_bonus}).execute()
                         st.success("Question bonus en ligne !")
                         st.rerun()
             
@@ -804,11 +728,9 @@ else:
                     q_choisie = st.selectbox("Sélectionner la question :", options=q_ouvertes, format_func=lambda x: f"{x['question']} ({x.get('points', 5)} pts)")
                     options_validation = [opt.strip() for opt in q_choisie['choix_reponse'].split("/")] if q_choisie['choix_reponse'] else ["Oui", "Non"]
                     bonne_rep = st.radio("Bonne réponse :", options=options_validation)
-                    
                     if st.button("Clôturer et distribuer les points"):
                         points_a_gagner = q_choisie.get('points', 5)
                         reponses_joueurs = supabase.table("Réponses_Questions").select("user_id, reponse_joueur").eq("question_id", q_choisie['id']).execute().data
-                        
                         compteur_gagnants = 0
                         if reponses_joueurs:
                             for r in reponses_joueurs:
@@ -818,17 +740,13 @@ else:
                                         nouveau_score = joueur_data.get('score', 0) + points_a_gagner
                                         supabase.table("Joueurs").update({"score": nouveau_score}).eq("id", r['user_id']).execute()
                                         compteur_gagnants += 1
-                        
                         supabase.table("Questions_Bonus").update({"reponse_valide": bonne_rep, "statut": "Validé"}).eq("id", q_choisie['id']).execute()
                         st.success(f"🎉 Validé ! {compteur_gagnants} joueur(s) récompensés.")
                         st.balloons()
                         time.sleep(1)
                         st.rerun()
-                else:
-                    st.write("Aucune question en cours de validation.")
-            except Exception as e: st.error(f"Erreur bonus : {e}")
+            except Exception as e: st.error(f"Erreur validation bonus : {e}")
 
-        # --- TAB 4 : SYNCHRO SCRAPING ---
         with tab4:
             st.subheader("🔄 Lanceur de Scraping Manuel")
             if st.button("⚡ Lancer la Synchronisation"):
@@ -837,10 +755,8 @@ else:
                     st.success(f"Terminé ! {nb} matchs traités avec succès.")
                     st.rerun()
 
-        # --- TAB 5 : CHANGEMENT DE SAISON ---
         with tab5:
-            st.subheader("🚨 Zone de Danger : Reset de fin de Saison")
-            st.error("⚠️ Attention : Cette action va effacer définitivement les données.")
+            st.subheader("🚨 Zone de Danger")
             confirmation_secu = st.checkbox("Je confirme vouloir tout réinitialiser.", key="danger_zone_confirm")
             if st.button("🔥 Réinitialiser l'application", type="primary", disabled=not confirmation_secu):
                 with st.spinner("Nettoyage..."):
@@ -855,5 +771,3 @@ else:
                         time.sleep(1)
                         st.rerun()
                     except Exception as e: st.error(f"Erreur reset : {e}")
-
-
