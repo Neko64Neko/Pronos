@@ -753,49 +753,80 @@ else:
 
 
 # =====================================================================
-    # --- 5. BARRE DE NAVIGATION COMMUNE (ANT-DESIGN COMPONENT) ---
+    # --- 5. BARRE DE NAVIGATION COMMUNE (ST.RADIO CAPSULE FIGÉ EN BAS) ---
     # =====================================================================
-    import streamlit_antd_components as sac
-
-    # Enrobage CSS minimal uniquement pour fixer le composant tout en bas de l'écran
+    
+    # 1. Injection du CSS pour transformer st.radio en barre d'onglets fixe en bas
     st.markdown("""
     <style>
+        /* Crée de l'espace en bas de page pour le classement */
         .main .block-container {
-            padding-bottom: 80px !important;
+            padding-bottom: 100px !important;
         }
-        /* Fixe le composant tout en bas de la page web mobile */
-        iframe[title="streamlit_antd_components.sac.tabs.tabs"] {
+        
+        /* Cible le st.radio de navigation et le fige tout en bas */
+        div[data-testid="stRadio"] {
             position: fixed !important;
             bottom: 0 !important;
             left: 0 !important;
             width: 100% !important;
-            z-index: 999999 !important;
             background-color: #ffffff !important;
+            padding: 10px 15px !important;
+            box-shadow: 0 -4px 15px rgba(0,0,0,0.1) !important;
+            z-index: 999999 !important;
             border-top: 1px solid #e2e8f0 !important;
-            box-shadow: 0 -4px 15px rgba(0,0,0,0.08) !important;
+        }
+        
+        /* Masque le titre inutile "Navigation" du st.radio */
+        div[data-testid="stRadio"] label[data-testid="stWidgetLabel"] {
+            display: none !important;
+        }
+
+        /* FORCE les options (boutons) à s'aligner horizontalement sur une seule ligne */
+        div[data-testid="stRadio"] div[role="radiogroup"] {
+            display: flex !important;
+            flex-direction: row !important;
+            flex-wrap: nowrap !important;
+            justify-content: space-around !important;
+            width: 100% !important;
+            gap: 8px !important;
+        }
+
+        /* Donne un look d'onglet/bouton tactile à chaque option */
+        div[data-testid="stRadio"] div[role="radiogroup"] label {
+            flex: 1 !important;
+            text-align: center !important;
+            padding: 10px 0 !important;
+            background-color: #f8fafc !important;
+            border: 1px solid #e2e8f0 !important;
+            border-radius: 8px !important;
+            margin: 0 !important;
+            display: block !important;
+        }
+
+        /* Supprime le petit rond de sélection natif pour ne garder que le bouton */
+        div[data-testid="stRadio"] div[role="radiogroup"] label div[data-testid="stMarkdownContainer"]::before {
+            display: none !important;
         }
     </style>
     """, unsafe_allow_html=True)
 
-    # Dictionnaire pour lier les index (0, 1, 2, 3) à nos icônes de session_state
-    mapping_onglets = {idx: icone for idx, icone in enumerate(icones_navigation)}
-    mapping_inverse = {icone: idx for idx, icone in enumerate(icones_navigation)}
-    
-    # Récupère l'index de l'onglet actuellement actif
-    index_actuel = mapping_inverse.get(st.session_state.onglet_actif, 0)
+    # 2. On récupère l'index de l'onglet actuel pour que le bouton reste allumé au bon endroit
+    try:
+        index_defaut = icones_navigation.index(st.session_state.onglet_actif)
+    except ValueError:
+        index_defaut = 0
 
-    # Génération des boutons d'onglets (sac.tabs force l'alignement horizontal par défaut)
-    index_selectionne = sac.tabs(
-        items=[sac.TabsItem(icon=icone) for icone in icones_navigation],
-        index=index_actuel,
-        align='center',
-        grow=True, # Force les onglets à occuper 100% de la largeur mobile équitablement
-        return_index=True,
-        key="bottom_nav_bar"
+    # 3. Le st.radio horizontal (qui va être transformé par notre CSS ci-dessus)
+    choix_onglet = st.radio(
+        "Navigation", # Le titre sera masqué par le CSS
+        options=icones_navigation,
+        index=index_defaut,
+        horizontal=True,
+        key="radio_nav_bar"
     )
 
-    # Si le joueur clique sur un onglet, on change l'état et on recharge INSTANTANÉMENT
-    onglet_choisi = mapping_onglets.get(index_selectionne)
-    if onglet_choisi != st.session_state.onglet_actif:
-        st.session_state.onglet_actif = onglet_choisi
+    # 4. Si l'utilisateur clique sur une autre icône, changement instantané sans déconnexion
+    if choix_onglet != st.session_state.onglet_actif:
+        st.session_state.onglet_actif = choix_onglet
         st.rerun()
