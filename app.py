@@ -7,6 +7,7 @@ import time
 import random
 import extra_streamlit_components as stx
 from streamlit_autorefresh import st_autorefresh
+from streamlit_option_menu import option_menu  # <-- AJOUT DE LA LIBRAIRIE ROBUSTE
 
 # CONFIGURATION DE LA PAGE
 st.set_page_config(page_title="Pronos Top 14", page_icon="🏉", layout="centered")
@@ -131,7 +132,7 @@ def sauvegarder_bonus_auto(question_id, user_id_cible):
 if "user_id" not in st.session_state: st.session_state.user_id = None
 if "is_admin" not in st.session_state: st.session_state.is_admin = False
 if "pseudo" not in st.session_state: st.session_state.pseudo = ""
-if "onglet_actif" not in st.session_state: st.session_state.onglet_actif = "📊"
+if "onglet_actif" not in st.session_state: st.session_state.onglet_actif = "📊 Classement"
 
 TRANCHES_ECARTS = ["1-6", "7-10", "11-15", "16-20", "21-30", "31-40", "41-50", "51+"]
 maintenant_paris = datetime.utcnow() + timedelta(hours=2)
@@ -212,146 +213,99 @@ if st.session_state.user_id is None:
 # INTERFACE PRINCIPALE (UTILISATEUR CONNECTÉ)
 # =====================================================================
 else:
-    # --- CONFIGURATION DES ONGLETS ACCESSIBLES ---
-    icones_navigation = ["📊", "🏉", "📅"]
+    # Noms des onglets explicites requis par le composant
+    onglets_noms = ["📊 Classement", "🏉 Pronostics", "📅 Matchs"]
+    onglets_icones = ["trophy", "shield-shaded", "calendar-event"]
+    
     if st.session_state.is_admin:
-        icones_navigation.append("⚙️")
+        onglets_noms.append("⚙️ Admin")
+        onglets_icones.append("gear")
 
-    # --- INJECTION DU STYLE CSS EXCLUSIF POUR LA BARRE DE NAVIGATION CIBLÉE ---
+    # --- INJECTION DU STYLE CSS POUR FIXER LE MENU ET METTRE EN FORME LES BULLES ---
     st.markdown("""
     <style>
-        /* Crée l'espace nécessaire en haut pour accueillir la barre fixe */
+        /* Espace en haut de page pour laisser la place à la barre fixe */
         .main .block-container {
-            padding-top: 100px !important;
+            padding-top: 105px !important;
             max-width: 100% !important;
         }
         
-        /* Appliqué uniquement sur le widget identifié par notre script JS */
-        div.targeted-nav-bar {
+        /* Fixation absolue de la zone de navigation tout en haut */
+        div.fixed-nav-container {
             position: fixed !important;
-            top: 0 !important;
-            left: 0 !important;
-            right: 0 !important;
+            top: 0 !important; left: 0 !important; right: 0 !important;
             width: 100% !important;
             background-color: #ffffff !important;
-            padding: 14px 16px !important;
+            padding: 10px 14px !important;
             z-index: 999999 !important;
             border-bottom: 2px solid #e2e8f0 !important;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.08) !important;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.06) !important;
             box-sizing: border-box !important;
         }
         
-        /* Cache l'étiquette "MenuPrincipal" */
-        div.targeted-nav-bar label {
-            display: none !important;
-        }
-
-        /* Organisation horizontale des bulles */
-        div.targeted-nav-bar div[role="radiogroup"] {
-            display: flex !important;
-            flex-direction: row !important;
-            flex-wrap: nowrap !important;
-            justify-content: space-around !important;
-            width: 100% !important;
+        /* Personnalisation interne du conteneur de menu */
+        div.fixed-nav-container .nav {
             gap: 12px !important;
         }
 
-        /* Look design des Grosses Bulles Pilules */
-        div.targeted-nav-bar div[role="radiogroup"] > label {
+        /* Look design des Grosses Bulles / Pilules */
+        div.fixed-nav-container .nav-link {
+            font-size: 18px !important;
+            font-weight: 600 !important;
+            height: 52px !important;
             display: flex !important;
-            flex: 1 !important;
             align-items: center !important;
             justify-content: center !important;
-            height: 56px !important;
-            background-color: #f1f5f9 !important;
+            border-radius: 30px !important; /* Forme de grosse bulle */
             border: 2px solid #cbd5e1 !important;
-            border-radius: 30px !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            cursor: pointer !important;
-            transition: all 0.2s ease !important;
-            position: relative !important;
+            background-color: #f1f5f9 !important;
+            color: #334155 !important;
+            transition: all 0.2s ease-in-out !important;
         }
 
-        /* Étendre la zone cliquable sur TOUTE la bulle */
-        div.targeted-nav-bar div[role="radiogroup"] > label > div:first-child {
-            position: absolute !important;
-            top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important;
-            width: 100% !important; height: 100% !important;
-            opacity: 0 !important; /* Masque le rond d'origine */
-            z-index: 2 !important;
-            margin: 0 !important;
-            cursor: pointer !important;
-        }
-
-        /* Style et taille des Émojis géants */
-        div.targeted-nav-bar div[role="radiogroup"] > label div[data-testid="stMarkdownContainer"] {
-            width: 100% !important;
-            height: 100% !important;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            font-size: 26px !important;
-            z-index: 1 !important;
-            pointer-events: none !important;
-        }
-
-        /* Retrait du point radio de Streamlit */
-        div.targeted-nav-bar div[role="radiogroup"] > label div[data-testid="stMarkdownContainer"]::before {
-            display: none !important;
-        }
-
-        /* Effet au survol */
-        div.targeted-nav-bar div[role="radiogroup"] > label:hover {
+        /* Hover (Survol) */
+        div.fixed-nav-container .nav-link:hover {
             background-color: #e2e8f0 !important;
-            transform: scale(1.04) !important;
+            transform: scale(1.03) !important;
         }
 
-        /* Couleur de la Bulle Active Sélectionnée (Bleu Rugby) */
-        div.targeted-nav-bar div[role="radiogroup"] label[data-checked="true"] {
+        /* Bulle Active Sélectionnée (Bleu Rugby Officiel) */
+        div.fixed-nav-container .nav-link.active {
             background-color: #1e3a8a !important;
             border-color: #1e3a8a !important;
-            box-shadow: 0 4px 14px rgba(30, 58, 138, 0.4) !important;
+            color: #ffffff !important;
+            box-shadow: 0 4px 12px rgba(30, 58, 138, 0.35) !important;
         }
     </style>
-    
-    <script>
-        // Ce script s'exécute en continu pour appliquer dynamiquement la classe sur le bon widget
-        function injectNavBarClass() {
-            const labels = window.parent.document.querySelectorAll('div[data-testid="stRadio"] label');
-            labels.forEach(label => {
-                if (label.textContent.includes("MenuPrincipal")) {
-                    const container = label.closest('div[data-testid="stRadio"]');
-                    if (container && !container.classList.contains('targeted-nav-bar')) {
-                        container.classList.add('targeted-nav-bar');
-                    }
-                }
-            });
-        }
-        // Exécution immédiate et répétée pour parer aux re-renderings de Streamlit
-        injectNavBarClass();
-        setInterval(injectNavBarClass, 500);
-    </script>
     """, unsafe_allow_html=True)
 
-    # --- BARRE DE NAVIGATION SUPÉRIEURE ---
+    # Récupération de l'index actif actuel
     try:
-        index_defaut = icones_navigation.index(st.session_state.onglet_actif)
+        index_defaut = onglets_noms.index(st.session_state.onglet_actif)
     except ValueError:
         index_defaut = 0
 
-    choix_onglet = st.radio(
-        "MenuPrincipal",
-        options=icones_navigation,
-        index=index_defaut,
-        horizontal=True,
-        key="radio_nav_bar"
+    # --- AFFICHAGE DU MENU HORIZONTAL DANS NOTRE CONTENEUR FIXE ---
+    st.markdown('<div class="fixed-nav-container">', unsafe_allow_html=True)
+    choix_onglet = option_menu(
+        menu_title=None,
+        options=onglets_noms,
+        icons=onglets_icones,
+        menu_icon="cast",
+        default_index=index_defaut,
+        orientation="horizontal"
     )
+    st.markdown('</div>', unsafe_allow_html=True)
 
-    # Intercepteur de clic ultra-rapide
+    # Détection et mise à jour de l'onglet actif avec rechargement instantané
     if choix_onglet != st.session_state.onglet_actif:
         st.session_state.onglet_actif = choix_onglet
         st.rerun()
+
+    # --- REMPLACEMENT LOCAL POUR LA LOGIQUE DE VOS ONGLETS SOUJACENTS ---
+    # (Exemple : si votre code suivant teste "if st.session_state.onglet_actif == '📊':", 
+    # vous pouvez nettoyer en récupérant uniquement le premier caractère emoji)
+    onglet_court = st.session_state.onglet_actif.split()[0]
     # --- EN-TÊTE DE LA PAGE AVEC DÉCONNEXION ---
     col_vide, col_deco = st.columns([4, 1])
     with col_deco:
