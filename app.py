@@ -7,7 +7,6 @@ import time
 import random
 import extra_streamlit_components as stx
 from streamlit_autorefresh import st_autorefresh
-from streamlit_option_menu import option_menu  # <-- AJOUT DE LA LIBRAIRIE ROBUSTE
 
 # CONFIGURATION DE LA PAGE
 st.set_page_config(page_title="Pronos Top 14", page_icon="🏉", layout="centered")
@@ -132,7 +131,7 @@ def sauvegarder_bonus_auto(question_id, user_id_cible):
 if "user_id" not in st.session_state: st.session_state.user_id = None
 if "is_admin" not in st.session_state: st.session_state.is_admin = False
 if "pseudo" not in st.session_state: st.session_state.pseudo = ""
-if "onglet_actif" not in st.session_state: st.session_state.onglet_actif = "📊 Classement"
+if "onglet_actif" not in st.session_state: st.session_state.onglet_actif = "📊"
 
 TRANCHES_ECARTS = ["1-6", "7-10", "11-15", "16-20", "21-30", "31-40", "41-50", "51+"]
 maintenant_paris = datetime.utcnow() + timedelta(hours=2)
@@ -213,99 +212,99 @@ if st.session_state.user_id is None:
 # INTERFACE PRINCIPALE (UTILISATEUR CONNECTÉ)
 # =====================================================================
 else:
-    # Noms des onglets explicites requis par le composant
-    onglets_noms = ["📊 Classement", "🏉 Pronostics", "📅 Matchs"]
-    onglets_icones = ["trophy", "shield-shaded", "calendar-event"]
-    
+    # --- CONFIGURATION DES ONGLETS ACCESSIBLES ---
+    icones_navigation = ["📊", "🏉", "📅"]
     if st.session_state.is_admin:
-        onglets_noms.append("⚙️ Admin")
-        onglets_icones.append("gear")
+        icones_navigation.append("⚙️")
 
-    # --- INJECTION DU STYLE CSS POUR FIXER LE MENU ET METTRE EN FORME LES BULLES ---
+    # --- INJECTION DU STYLE CSS CIBLÉ (UNIQUEMENT POUR LE MENU EN HAUT) ---
     st.markdown("""
     <style>
-        /* Espace en haut de page pour laisser la place à la barre fixe */
+        /* Ajustement de la marge haute globale pour le menu fixe */
         .main .block-container {
-            padding-top: 105px !important;
+            padding-top: 90px !important;
             max-width: 100% !important;
         }
         
-        /* Fixation absolue de la zone de navigation tout en haut */
-        div.fixed-nav-container {
+        /* Cible UNIQUEMENT le st.radio dans notre conteneur personnalisé */
+        .menu-principal-container div[data-testid="stRadio"] {
             position: fixed !important;
-            top: 0 !important; left: 0 !important; right: 0 !important;
-            width: 100% !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            margin-left: 0 !important;
             background-color: #ffffff !important;
-            padding: 10px 14px !important;
+            padding: 12px 15px !important;
             z-index: 999999 !important;
             border-bottom: 2px solid #e2e8f0 !important;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.06) !important;
-            box-sizing: border-box !important;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05) !important;
         }
         
-        /* Personnalisation interne du conteneur de menu */
-        div.fixed-nav-container .nav {
-            gap: 12px !important;
+        /* Masquage du label par défaut pour le menu */
+        .menu-principal-container div[data-testid="stRadio"] label[data-testid="stWidgetLabel"] {
+            display: none !important;
         }
 
-        /* Look design des Grosses Bulles / Pilules */
-        div.fixed-nav-container .nav-link {
-            font-size: 18px !important;
-            font-weight: 600 !important;
-            height: 52px !important;
+        /* Alignement horizontal strict en ligne (Flexbox) pour le menu */
+        .menu-principal-container div[data-testid="stRadio"] div[role="radiogroup"] {
             display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            border-radius: 30px !important; /* Forme de grosse bulle */
-            border: 2px solid #cbd5e1 !important;
+            flex-direction: row !important;
+            flex-wrap: nowrap !important;
+            justify-content: space-around !important;
+            width: 100% !important;
+            gap: 8px !important;
+        }
+
+        /* Look design de jolies bulles pilules pour le menu */
+        .menu-principal-container div[data-testid="stRadio"] div[role="radiogroup"] label {
+            flex: 1 !important;
+            text-align: center !important;
+            padding: 12px 0 !important;
             background-color: #f1f5f9 !important;
-            color: #334155 !important;
-            transition: all 0.2s ease-in-out !important;
+            border: 1px solid #cbd5e1 !important;
+            border-radius: 10px !important;
+            margin: 0 !important;
+            display: block !important;
+            cursor: pointer !important;
         }
 
-        /* Hover (Survol) */
-        div.fixed-nav-container .nav-link:hover {
-            background-color: #e2e8f0 !important;
-            transform: scale(1.03) !important;
+        /* Retrait du rond bouton radio natif pour le menu */
+        .menu-principal-container div[data-testid="stRadio"] div[role="radiogroup"] label div[data-testid="stMarkdownContainer"]::before {
+            display: none !important;
         }
 
-        /* Bulle Active Sélectionnée (Bleu Rugby Officiel) */
-        div.fixed-nav-container .nav-link.active {
+        /* Couleur de la bulle active sélectionnée (Bleu Rugby) */
+        .menu-principal-container div[data-testid="stRadio"] div[role="radiogroup"] label[data-checked="true"] {
             background-color: #1e3a8a !important;
-            border-color: #1e3a8a !important;
             color: #ffffff !important;
-            box-shadow: 0 4px 12px rgba(30, 58, 138, 0.35) !important;
+            border-color: #1e3a8a !important;
+            font-weight: bold !important;
         }
     </style>
     """, unsafe_allow_html=True)
 
-    # Récupération de l'index actif actuel
+    # --- BARRE DE NAVIGATION SUPÉRIEURE ENAPSULÉE ---
     try:
-        index_defaut = onglets_noms.index(st.session_state.onglet_actif)
+        index_defaut = icones_navigation.index(st.session_state.onglet_actif)
     except ValueError:
         index_defaut = 0
 
-    # --- AFFICHAGE DU MENU HORIZONTAL DANS NOTRE CONTENEUR FIXE ---
-    st.markdown('<div class="fixed-nav-container">', unsafe_allow_html=True)
-    choix_onglet = option_menu(
-        menu_title=None,
-        options=onglets_noms,
-        icons=onglets_icones,
-        menu_icon="cast",
-        default_index=index_defaut,
-        orientation="horizontal"
+    # On enferme ce st.radio spécifique pour restreindre le CSS ci-dessus
+    st.markdown('<div class="menu-principal-container">', unsafe_allow_html=True)
+    choix_onglet = st.radio(
+        "MenuPrincipal",
+        options=icones_navigation,
+        index=index_defaut,
+        horizontal=True,
+        key="radio_nav_bar"
     )
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # Détection et mise à jour de l'onglet actif avec rechargement instantané
+    # Intercepteur de clic ultra-rapide
     if choix_onglet != st.session_state.onglet_actif:
         st.session_state.onglet_actif = choix_onglet
         st.rerun()
 
-    # --- REMPLACEMENT LOCAL POUR LA LOGIQUE DE VOS ONGLETS SOUJACENTS ---
-    # (Exemple : si votre code suivant teste "if st.session_state.onglet_actif == '📊':", 
-    # vous pouvez nettoyer en récupérant uniquement le premier caractère emoji)
-    onglet_court = st.session_state.onglet_actif.split()[0]
     # --- EN-TÊTE DE LA PAGE AVEC DÉCONNEXION ---
     col_vide, col_deco = st.columns([4, 1])
     with col_deco:
