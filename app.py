@@ -1,8 +1,3 @@
-Voici l'intégralité du code depuis la ligne 1 jusqu'à la fin du bloc CSS modifié (la ligne où se ferme la barre de navigation).
-
-Vous pouvez copier ce bloc et remplacer le début de votre fichier app.py jusqu'à la fin de la section de la barre de navigation (st.markdown('</div>', unsafe_allow_html=True) et son intercepteur de clic). Le reste de votre logique pour les onglets (qui suit immédiatement après dans votre fichier) reste inchangé.
-
-Python
 import streamlit as st
 from supabase import create_client
 from datetime import datetime, timedelta
