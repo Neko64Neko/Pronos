@@ -217,16 +217,16 @@ else:
     if st.session_state.is_admin:
         icones_navigation.append("⚙️")
 
-    # --- INJECTION DU STYLE CSS SPÉCIFIQUE (CIBLE UNIQUEMENT LA BARRE DE NAV) ---
+    # --- INJECTION DU STYLE CSS SPÉFICIQUE ET AMÉLIORÉ ---
     st.markdown("""
     <style>
-        /* Ajustement des marges hautes globales */
+        /* Ajustement de la zone de contenu sous la barre */
         .main .block-container {
-            padding-top: 65px !important; /* Laisse de la place sous la barre fixe */
+            padding-top: 75px !important; 
             max-width: 100% !important;
         }
         
-        /* Fixation du conteneur personnalisé de la barre en haut */
+        /* Fixation globale du conteneur de navigation */
         div.custom-nav-bar div[data-testid="stRadio"] {
             position: fixed !important;
             top: 0 !important;
@@ -234,53 +234,70 @@ else:
             right: 0 !important;
             width: 100% !important;
             background-color: #ffffff !important;
-            padding: 10px 10px !important;
+            padding: 12px 8px !important;
             z-index: 999999 !important;
             border-bottom: 2px solid #e2e8f0 !important;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05) !important;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.06) !important;
             box-sizing: border-box !important;
         }
         
-        /* Masquage de l'étiquette par défaut du widget de nav */
+        /* Masquage du titre vide */
         div.custom-nav-bar div[data-testid="stRadio"] label[data-testid="stWidgetLabel"] {
             display: none !important;
         }
 
-        /* Alignement horizontal strict en ligne (Flexbox) */
+        /* Organisation horizontale */
         div.custom-nav-bar div[data-testid="stRadio"] div[role="radiogroup"] {
             display: flex !important;
             flex-direction: row !important;
             flex-wrap: nowrap !important;
             justify-content: space-around !important;
             width: 100% !important;
-            gap: 6px !important;
+            gap: 10px !important;
         }
 
-        /* Look design d'onglets pour smartphone */
+        /* Transformation de chaque option en une grosse bulle cliquable à 100% */
         div.custom-nav-bar div[data-testid="stRadio"] div[role="radiogroup"] label {
             flex: 1 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
             text-align: center !important;
-            padding: 10px 0 !important;
+            
+            /* Taille et épaisseur ajustées */
+            padding: 14px 0 !important; 
             background-color: #f1f5f9 !important;
             border: 1px solid #cbd5e1 !important;
-            border-radius: 8px !important;
+            border-radius: 14px !important; /* Forme de bulle moderne */
             margin: 0 !important;
-            display: block !important;
             cursor: pointer !important;
-            font-size: 16px !important;
+            
+            /* Grosse police bien visible */
+            font-size: 22px !important; 
+            transition: all 0.2s ease-in-out !important;
         }
 
-        /* Retrait du rond radio par défaut de Streamlit */
+        /* Effet au survol / appui tactile */
+        div.custom-nav-bar div[data-testid="stRadio"] div[role="radiogroup"] label:hover {
+            background-color: #e2e8f0 !important;
+            transform: scale(1.02) !important;
+        }
+
+        /* Retrait strict du rond radio par défaut */
         div.custom-nav-bar div[data-testid="stRadio"] div[role="radiogroup"] label div[data-testid="stMarkdownContainer"]::before {
             display: none !important;
         }
+        div.custom-nav-bar div[data-testid="stRadio"] div[role="radiogroup"] label [data-testid="stRadio-Option-Indicator"] {
+            display: none !important;
+        }
 
-        /* Couleur de l'onglet actif sélectionné (Bleu Rugby) */
+        /* Rendu de la bulle active (Sélectionnée) */
         div.custom-nav-bar div[data-testid="stRadio"] div[role="radiogroup"] label[data-checked="true"] {
-            background-color: #1e3a8a !important;
+            background-color: #1e3a8a !important; /* Bleu Rugby */
             color: #ffffff !important;
             border-color: #1e3a8a !important;
             font-weight: bold !important;
+            box-shadow: 0 4px 10px rgba(30, 58, 138, 0.3) !important;
         }
     </style>
     """, unsafe_allow_html=True)
@@ -291,7 +308,6 @@ else:
     except ValueError:
         index_defaut = 0
 
-    # L'encapsulation dans la div 'custom-nav-bar' évite que le CSS bousille les pronostics
     st.markdown('<div class="custom-nav-bar">', unsafe_allow_html=True)
     choix_onglet = st.radio(
         "MenuPrincipal",
@@ -302,7 +318,7 @@ else:
     )
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # Intercepteur de clic ultra-rapide
+    # Intercepteur de clic
     if choix_onglet != st.session_state.onglet_actif:
         st.session_state.onglet_actif = choix_onglet
         st.rerun()
