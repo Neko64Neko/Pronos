@@ -217,17 +217,17 @@ else:
     if st.session_state.is_admin:
         icones_navigation.append("⚙️")
 
-    # --- INJECTION DU STYLE CSS POUR LE BANDEAU PARFAITEMENT CENTRÉ EN HAUT ---
+    # --- INJECTION DU STYLE CSS SPÉCIFIQUE (CIBLE UNIQUEMENT LA BARRE DE NAV) ---
     st.markdown("""
     <style>
         /* Ajustement des marges hautes globales */
         .main .block-container {
-            padding-top: 55px !important; /* Laisse de la place sous la barre fixe */
+            padding-top: 65px !important; /* Laisse de la place sous la barre fixe */
             max-width: 100% !important;
         }
         
-        /* Fixation du st.radio en haut de l'écran et centrage absolu */
-        div[data-testid="stRadio"] {
+        /* Fixation du conteneur personnalisé de la barre en haut */
+        div.custom-nav-bar div[data-testid="stRadio"] {
             position: fixed !important;
             top: 0 !important;
             left: 0 !important;
@@ -241,13 +241,13 @@ else:
             box-sizing: border-box !important;
         }
         
-        /* Masquage de l'étiquette par défaut du widget */
-        div[data-testid="stRadio"] label[data-testid="stWidgetLabel"] {
+        /* Masquage de l'étiquette par défaut du widget de nav */
+        div.custom-nav-bar div[data-testid="stRadio"] label[data-testid="stWidgetLabel"] {
             display: none !important;
         }
 
         /* Alignement horizontal strict en ligne (Flexbox) */
-        div[data-testid="stRadio"] div[role="radiogroup"] {
+        div.custom-nav-bar div[data-testid="stRadio"] div[role="radiogroup"] {
             display: flex !important;
             flex-direction: row !important;
             flex-wrap: nowrap !important;
@@ -257,7 +257,7 @@ else:
         }
 
         /* Look design d'onglets pour smartphone */
-        div[data-testid="stRadio"] div[role="radiogroup"] label {
+        div.custom-nav-bar div[data-testid="stRadio"] div[role="radiogroup"] label {
             flex: 1 !important;
             text-align: center !important;
             padding: 10px 0 !important;
@@ -271,12 +271,12 @@ else:
         }
 
         /* Retrait du rond radio par défaut de Streamlit */
-        div[data-testid="stRadio"] div[role="radiogroup"] label div[data-testid="stMarkdownContainer"]::before {
+        div.custom-nav-bar div[data-testid="stRadio"] div[role="radiogroup"] label div[data-testid="stMarkdownContainer"]::before {
             display: none !important;
         }
 
         /* Couleur de l'onglet actif sélectionné (Bleu Rugby) */
-        div[data-testid="stRadio"] div[role="radiogroup"] label[data-checked="true"] {
+        div.custom-nav-bar div[data-testid="stRadio"] div[role="radiogroup"] label[data-checked="true"] {
             background-color: #1e3a8a !important;
             color: #ffffff !important;
             border-color: #1e3a8a !important;
@@ -285,12 +285,14 @@ else:
     </style>
     """, unsafe_allow_html=True)
 
-    # --- BARRE DE NAVIGATION SUPÉRIEURE ---
+    # --- BARRE DE NAVIGATION SUPÉRIEURE ENCAPSULÉE ---
     try:
         index_defaut = icones_navigation.index(st.session_state.onglet_actif)
     except ValueError:
         index_defaut = 0
 
+    # L'encapsulation dans la div 'custom-nav-bar' évite que le CSS bousille les pronostics
+    st.markdown('<div class="custom-nav-bar">', unsafe_allow_html=True)
     choix_onglet = st.radio(
         "MenuPrincipal",
         options=icones_navigation,
@@ -298,6 +300,7 @@ else:
         horizontal=True,
         key="radio_nav_bar"
     )
+    st.markdown('</div>', unsafe_allow_html=True)
 
     # Intercepteur de clic ultra-rapide
     if choix_onglet != st.session_state.onglet_actif:
