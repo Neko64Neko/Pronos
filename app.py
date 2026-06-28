@@ -217,64 +217,65 @@ else:
     if st.session_state.is_admin:
         icones_navigation.append("⚙️")
 
-    # --- INJECTION DU STYLE CSS CIBLÉ (UNIQUEMENT POUR LE MENU EN HAUT) ---
+    # --- INJECTION DU STYLE CSS ULTRA-CIBLÉ ---
+    # On cible uniquement le st.radio qui possède l'attribut aria-label="MenuPrincipal"
     st.markdown("""
     <style>
-        /* Ajustement de la marge haute globale pour le menu fixe */
+        /* Espacement global pour éviter que le menu fixe ne cache le contenu */
         .main .block-container {
-            padding-top: 90px !important;
+            padding-top: 100px !important;
             max-width: 100% !important;
         }
         
-        /* Cible UNIQUEMENT le st.radio dans notre conteneur personnalisé */
-        .menu-principal-container div[data-testid="stRadio"] {
+        /* Conteneur global du bouton de navigation principal */
+        div[data-testid="stRadio"]:has(input[name="MenuPrincipal"]) {
             position: fixed !important;
             top: 0 !important;
             left: 0 !important;
             width: 100vw !important;
             margin-left: 0 !important;
             background-color: #ffffff !important;
-            padding: 12px 15px !important;
-            z-index: 999999 !important;
+            padding: 14px 15px !important;
+            z-index: 99999 !important;
             border-bottom: 2px solid #e2e8f0 !important;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05) !important;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important;
         }
         
-        /* Masquage du label par défaut pour le menu */
-        .menu-principal-container div[data-testid="stRadio"] label[data-testid="stWidgetLabel"] {
+        /* Masquage de son label d'en-tête */
+        div[data-testid="stRadio"]:has(input[name="MenuPrincipal"]) label[data-testid="stWidgetLabel"] {
             display: none !important;
         }
 
-        /* Alignement horizontal strict en ligne (Flexbox) pour le menu */
-        .menu-principal-container div[data-testid="stRadio"] div[role="radiogroup"] {
+        /* Flexbox horizontal strict pour la barre supérieure */
+        div[data-testid="stRadio"]:has(input[name="MenuPrincipal"]) div[role="radiogroup"] {
             display: flex !important;
             flex-direction: row !important;
             flex-wrap: nowrap !important;
             justify-content: space-around !important;
             width: 100% !important;
-            gap: 8px !important;
+            gap: 10px !important;
         }
 
-        /* Look design de jolies bulles pilules pour le menu */
-        .menu-principal-container div[data-testid="stRadio"] div[role="radiogroup"] label {
+        /* Look design "grosses bulles/pilules" pour le menu */
+        div[data-testid="stRadio"]:has(input[name="MenuPrincipal"]) div[role="radiogroup"] label {
             flex: 1 !important;
             text-align: center !important;
             padding: 12px 0 !important;
             background-color: #f1f5f9 !important;
             border: 1px solid #cbd5e1 !important;
-            border-radius: 10px !important;
+            border-radius: 12px !important;
             margin: 0 !important;
             display: block !important;
             cursor: pointer !important;
         }
 
-        /* Retrait du rond bouton radio natif pour le menu */
-        .menu-principal-container div[data-testid="stRadio"] div[role="radiogroup"] label div[data-testid="stMarkdownContainer"]::before {
+        /* Cacher les ronds d'option radio natifs du menu */
+        div[data-testid="stRadio"]:has(input[name="MenuPrincipal"]) div[role="radiogroup"] label div[data-testid="stMarkdownContainer"]::before {
             display: none !important;
         }
 
-        /* Couleur de la bulle active sélectionnée (Bleu Rugby) */
-        .menu-principal-container div[data-testid="stRadio"] div[role="radiogroup"] label[data-checked="true"] {
+        /* Style de la bulle active (Sélectionnée) */
+        div[data-testid="stRadio"]:has(input[name="MenuPrincipal"]) div[role="radiogroup"] label[data-checked="true"] {
             background-color: #1e3a8a !important;
             color: #ffffff !important;
             border-color: #1e3a8a !important;
@@ -283,22 +284,20 @@ else:
     </style>
     """, unsafe_allow_html=True)
 
-    # --- BARRE DE NAVIGATION SUPÉRIEURE ENAPSULÉE ---
+    # --- EN-TÊTE DU COMPOSANT RADIO DE NAVIGATION ---
     try:
         index_defaut = icones_navigation.index(st.session_state.onglet_actif)
     except ValueError:
         index_defaut = 0
 
-    # On enferme ce st.radio spécifique pour restreindre le CSS ci-dessus
-    st.markdown('<div class="menu-principal-container">', unsafe_allow_html=True)
     choix_onglet = st.radio(
         "MenuPrincipal",
         options=icones_navigation,
         index=index_defaut,
         horizontal=True,
-        key="radio_nav_bar"
+        label_visibility="collapsed",
+        key="MenuPrincipal" # Clé identique au nom du composant inspecté par le CSS
     )
-    st.markdown('</div>', unsafe_allow_html=True)
 
     # Intercepteur de clic ultra-rapide
     if choix_onglet != st.session_state.onglet_actif:
