@@ -217,36 +217,36 @@ else:
     if st.session_state.is_admin:
         icones_navigation.append("⚙️")
 
-    # --- INJECTION DU STYLE CSS MODIFIÉ (BULLES PLUS GROSSES & ENTIÈREMENT CLIQUABLES) ---
+    # --- INJECTION DU STYLE CSS CORRIGÉ (BULLES ENTIÈREMENT CLIQUABLES VIA .custom-nav-bar) ---
     st.markdown("""
     <style>
-        /* Ajustement de la marge haute de l'application pour la barre fixe */
+        /* Ajustement de la marge haute globale pour compenser la barre fixe */
         .main .block-container {
-            padding-top: 85px !important; 
+            padding-top: 95px !important; 
             max-width: 100% !important;
         }
         
-        /* Fixation globale du bandeau de navigation */
-        div.custom-nav-bar div[data-testid="stRadio"] {
+        /* Fixation globale de notre bandeau personnalisé */
+        div.custom-nav-bar {
             position: fixed !important;
             top: 0 !important;
             left: 0 !important;
             right: 0 !important;
             width: 100% !important;
             background-color: #ffffff !important;
-            padding: 10px 16px !important;
+            padding: 12px 16px !important;
             z-index: 999999 !important;
             border-bottom: 2px solid #e2e8f0 !important;
             box-shadow: 0 4px 20px rgba(0,0,0,0.08) !important;
             box-sizing: border-box !important;
         }
         
-        /* Masquage du titre/label par défaut */
+        /* Masquage de l'étiquette par défaut du widget */
         div.custom-nav-bar div[data-testid="stRadio"] label[data-testid="stWidgetLabel"] {
             display: none !important;
         }
 
-        /* Organisation horizontale des bulles */
+        /* Organisation horizontale et répartition des bulles */
         div.custom-nav-bar div[data-testid="stRadio"] div[role="radiogroup"] {
             display: flex !important;
             flex-direction: row !important;
@@ -256,16 +256,16 @@ else:
             gap: 12px !important;
         }
 
-        /* Style des "Grosses Bulles" de navigation */
+        /* Look design "Grosses Bulles Pilules" */
         div.custom-nav-bar div[data-testid="stRadio"] div[role="radiogroup"] label {
             flex: 1 !important;
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
-            height: 60px !important; /* Augmentation de la hauteur pour une plus grosse bulle */
+            height: 58px !important; /* Hauteur généreuse */
             background-color: #f1f5f9 !important;
-            border: 2px solid #cbd5e1 !important; /* Bordure un peu plus épaisse */
-            border-radius: 30px !important; /* Rendu en forme de grosse pilule/bulle */
+            border: 2px solid #cbd5e1 !important;
+            border-radius: 30px !important; /* Arrondi complet style pilule */
             margin: 0 !important;
             cursor: pointer !important;
             transition: all 0.2s ease-in-out !important;
@@ -273,50 +273,45 @@ else:
             position: relative !important;
         }
 
-        /* Extension de la zone de clic native de Streamlit à 100% de la bulle */
+        /* Étendre la zone cliquable native de Streamlit sur TOUTE la bulle */
         div.custom-nav-bar div[data-testid="stRadio"] div[role="radiogroup"] label > div:first-child {
             position: absolute !important;
             top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important;
             width: 100% !important; height: 100% !important;
-            opacity: 0 !important; /* Cache complètement le bouton radio rond natif */
+            opacity: 0 !important; /* Masque le petit cercle radio natif */
             margin: 0 !important;
             cursor: pointer !important;
             z-index: 2 !important;
         }
 
-        /* Style du texte/émoji à l'intérieur de la bulle */
+        /* Conteneur interne de l'émoji */
         div.custom-nav-bar div[data-testid="stRadio"] div[role="radiogroup"] label div[data-testid="stMarkdownContainer"] {
             width: 100% !important;
             height: 100% !important;
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
-            font-size: 26px !important; /* Émoji plus grand et visible */
-            pointer-events: none !important; /* Le clic traverse le texte pour activer l'input caché derrière */
+            font-size: 26px !important; /* Gros émojis visibles */
+            pointer-events: none !important; /* Laisse passer le clic vers l'input sous-jacent */
             z-index: 1 !important;
         }
 
-        /* Retrait forcé du point radio de Streamlit */
+        /* Retrait du rond radio de Streamlit */
         div.custom-nav-bar div[data-testid="stRadio"] div[role="radiogroup"] label div[data-testid="stMarkdownContainer"]::before {
             display: none !important;
         }
 
-        /* Changement d'aspect au survol (Feedback visuel) */
+        /* Effet visuel au survol */
         div.custom-nav-bar div[data-testid="stRadio"] div[role="radiogroup"] label:hover {
             background-color: #e2e8f0 !important;
-            transform: scale(1.04) !important; /* Légère animation de gonflement au survol */
+            transform: scale(1.04) !important;
         }
 
-        /* Bulle active / sélectionnée (Bleu Rugby) */
+        /* Style de la bulle active (Bleu Rugby) */
         div.custom-nav-bar div[data-testid="stRadio"] div[role="radiogroup"] label[data-checked="true"] {
             background-color: #1e3a8a !important;
             border-color: #1e3a8a !important;
             box-shadow: 0 4px 12px rgba(30, 58, 138, 0.4) !important;
-        }
-        
-        /* Couleur blanche pour le contenu de la bulle active */
-        div.custom-nav-bar div[data-testid="stRadio"] div[role="radiogroup"] label[data-checked="true"] div[data-testid="stMarkdownContainer"] {
-            color: #ffffff !important;
         }
     </style>
     """, unsafe_allow_html=True)
@@ -327,6 +322,7 @@ else:
     except ValueError:
         index_defaut = 0
 
+    # L'encapsulation dans le div avec la classe "custom-nav-bar" est maintenant présente :
     st.markdown('<div class="custom-nav-bar">', unsafe_allow_html=True)
     choix_onglet = st.radio(
         "MenuPrincipal",
