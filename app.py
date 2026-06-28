@@ -217,52 +217,52 @@ else:
     if st.session_state.is_admin:
         icones_navigation.append("⚙️")
 
-    # --- INJECTION DU STYLE CSS ULTRA-PRÉCIS ET ROBUSTE ---
+    # --- INJECTION DU STYLE CSS EXCLUSIF POUR LA BARRE DE NAVIGATION CIBLÉE ---
     st.markdown("""
     <style>
-        /* Ajustement de l'espace haut global pour laisser passer la barre fixe */
+        /* Crée l'espace nécessaire en haut pour accueillir la barre fixe */
         .main .block-container {
-            padding-top: 90px !important;
+            padding-top: 100px !important;
             max-width: 100% !important;
         }
         
-        /* Conteneur global de la barre de navigation personnalisée */
-        div.custom-nav-bar {
+        /* Appliqué uniquement sur le widget identifié par notre script JS */
+        div.targeted-nav-bar {
             position: fixed !important;
             top: 0 !important;
             left: 0 !important;
             right: 0 !important;
             width: 100% !important;
             background-color: #ffffff !important;
-            padding: 12px 16px !important;
+            padding: 14px 16px !important;
             z-index: 999999 !important;
             border-bottom: 2px solid #e2e8f0 !important;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.06) !important;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08) !important;
             box-sizing: border-box !important;
         }
         
-        /* Masquer le label/titre par défaut généré par Streamlit */
-        div.custom-nav-bar div[data-testid="stRadio"] label {
+        /* Cache l'étiquette "MenuPrincipal" */
+        div.targeted-nav-bar label {
             display: none !important;
         }
 
-        /* Forcer l'affichage horizontal strict des options */
-        div.custom-nav-bar div[role="radiogroup"] {
+        /* Organisation horizontale des bulles */
+        div.targeted-nav-bar div[role="radiogroup"] {
             display: flex !important;
             flex-direction: row !important;
             flex-wrap: nowrap !important;
             justify-content: space-around !important;
             width: 100% !important;
-            gap: 10px !important;
+            gap: 12px !important;
         }
 
-        /* Transformation des lignes d'options en Grosses Bulles Pilules */
-        div.custom-nav-bar div[role="radiogroup"] > label {
+        /* Look design des Grosses Bulles Pilules */
+        div.targeted-nav-bar div[role="radiogroup"] > label {
             display: flex !important;
             flex: 1 !important;
             align-items: center !important;
             justify-content: center !important;
-            height: 55px !important;
+            height: 56px !important;
             background-color: #f1f5f9 !important;
             border: 2px solid #cbd5e1 !important;
             border-radius: 30px !important;
@@ -273,19 +273,19 @@ else:
             position: relative !important;
         }
 
-        /* Rendre l'entièreté de la surface de la bulle cliquable */
-        div.custom-nav-bar div[role="radiogroup"] > label > div:first-child {
+        /* Étendre la zone cliquable sur TOUTE la bulle */
+        div.targeted-nav-bar div[role="radiogroup"] > label > div:first-child {
             position: absolute !important;
             top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important;
             width: 100% !important; height: 100% !important;
-            opacity: 0 !important; /* Cache le bouton circulaire natif */
+            opacity: 0 !important; /* Masque le rond d'origine */
             z-index: 2 !important;
             margin: 0 !important;
             cursor: pointer !important;
         }
 
-        /* Centrage parfait des émojis géants à l'intérieur de la bulle */
-        div.custom-nav-bar div[role="radiogroup"] > label div[data-testid="stMarkdownContainer"] {
+        /* Style et taille des Émojis géants */
+        div.targeted-nav-bar div[role="radiogroup"] > label div[data-testid="stMarkdownContainer"] {
             width: 100% !important;
             height: 100% !important;
             display: flex !important;
@@ -296,39 +296,50 @@ else:
             pointer-events: none !important;
         }
 
-        /* Supprimer définitivement le point radio par défaut de Streamlit */
-        div.custom-nav-bar div[role="radiogroup"] > label div[data-testid="stMarkdownContainer"]::before {
+        /* Retrait du point radio de Streamlit */
+        div.targeted-nav-bar div[role="radiogroup"] > label div[data-testid="stMarkdownContainer"]::before {
             display: none !important;
         }
 
-        /* Feedback visuel immédiat lors du survol de la bulle */
-        div.custom-nav-bar div[role="radiogroup"] > label:hover {
+        /* Effet au survol */
+        div.targeted-nav-bar div[role="radiogroup"] > label:hover {
             background-color: #e2e8f0 !important;
-            transform: scale(1.03) !important;
+            transform: scale(1.04) !important;
         }
 
-        /* Rendu de la Bulle Active / Sélectionnée (Bleu Rugby) */
-        div.custom-nav-bar div[role="radiogroup"] label[data-checked="true"] {
+        /* Couleur de la Bulle Active Sélectionnée (Bleu Rugby) */
+        div.targeted-nav-bar div[role="radiogroup"] label[data-checked="true"] {
             background-color: #1e3a8a !important;
             border-color: #1e3a8a !important;
-            box-shadow: 0 4px 12px rgba(30, 58, 138, 0.35) !important;
-        }
-        
-        /* Forcer la couleur blanche si du texte apparaît dans la bulle active */
-        div.custom-nav-bar div[role="radiogroup"] label[data-checked="true"] div[data-testid="stMarkdownContainer"] {
-            color: #ffffff !important;
+            box-shadow: 0 4px 14px rgba(30, 58, 138, 0.4) !important;
         }
     </style>
+    
+    <script>
+        // Ce script s'exécute en continu pour appliquer dynamiquement la classe sur le bon widget
+        function injectNavBarClass() {
+            const labels = window.parent.document.querySelectorAll('div[data-testid="stRadio"] label');
+            labels.forEach(label => {
+                if (label.textContent.includes("MenuPrincipal")) {
+                    const container = label.closest('div[data-testid="stRadio"]');
+                    if (container && !container.classList.contains('targeted-nav-bar')) {
+                        container.classList.add('targeted-nav-bar');
+                    }
+                }
+            });
+        }
+        // Exécution immédiate et répétée pour parer aux re-renderings de Streamlit
+        injectNavBarClass();
+        setInterval(injectNavBarClass, 500);
+    </script>
     """, unsafe_allow_html=True)
 
-    # --- BARRE DE NAVIGATION SUPÉRIEURE ENCAPSULÉE ---
+    # --- BARRE DE NAVIGATION SUPÉRIEURE ---
     try:
         index_defaut = icones_navigation.index(st.session_state.onglet_actif)
     except ValueError:
         index_defaut = 0
 
-    # Application du conteneur HTML personnalisé autour du st.radio
-    st.markdown('<div class="custom-nav-bar">', unsafe_allow_html=True)
     choix_onglet = st.radio(
         "MenuPrincipal",
         options=icones_navigation,
@@ -336,7 +347,6 @@ else:
         horizontal=True,
         key="radio_nav_bar"
     )
-    st.markdown('</div>', unsafe_allow_html=True)
 
     # Intercepteur de clic ultra-rapide
     if choix_onglet != st.session_state.onglet_actif:
