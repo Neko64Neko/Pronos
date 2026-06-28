@@ -1,3 +1,8 @@
+Voici l'intégralité du code depuis la ligne 1 jusqu'à la fin du bloc CSS modifié (la ligne où se ferme la barre de navigation).
+
+Vous pouvez copier ce bloc et remplacer le début de votre fichier app.py jusqu'à la fin de la section de la barre de navigation (st.markdown('</div>', unsafe_allow_html=True) et son intercepteur de clic). Le reste de votre logique pour les onglets (qui suit immédiatement après dans votre fichier) reste inchangé.
+
+Python
 import streamlit as st
 from supabase import create_client
 from datetime import datetime, timedelta
@@ -217,16 +222,16 @@ else:
     if st.session_state.is_admin:
         icones_navigation.append("⚙️")
 
-    # --- INJECTION DU STYLE CSS SPÉFICIQUE ET AMÉLIORÉ ---
+    # --- INJECTION DU STYLE CSS MODIFIÉ (BULLES PLUS GROSSES & ENTIÈREMENT CLIQUABLES) ---
     st.markdown("""
     <style>
-        /* Ajustement de la zone de contenu sous la barre */
+        /* Ajustement de la marge haute de l'application pour la barre fixe */
         .main .block-container {
-            padding-top: 75px !important; 
+            padding-top: 85px !important; 
             max-width: 100% !important;
         }
         
-        /* Fixation globale du conteneur de navigation */
+        /* Fixation globale du bandeau de navigation */
         div.custom-nav-bar div[data-testid="stRadio"] {
             position: fixed !important;
             top: 0 !important;
@@ -234,70 +239,89 @@ else:
             right: 0 !important;
             width: 100% !important;
             background-color: #ffffff !important;
-            padding: 12px 8px !important;
+            padding: 10px 16px !important;
             z-index: 999999 !important;
             border-bottom: 2px solid #e2e8f0 !important;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.06) !important;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08) !important;
             box-sizing: border-box !important;
         }
         
-        /* Masquage du titre vide */
+        /* Masquage du titre/label par défaut */
         div.custom-nav-bar div[data-testid="stRadio"] label[data-testid="stWidgetLabel"] {
             display: none !important;
         }
 
-        /* Organisation horizontale */
+        /* Organisation horizontale des bulles */
         div.custom-nav-bar div[data-testid="stRadio"] div[role="radiogroup"] {
             display: flex !important;
             flex-direction: row !important;
             flex-wrap: nowrap !important;
             justify-content: space-around !important;
             width: 100% !important;
-            gap: 10px !important;
+            gap: 12px !important;
         }
 
-        /* Transformation de chaque option en une grosse bulle cliquable à 100% */
+        /* Style des "Grosses Bulles" de navigation */
         div.custom-nav-bar div[data-testid="stRadio"] div[role="radiogroup"] label {
             flex: 1 !important;
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
-            text-align: center !important;
-            
-            /* Taille et épaisseur ajustées */
-            padding: 14px 0 !important; 
+            height: 60px !important; /* Augmentation de la hauteur pour une plus grosse bulle */
             background-color: #f1f5f9 !important;
-            border: 1px solid #cbd5e1 !important;
-            border-radius: 14px !important; /* Forme de bulle moderne */
+            border: 2px solid #cbd5e1 !important; /* Bordure un peu plus épaisse */
+            border-radius: 30px !important; /* Rendu en forme de grosse pilule/bulle */
             margin: 0 !important;
             cursor: pointer !important;
-            
-            /* Grosse police bien visible */
-            font-size: 22px !important; 
             transition: all 0.2s ease-in-out !important;
+            padding: 0 !important; 
+            position: relative !important;
         }
 
-        /* Effet au survol / appui tactile */
-        div.custom-nav-bar div[data-testid="stRadio"] div[role="radiogroup"] label:hover {
-            background-color: #e2e8f0 !important;
-            transform: scale(1.02) !important;
+        /* Extension de la zone de clic native de Streamlit à 100% de la bulle */
+        div.custom-nav-bar div[data-testid="stRadio"] div[role="radiogroup"] label > div:first-child {
+            position: absolute !important;
+            top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important;
+            width: 100% !important; height: 100% !important;
+            opacity: 0 !important; /* Cache complètement le bouton radio rond natif */
+            margin: 0 !important;
+            cursor: pointer !important;
+            z-index: 2 !important;
         }
 
-        /* Retrait strict du rond radio par défaut */
+        /* Style du texte/émoji à l'intérieur de la bulle */
+        div.custom-nav-bar div[data-testid="stRadio"] div[role="radiogroup"] label div[data-testid="stMarkdownContainer"] {
+            width: 100% !important;
+            height: 100% !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            font-size: 26px !important; /* Émoji plus grand et visible */
+            pointer-events: none !important; /* Le clic traverse le texte pour activer l'input caché derrière */
+            z-index: 1 !important;
+        }
+
+        /* Retrait forcé du point radio de Streamlit */
         div.custom-nav-bar div[data-testid="stRadio"] div[role="radiogroup"] label div[data-testid="stMarkdownContainer"]::before {
             display: none !important;
         }
-        div.custom-nav-bar div[data-testid="stRadio"] div[role="radiogroup"] label [data-testid="stRadio-Option-Indicator"] {
-            display: none !important;
+
+        /* Changement d'aspect au survol (Feedback visuel) */
+        div.custom-nav-bar div[data-testid="stRadio"] div[role="radiogroup"] label:hover {
+            background-color: #e2e8f0 !important;
+            transform: scale(1.04) !important; /* Légère animation de gonflement au survol */
         }
 
-        /* Rendu de la bulle active (Sélectionnée) */
+        /* Bulle active / sélectionnée (Bleu Rugby) */
         div.custom-nav-bar div[data-testid="stRadio"] div[role="radiogroup"] label[data-checked="true"] {
-            background-color: #1e3a8a !important; /* Bleu Rugby */
-            color: #ffffff !important;
+            background-color: #1e3a8a !important;
             border-color: #1e3a8a !important;
-            font-weight: bold !important;
-            box-shadow: 0 4px 10px rgba(30, 58, 138, 0.3) !important;
+            box-shadow: 0 4px 12px rgba(30, 58, 138, 0.4) !important;
+        }
+        
+        /* Couleur blanche pour le contenu de la bulle active */
+        div.custom-nav-bar div[data-testid="stRadio"] div[role="radiogroup"] label[data-checked="true"] div[data-testid="stMarkdownContainer"] {
+            color: #ffffff !important;
         }
     </style>
     """, unsafe_allow_html=True)
@@ -318,7 +342,7 @@ else:
     )
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # Intercepteur de clic
+    # Intercepteur de clic ultra-rapide
     if choix_onglet != st.session_state.onglet_actif:
         st.session_state.onglet_actif = choix_onglet
         st.rerun()
