@@ -217,69 +217,83 @@ else:
     if st.session_state.is_admin:
         icones_navigation.append("⚙️")
 
-    # --- INJECTION DU STYLE CSS ULTRA-CIBLÉ ---
-    # On cible uniquement le st.radio qui possède l'attribut aria-label="MenuPrincipal"
+    # --- INJECTION DU STYLE CSS RADICAL ET INFAILLIBLE ---
+    # On cible le TOUT PREMIER bloc stRadio généré dans l'application (.element-container:nth-of-type(1) ou (2))
+    # pour s'assurer de transformer le menu principal et lui seul en barre de navigation fixe.
     st.markdown("""
     <style>
-        /* Espacement global pour éviter que le menu fixe ne cache le contenu */
+        /* Espacement global pour éviter le chevauchement du contenu sous la barre fixe */
         .main .block-container {
-            padding-top: 100px !important;
+            padding-top: 90px !important;
             max-width: 100% !important;
         }
         
-        /* Conteneur global du bouton de navigation principal */
-        div[data-testid="stRadio"]:has(input[name="MenuPrincipal"]) {
+        /* Forcer le conteneur du tout premier bouton radio à devenir notre barre fixe */
+        div[data-testid="stMainBlockContainer"] > div:nth-child(1) div[data-testid="stRadio"],
+        div[data-testid="stMainBlockContainer"] > div:nth-child(2) div[data-testid="stRadio"] {
             position: fixed !important;
             top: 0 !important;
             left: 0 !important;
             width: 100vw !important;
-            margin-left: 0 !important;
+            margin: 0 !important;
             background-color: #ffffff !important;
-            padding: 14px 15px !important;
-            z-index: 99999 !important;
+            padding: 12px 10px !important;
+            z-index: 999999 !important;
             border-bottom: 2px solid #e2e8f0 !important;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.06) !important;
         }
         
-        /* Masquage de son label d'en-tête */
-        div[data-testid="stRadio"]:has(input[name="MenuPrincipal"]) label[data-testid="stWidgetLabel"] {
+        /* Masquer obligatoirement le label invisible du menu principal */
+        div[data-testid="stRadio"] label[data-testid="stWidgetLabel"] {
             display: none !important;
         }
 
-        /* Flexbox horizontal strict pour la barre supérieure */
-        div[data-testid="stRadio"]:has(input[name="MenuPrincipal"]) div[role="radiogroup"] {
+        /* Flexbox horizontal strict pour aligner les onglets */
+        div[data-testid="stRadio"] div[role="radiogroup"] {
             display: flex !important;
             flex-direction: row !important;
             flex-wrap: nowrap !important;
             justify-content: space-around !important;
             width: 100% !important;
-            gap: 10px !important;
+            gap: 8px !important;
         }
 
-        /* Look design "grosses bulles/pilules" pour le menu */
-        div[data-testid="stRadio"]:has(input[name="MenuPrincipal"]) div[role="radiogroup"] label {
+        /* Look & Design des grosses bulles cliquables */
+        div[data-testid="stRadio"] div[role="radiogroup"] label {
             flex: 1 !important;
             text-align: center !important;
-            padding: 12px 0 !important;
+            padding: 10px 0 !important;
             background-color: #f1f5f9 !important;
             border: 1px solid #cbd5e1 !important;
-            border-radius: 12px !important;
+            border-radius: 14px !important;
             margin: 0 !important;
-            display: block !important;
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center;
             cursor: pointer !important;
+            transition: all 0.2s ease-in-out;
         }
 
-        /* Cacher les ronds d'option radio natifs du menu */
-        div[data-testid="stRadio"]:has(input[name="MenuPrincipal"]) div[role="radiogroup"] label div[data-testid="stMarkdownContainer"]::before {
+        /* Supprimer définitivement les petits cercles radio natifs de Streamlit */
+        div[data-testid="stRadio"] div[role="radiogroup"] label div[data-testid="stMarkdownContainer"]::before,
+        div[data-testid="stRadio"] div[role="radiogroup"] [data-testid="stWidgetRadioCircle"] {
             display: none !important;
         }
 
-        /* Style de la bulle active (Sélectionnée) */
-        div[data-testid="stRadio"]:has(input[name="MenuPrincipal"]) div[role="radiogroup"] label[data-checked="true"] {
+        /* Ajustement du texte/émojis à l'intérieur */
+        div[data-testid="stRadio"] div[role="radiogroup"] label p {
+            font-size: 20px !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        /* Changement d'état visuel de la bulle active (Sélectionnée) */
+        div[data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked),
+        div[data-testid="stRadio"] div[role="radiogroup"] label[data-checked="true"] {
             background-color: #1e3a8a !important;
             color: #ffffff !important;
             border-color: #1e3a8a !important;
-            font-weight: bold !important;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.15) !important;
         }
     </style>
     """, unsafe_allow_html=True)
@@ -296,7 +310,7 @@ else:
         index=index_defaut,
         horizontal=True,
         label_visibility="collapsed",
-        key="MenuPrincipal" # Clé identique au nom du composant inspecté par le CSS
+        key="MenuPrincipal" 
     )
 
     # Intercepteur de clic ultra-rapide
