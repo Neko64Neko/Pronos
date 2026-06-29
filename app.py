@@ -818,7 +818,7 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
     with tab5:
         st.subheader("🚨 Zone de Danger")
         confirmation_secu = st.checkbox("Je confirme vouloir tout réinitialiser.", key="danger_zone_confirm")
-        if st.button("🔥 Réinitialiser l'application", type=\"primary\", disabled=not confirmation_secu):
+        if st.button("🔥 Réinitialiser l'application", type="primary", disabled=not confirmation_secu):
             with st.spinner("Nettoyage..."):
                 try:
                     supabase.table("Pronostics").delete().not_.is_("id", "null").execute()
