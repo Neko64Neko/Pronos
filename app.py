@@ -464,7 +464,7 @@ else:
             else: 
                 st.write("Aucune question bonus ouverte actuellement.")
 
-# 7.2.2. SECTION MATCHS OUVERTS (VERSION BULLS HORIZONTALES AVEC FIX MOBILE)
+# 7.2.2. SECTION MATCHS OUVERTS (VERSION BULLS HORIZONTALES + DATE ET HEURE)
             # Ligne de séparation gris clair sous les Questions Bonus
             st.markdown("""<hr style="border: 1px solid #e2e8f0; margin: 30px 0 20px 0;">""", unsafe_allow_html=True)
             st.subheader("🏉 Matchs à venir")
@@ -479,6 +479,17 @@ else:
                         st.markdown(f'<div class="match-card">', unsafe_allow_html=True)
                         st.markdown(f'<div class="match-title">{m["equipe_dom"]} vs {m["equipe_ext"]}</div>', unsafe_allow_html=True)
                         
+                        # --- FORMATAGE DE LA DATE ET DE L'HEURE ---
+                        try:
+                            # On extrait la date brute et on la transforme en objet datetime
+                            date_brute = m['date_match'].split("+")[0].split("Z")[0]
+                            dt_obj = datetime.fromisoformat(date_brute)
+                            # Formatage en français (ex: "Samedi 12 Septembre à 15:00")
+                            date_affiche = dt_obj.strftime("%d/%m/%Y à %H:%M")
+                            st.markdown(f"<div style='text-align: center; color: #64748b; font-size: 0.9em; margin-bottom: 10px;'>📅 Match prévu le {date_affiche}</div>", unsafe_allow_html=True)
+                        except Exception:
+                            pass
+
                         # Récupération du prono en cours
                         prono_existant = supabase.table("Pronostics").select("*").eq("user_id", id_joueur_cible).eq("match_id", m['id']).execute().data
                         choix_actuel = ""
@@ -488,7 +499,7 @@ else:
                             elif g_prevu == "away": choix_actuel = m['equipe_ext']
                             elif g_prevu == "draw": choix_actuel = "Match Nul"
 
-# --- CHOIX DU VAINQUEUR (3 BULLS HORIZONTALES BRIDÉES AVEC FORCE) ---
+                        # --- CHOIX DU VAINQUEUR (3 BULLS HORIZONTALES BRIDÉES AVEC FORCE) ---
                         st.caption("Sélectionner le Vainqueur :")
                         
                         # CSS Ultra-Précis pour brider les boutons Streamlit sur Mobile
@@ -510,7 +521,7 @@ else:
                                 div[data-testid="stHorizontalBlock"] button {
                                     width: 100% !important;
                                     max-width: 100% !important;
-                                    min-width: 0 !important; /* Supprime la largeur minimale par défaut */
+                                    min-width: 0 !important;
                                     padding: 4px 4px !important;
                                     overflow: hidden !important;
                                 }
@@ -519,7 +530,7 @@ else:
                                     overflow: hidden !important;
                                     text-overflow: ellipsis !important;
                                     white-space: nowrap !important;
-                                    font-size: 12px !important;
+                                    font-size: 11px !important;
                                 }
                             </style>
                         """, unsafe_allow_html=True)
