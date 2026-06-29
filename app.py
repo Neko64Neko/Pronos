@@ -464,7 +464,7 @@ else:
             else: 
                 st.write("Aucune question bonus ouverte actuellement.")
 
-# 7.2.2. SECTION MATCHS OUVERTS (VERSION BULLS & SEPARATEURS)
+# 7.2.2. SECTION MATCHS OUVERTS (VERSION BULLS & SEPARATEURS + FIX KEY ADMIN)
             # Ligne de séparation gris clair sous les Questions Bonus
             st.markdown("""<hr style="border: 1px solid #e2e8f0; margin: 30px 0 20px 0;">""", unsafe_allow_html=True)
             st.subheader("🏉 Matchs à venir")
@@ -488,49 +488,51 @@ else:
                             elif g_prevu == "away": choix_actuel = m['equipe_ext']
                             elif g_prevu == "draw": choix_actuel = "Match Nul"
 
-                        # --- CHOIX DU VAINQUEUR (3 BULLS) ---
+                        # --- CHOIX DU VAINQUEUR (3 BULLS AVEC KEY ADAPTÉE À L'ADMIN) ---
                         st.caption("Sélectionner le Vainqueur :")
                         col_a, col_b, col_c = st.columns(3)
                         
                         with col_a:
                             type_a = "primary" if choix_actuel == m['equipe_dom'] else "secondary"
-                            if st.button(f"🏉 {m['equipe_dom']}", key=f"btn_dom_{m['id']}", type=type_a, use_container_width=True):
+                            # Ajout de id_joueur_cible dans la key pour forcer le rafraîchissement au changement de joueur
+                            if st.button(f"🏉 {m['equipe_dom']}", key=f"btn_dom_{m['id']}_{id_joueur_cible}", type=type_a, use_container_width=True):
                                 st.session_state[f"w_{m['id']}"] = m['equipe_dom']
                                 sauvegarder_prono_auto(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
                                 st.rerun()
                                 
                         with col_b:
                             type_b = "primary" if choix_actuel == "Match Nul" else "secondary"
-                            if st.button("🤝 Nul", key=f"btn_nul_{m['id']}", type=type_b, use_container_width=True):
+                            if st.button("🤝 Nul", key=f"btn_nul_{m['id']}_{id_joueur_cible}", type=type_b, use_container_width=True):
                                 st.session_state[f"w_{m['id']}"] = "Match Nul"
                                 sauvegarder_prono_auto(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
                                 st.rerun()
                                 
                         with col_c:
                             type_c = "primary" if choix_actuel == m['equipe_ext'] else "secondary"
-                            if st.button(f"🏉 {m['equipe_ext']}", key=f"btn_ext_{m['id']}", type=type_c, use_container_width=True):
+                            if st.button(f"🏉 {m['equipe_ext']}", key=f"btn_ext_{m['id']}_{id_joueur_cible}", type=type_c, use_container_width=True):
                                 st.session_state[f"w_{m['id']}"] = m['equipe_ext']
                                 sauvegarder_prono_auto(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
                                 st.rerun()
 
-# --- CHOIX DE L'ÉCART (CORRIGÉ POUR CONSERVER LA VALEUR) ---
+                        # --- CHOIX DE L'ÉCART (AVEC KEY ADAPTÉE À L'ADMIN) ---
                         st.markdown("<br>", unsafe_allow_html=True)
                         
-                        # 1. On calcule l'index de la tranche déjà enregistrée si elle existe
                         index_ecart_defaut = 0
                         if prono_existant and prono_existant[0]['ecart_prevu'] in TRANCHES_ECARTS:
-                            # +1 car il y a "..." en position 0
                             index_ecart_defaut = TRANCHES_ECARTS.index(prono_existant[0]['ecart_prevu']) + 1
                         
-                        # 2. On applique l'index par défaut au selectbox
                         st.selectbox(
                             "Écart (pts)", 
                             ["..."] + TRANCHES_ECARTS, 
                             index=index_ecart_defaut,
-                            key=f"m_{m['id']}", 
+                            key=f"m_{m['id']}_{id_joueur_cible}", # Ajout de id_joueur_cible ici aussi
                             on_change=sauvegarder_prono_auto, 
                             args=(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
                         )
+                        
+                        if prono_existant:
+                            st.success("✅ Pronostic enregistré")
+                        st.markdown('</div>', unsafe_allow_html=True)
             else: 
                 st.info("Aucun match ouvert.")
 
