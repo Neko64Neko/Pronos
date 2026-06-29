@@ -464,27 +464,59 @@ else:
             else: 
                 st.write("Aucune question bonus ouverte actuellement.")
 
-            # 7.2.2. SECTION MATCHS OUVERTS (UI AMÉLIORÉE)
+# 7.2.2. SECTION MATCHS OUVERTS (VERSION BULLS & SEPARATEURS)
+            # Ligne de séparation gris clair sous les Questions Bonus
+            st.markdown("""<hr style="border: 1px solid #e2e8f0; margin: 30px 0 20px 0;">""", unsafe_allow_html=True)
             st.subheader("🏉 Matchs à venir")
 
-            # 7.2.3. On initialise la variable par défaut (liste vide)
-            matchs_ouverts = [] 
             matchs_ouverts = supabase.table("Matchs").select("*").eq("statut", "NS").execute().data
             if matchs_ouverts:
                 for m in matchs_ouverts:
+                    # Bandeau séparateur gris clair entre chaque match de la liste
+                    st.markdown("""<hr style="border: 1px solid #f1f5f9; margin: 20px 0;">""", unsafe_allow_html=True)
+                    
                     with st.container():
                         st.markdown(f'<div class="match-card">', unsafe_allow_html=True)
                         st.markdown(f'<div class="match-title">{m["equipe_dom"]} vs {m["equipe_ext"]}</div>', unsafe_allow_html=True)
                         
+                        # Récupération du prono en cours pour pré-sélectionner le bon bouton coloré
                         prono_existant = supabase.table("Pronostics").select("*").eq("user_id", id_joueur_cible).eq("match_id", m['id']).execute().data
+                        choix_actuel = ""
+                        if prono_existant:
+                            g_prevu = prono_existant[0]['gagnant_prevu']
+                            if g_prevu == "home": choix_actuel = m['equipe_dom']
+                            elif g_prevu == "away": choix_actuel = m['equipe_ext']
+                            elif g_prevu == "draw": choix_actuel = "Match Nul"
+
+                        # --- CHOIX DU VAINQUEUR (3 BULLS) ---
+                        st.caption("Sélectionner le Vainqueur :")
+                        col_a, col_b, col_c = st.columns(3)
                         
-                        col1, col2 = st.columns(2)
-                        with col1:
-                            st.radio("Vainqueur", ["...", m['equipe_dom'], m['equipe_ext'], "Match Nul"], 
-                                     key=f"w_{m['id']}", on_change=sauvegarder_prono_auto, args=(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible))
-                        with col2:
-                            st.selectbox("Écart (pts)", ["..."] + TRANCHES_ECARTS, 
-                                         key=f"m_{m['id']}", on_change=sauvegarder_prono_auto, args=(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible))
+                        with col_a:
+                            type_a = "primary" if choix_actuel == m['equipe_dom'] else "secondary"
+                            if st.button(f"🏉 {m['equipe_dom']}", key=f"btn_dom_{m['id']}", type=type_a, use_container_width=True):
+                                st.session_state[f"w_{m['id']}"] = m['equipe_dom']
+                                sauvegarder_prono_auto(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
+                                st.rerun()
+                                
+                        with col_b:
+                            type_b = "primary" if choix_actuel == "Match Nul" else "secondary"
+                            if st.button("🤝 Nul", key=f"btn_nul_{m['id']}", type=type_b, use_container_width=True):
+                                st.session_state[f"w_{m['id']}"] = "Match Nul"
+                                sauvegarder_prono_auto(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
+                                st.rerun()
+                                
+                        with col_c:
+                            type_c = "primary" if choix_actuel == m['equipe_ext'] else "secondary"
+                            if st.button(f"🏉 {m['equipe_ext']}", key=f"btn_ext_{m['id']}", type=type_c, use_container_width=True):
+                                st.session_state[f"w_{m['id']}"] = m['equipe_ext']
+                                sauvegarder_prono_auto(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
+                                st.rerun()
+
+                        # --- CHOIX DE L'ÉCART ---
+                        st.markdown("<br>", unsafe_allow_html=True)
+                        st.selectbox("Écart (pts)", ["..."] + TRANCHES_ECARTS, 
+                                     key=f"m_{m['id']}", on_change=sauvegarder_prono_auto, args=(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible))
                         
                         if prono_existant:
                             st.success("✅ Pronostic enregistré")
