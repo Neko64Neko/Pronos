@@ -255,46 +255,48 @@ else:
     except ValueError:
         index_defaut = 0
 
-# 5.4 - CODE CORRIGÉ : BARRE DE NAVIGATION (BRIDAGE STRICT 1/3 OU 1/4 SANS DÉBORDEMENT)
+# 5.4 - CODE CORRIGÉ : DESIGN HORIZONTAL UNIFORME ET COMPATIBLE 100% SMARTPHONES
     st.markdown("""
         <style>
-            /* 1. On force le bloc de colonnes de Streamlit à rester sur une seule ligne */
-            div[data-testid="stHorizontalBlock"]:has(button[key^="m_tab_"]) {
+            /* 1. Force le bloc de colonnes de la barre à rester strictement en ligne */
+            .barre-horizon [data-testid="stHorizontalBlock"] {
                 display: flex !important;
                 flex-direction: row !important;
                 flex-wrap: nowrap !important;
-                gap: 4px !important; /* Espace réduit entre les bulles pour gagner de la place */
+                gap: 4px !important;
                 width: 100% !important;
             }
             
-            /* 2. On redéfinit chaque colonne pour qu'elle prenne une taille identique exacte */
-            div[data-testid="stHorizontalBlock"]:has(button[key^="m_tab_"]) > div[data-testid="column"] {
-                flex: 1 1 0% !important; /* Force la distribution égale (1/3 ou 1/4 selon le nombre de colonnes) */
-                min-width: 0 !important; /* Supprime la limite minimale de Streamlit qui faisait déborder */
+            /* 2. Égalise la taille des colonnes (1/3 ou 1/4) sans aucun débordement */
+            .barre-horizon [data-testid="column"] {
+                flex: 1 1 0% !important;
+                min-width: 0 !important;
                 max-width: 100% !important;
             }
             
-            /* 3. On applique le bridage strict sur le bouton lui-même */
-            div[data-testid="stHorizontalBlock"]:has(button[key^="m_tab_"]) button {
+            /* 3. Ajuste la taille des boutons */
+            .barre-horizon button {
                 width: 100% !important;
                 max-width: 100% !important;
                 min-width: 0 !important;
-                padding: 6px 2px !important; /* Padding ultra-réduit pour éviter que le texte pousse les bords */
+                padding: 8px 2px !important;
                 overflow: hidden !important;
             }
             
-            /* 4. Force le texte à rester sur une seule ligne avec points de suspension si trop long */
-            div[data-testid="stHorizontalBlock"]:has(button[key^="m_tab_"]) button p {
+            /* 4. Force les points de suspension sur le texte s'il est trop long */
+            .barre-horizon button p {
                 overflow: hidden !important;
                 text-overflow: ellipsis !important;
                 white-space: nowrap !important;
-                font-size: 11px !important; /* Taille de police adaptée aux petits écrans mobiles */
+                font-size: 11px !important;
                 font-weight: bold !important;
             }
         </style>
     """, unsafe_allow_html=True)
 
-    # Création des colonnes dynamiques (génère automatiquement des colonnes de tailles égales)
+    # On encapsule nos colonnes dans notre div personnalisée "barre-horizon"
+    st.markdown('<div class="barre-horizon">', unsafe_allow_html=True)
+
     if st.session_state.is_admin:
         c1, c2, c3, c4 = st.columns(4)
     else:
@@ -317,6 +319,8 @@ else:
             if st.button("⚙️ Admin", key="m_tab_4", type="primary" if st.session_state.onglet_actif == "⚙️" else "secondary", use_container_width=True):
                 st.session_state.onglet_actif = "⚙️"
                 st.rerun()
+
+    st.markdown('</div>', unsafe_allow_html=True)
                 
     # --- 5.6 - EN-TÊTE DE LA PAGE AVEC DÉCONNEXION ---
     col_vide, col_deco = st.columns([4, 1])
