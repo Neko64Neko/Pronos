@@ -442,7 +442,7 @@ else:
 
 # --- 7.1 - QUESTIONS BONUS ET MATCHS À VENIR ---
         try:
-            # 1. SECTION QUESTIONS BONUS
+            # 7.1.1 SECTION QUESTIONS BONUS
             st.subheader("🎯 Questions Bonus du moment")
             questions = supabase.table("Questions_Bonus").select("*").eq("statut", "En cours").order("date_limite").execute().data
             questions_ouvertes = []
@@ -464,8 +464,15 @@ else:
             else: 
                 st.write("Aucune question bonus ouverte actuellement.")
 
-            # 2. SECTION MATCHS OUVERTS (UI AMÉLIORÉE)
+            # 7.2.2. SECTION MATCHS OUVERTS (UI AMÉLIORÉE)
             st.subheader("🏉 Matchs à venir")
+
+            # 7.2.3. On initialise la variable par défaut (liste vide)
+            matchs_ouverts = [] 
+        
+            try:
+                # 7.2.4. On essaie de récupérer les données
+                matchs_ouverts = supabase.table("Matchs").select("*").eq("statut", "A VENIR").execute().data
             if matchs_ouverts:
                 for m in matchs_ouverts:
                     with st.container():
