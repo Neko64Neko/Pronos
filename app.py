@@ -510,15 +510,22 @@ else:
             
             for m in matchs:
                 # Calcul des conditions pour le match
-                # 1. On remplace les None par 0 pour éviter l'erreur
+                # 1. Gestion sécurisée des scores (remplace None par 0)
                 sc_dom = m.get('score_dom') if m.get('score_dom') is not None else 0
                 sc_ext = m.get('score_ext') if m.get('score_ext') is not None else 0                
-                #sc_dom, sc_ext = m.get('score_dom', 0), m.get('score_ext', 0)
-                vrai_gagnant_brut = "home" if sc_dom > sc_ext else ("away" if sc_dom < sc_ext else "draw")
-                vrai_ecart = abs(sc_dom - sc_ext)
                 
-                # Déterminer la tranche (ta logique actuelle)
-                vraie_tranche = "1-6" # ... (ajoute ici tes conditions if/elif pour la tranche)
+                vrai_gagnant_brut = "home" if sc_dom > sc_ext else ("away" if sc_dom < sc_ext else "draw")
+                diff = abs(sc_dom - sc_ext)
+                
+                # 2. Détermination de la tranche réelle
+                if diff <= 6: vraie_tranche = "1-6"
+                elif diff <= 10: vraie_tranche = "7-10"
+                elif diff <= 15: vraie_tranche = "11-15"
+                elif diff <= 20: vraie_tranche = "16-20"
+                elif diff <= 30: vraie_tranche = "21-30"
+                elif diff <= 40: vraie_tranche = "31-40"
+                elif diff <= 50: vraie_tranche = "41-50"
+                else: vraie_tranche = "51+"
                 
                 # UI : Utilisation d'un expander stylisé
                 label_live = "🔴 EN DIRECT" if m['statut'] == 'LIVE' else ""
