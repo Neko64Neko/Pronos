@@ -1,3 +1,9 @@
+import sys
+import os
+
+# Ajoute le répertoire courant au PYTHONPATH
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 import streamlit as st
 from modules import database, scraping, utils
 import extra_streamlit_components as stx
