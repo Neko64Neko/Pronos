@@ -464,7 +464,7 @@ else:
             else: 
                 st.write("Aucune question bonus ouverte actuellement.")
 
-# 7.2.2. SECTION MATCHS OUVERTS (VERSION BULLS & SEPARATEURS + FIX KEY ADMIN)
+# 7.2.2. SECTION MATCHS OUVERTS (VERSION BULLS HORIZONTALES COUPE-MOBILE)
             # Ligne de séparation gris clair sous les Questions Bonus
             st.markdown("""<hr style="border: 1px solid #e2e8f0; margin: 30px 0 20px 0;">""", unsafe_allow_html=True)
             st.subheader("🏉 Matchs à venir")
@@ -479,7 +479,7 @@ else:
                         st.markdown(f'<div class="match-card">', unsafe_allow_html=True)
                         st.markdown(f'<div class="match-title">{m["equipe_dom"]} vs {m["equipe_ext"]}</div>', unsafe_allow_html=True)
                         
-                        # Récupération du prono en cours pour pré-sélectionner le bon bouton coloré
+                        # Récupération du prono en cours
                         prono_existant = supabase.table("Pronostics").select("*").eq("user_id", id_joueur_cible).eq("match_id", m['id']).execute().data
                         choix_actuel = ""
                         if prono_existant:
@@ -488,13 +488,23 @@ else:
                             elif g_prevu == "away": choix_actuel = m['equipe_ext']
                             elif g_prevu == "draw": choix_actuel = "Match Nul"
 
-                        # --- CHOIX DU VAINQUEUR (3 BULLS AVEC KEY ADAPTÉE À L'ADMIN) ---
+                        # --- CHOIX DU VAINQUEUR (3 BULLS STRICTEMENT HORIZONTALES) ---
                         st.caption("Sélectionner le Vainqueur :")
+                        
+                        # Astuce CSS : On force le conteneur de colonnes Streamlit à ne pas revenir à la ligne (flex-wrap: nowrap)
+                        st.markdown("""
+                            <style>
+                                div[data-testid="stHorizontalBlock"] {
+                                    flex-wrap: nowrap !important;
+                                    gap: 8px !important;
+                                }
+                            </style>
+                        """, unsafe_allow_html=True)
+                        
                         col_a, col_b, col_c = st.columns(3)
                         
                         with col_a:
                             type_a = "primary" if choix_actuel == m['equipe_dom'] else "secondary"
-                            # Ajout de id_joueur_cible dans la key pour forcer le rafraîchissement au changement de joueur
                             if st.button(f"🏉 {m['equipe_dom']}", key=f"btn_dom_{m['id']}_{id_joueur_cible}", type=type_a, use_container_width=True):
                                 st.session_state[f"w_{m['id']}"] = m['equipe_dom']
                                 sauvegarder_prono_auto(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
@@ -503,9 +513,9 @@ else:
                         with col_b:
                             type_b = "primary" if choix_actuel == "Match Nul" else "secondary"
                             if st.button("🤝 Nul", key=f"btn_nul_{m['id']}_{id_joueur_cible}", type=type_b, use_container_width=True):
-                                st.session_state[f"w_{m['id']}"] = "Match Nul"
-                                sauvegarder_prono_auto(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
-                                st.rerun()
+                                        st.session_state[f"w_{m['id']}"] = "Match Nul"
+                                        sauvegarder_prono_auto(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
+                                        st.rerun()
                                 
                         with col_c:
                             type_c = "primary" if choix_actuel == m['equipe_ext'] else "secondary"
@@ -514,7 +524,7 @@ else:
                                 sauvegarder_prono_auto(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
                                 st.rerun()
 
-                        # --- CHOIX DE L'ÉCART (AVEC KEY ADAPTÉE À L'ADMIN) ---
+                        # --- CHOIX DE L'ÉCART ---
                         st.markdown("<br>", unsafe_allow_html=True)
                         
                         index_ecart_defaut = 0
@@ -525,7 +535,7 @@ else:
                             "Écart (pts)", 
                             ["..."] + TRANCHES_ECARTS, 
                             index=index_ecart_defaut,
-                            key=f"m_{m['id']}_{id_joueur_cible}", # Ajout de id_joueur_cible ici aussi
+                            key=f"m_{m['id']}_{id_joueur_cible}", 
                             on_change=sauvegarder_prono_auto, 
                             args=(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
                         )
@@ -535,7 +545,6 @@ else:
                         st.markdown('</div>', unsafe_allow_html=True)
             else: 
                 st.info("Aucun match ouvert.")
-
         except Exception as e: 
             st.error(f"Erreur lors du chargement : {e}")
 
