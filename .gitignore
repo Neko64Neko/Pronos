@@ -1,1 +1,8 @@
+# Environnement et cache
+__pycache__/
+.DS_Store
+.venv/
+env/
 
+# Secrets (TRÈS IMPORTANT)
+.streamlit/secrets.toml
