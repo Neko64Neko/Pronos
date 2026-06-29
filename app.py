@@ -255,33 +255,27 @@ else:
     except ValueError:
         index_defaut = 0
 
-    # 5.4 - INJECTION CSS CENTRALISÉ (S'APPLIQUE À TOUTES LES PAGES)
+    # 5.4 - INJECTION CSS DIRECTE SUR LES CLÉS DE BOUTONS (SANS CONTENEUR PARENT)
     st.markdown("""
         <style>
-            /* Force le conteneur du menu à rester horizontal partout */
-            .menu-horizontal-centralise {
+            /* Force le conteneur de colonnes Streamlit qui contient nos boutons de menu à rester horizontal */
+            div[data-testid="stHorizontalBlock"]:has(button[key^="nav_c_btn_"]) {
                 display: flex !important;
                 flex-direction: row !important;
                 flex-wrap: nowrap !important;
+                gap: 4px !important;
                 width: 100% !important;
-                gap: 5px !important;
-                margin-bottom: 15px !important;
             }
             
-            /* Égalise les colonnes du menu */
-            .menu-horizontal-centralise > div {
+            /* Égalise de force l'espace des colonnes (1/3 ou 1/4) */
+            div[data-testid="stHorizontalBlock"]:has(button[key^="nav_c_btn_"]) > div[data-testid="column"] {
                 flex: 1 1 0% !important;
                 min-width: 0 !important;
                 max-width: 100% !important;
             }
             
-            .menu-horizontal-centralise div[data-testid="stVerticalBlock"] {
-                display: block !important;
-                width: 100% !important;
-            }
-            
-            /* Style des boutons du menu */
-            .menu-horizontal-centralise button {
+            /* Ajuste la taille des boutons pour le mobile */
+            div[data-testid="stHorizontalBlock"]:has(button[key^="nav_c_btn_"]) button {
                 width: 100% !important;
                 max-width: 100% !important;
                 min-width: 0 !important;
@@ -289,7 +283,8 @@ else:
                 overflow: hidden !important;
             }
             
-            .menu-horizontal-centralise button p {
+            /* Force le texte sur une seule ligne avec points de suspension */
+            div[data-testid="stHorizontalBlock"]:has(button[key^="nav_c_btn_"]) button p {
                 overflow: hidden !important;
                 text-overflow: ellipsis !important;
                 white-space: nowrap !important;
@@ -299,9 +294,7 @@ else:
         </style>
     """, unsafe_allow_html=True)
 
-    # 5.5 - RENDU DU MENU ENCAPSULÉ
-    st.markdown('<div class="menu-horizontal-centralise">', unsafe_allow_html=True)
-    
+    # 5.5 - RENDU DIRECT DES COLONNES NATIVES
     if st.session_state.is_admin:
         col_m1, col_m2, col_m3, col_m4 = st.columns(4)
     else:
@@ -331,7 +324,6 @@ else:
             if st.button("⚙️ Admin", key="nav_c_btn_4", type=type_m4, use_container_width=True):
                 st.session_state.onglet_actif = "⚙️"
                 st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
                 
     # --- 5.6 - EN-TÊTE DE LA PAGE AVEC DÉCONNEXION ---
     col_vide, col_deco = st.columns([4, 1])
