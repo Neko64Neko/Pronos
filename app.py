@@ -529,7 +529,7 @@ else:
                             elif g_prevu == "away": choix_actuel = m['equipe_ext']
                             elif g_prevu == "draw": choix_actuel = "Match Nul"
 
-# --- CHOIX DU VAINQUEUR ---
+# --- 7.2.3 - CHOIX DU VAINQUEUR ---
                         st.caption("Sélectionner le Vainqueur :")
                         
                         # Style isolé uniquement pour les lignes de choix de vainqueurs de matchs
