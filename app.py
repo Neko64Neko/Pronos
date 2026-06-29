@@ -451,7 +451,7 @@ if st.session_state.onglet_actif == "🏉":
     st.title("🏉 Espace Pronostics")
     
     # --- 7.1 - LISTE DÉROULANTE JOUEUR (RÉSERVÉE ADMIN) ---
-    liste_joueurs = supabase.table("Joueurs").select("*").order("nom").execute().data
+    liste_joueurs = supabase.table("Joueurs").select("*").order("pseudo").execute().data
     
     if liste_joueurs:
         noms_joueurs = [j['nom'] for j in liste_joueurs]
