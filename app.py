@@ -249,81 +249,58 @@ else:
     </style>
     """, unsafe_allow_html=True)
 
-# --- 5.3 - CONFIGURATION DES ONGLETS NAVIGATION ---
-    try:
-        index_defaut = icones_navigation.index(st.session_state.onglet_actif)
-    except ValueError:
-        index_defaut = 0
+# --- 5.3 - CONFIGURATION DES ONGLETS DE NAVIGATION ---
+    # On définit les options et les labels associés
+    if st.session_state.is_admin:
+        options_menu = ["📊", "🏉", "📅", "⚙️"]
+        labels_menu = {
+            "📊": "📊 Général",
+            "🏉": "🏉 Pronos",
+            "📅": "📅 Scores",
+            "⚙️": "⚙️ Admin"
+        }
+    else:
+        options_menu = ["📊", "🏉", "📅"]
+        labels_menu = {
+            "📊": "📊 Général",
+            "🏉": "🏉 Pronos",
+            "📅": "📅 Scores"
+        }
 
-    # 5.4 - INJECTION CSS DIRECTE SUR LES CLÉS DE BOUTONS (SANS CONTENEUR PARENT)
+    # Style minimal pour donner un look de gros boutons d'application à la barre native
     st.markdown("""
         <style>
-            /* Force le conteneur de colonnes Streamlit qui contient nos boutons de menu à rester horizontal */
-            div[data-testid="stHorizontalBlock"]:has(button[key^="nav_c_btn_"]) {
+            /* Force la barre de contrôle segmentée à occuper 100% de la largeur */
+            div[data-testid="stSegmentedControl"] {
+                width: 100% !important;
                 display: flex !important;
-                flex-direction: row !important;
-                flex-wrap: nowrap !important;
-                gap: 4px !important;
-                width: 100% !important;
             }
-            
-            /* Égalise de force l'espace des colonnes (1/3 ou 1/4) */
-            div[data-testid="stHorizontalBlock"]:has(button[key^="nav_c_btn_"]) > div[data-testid="column"] {
-                flex: 1 1 0% !important;
+            /* Égalise la taille de chaque segment (1/3 ou 1/4) */
+            div[data-testid="stSegmentedControl"] button {
+                flex: 1 !important;
                 min-width: 0 !important;
-                max-width: 100% !important;
-            }
-            
-            /* Ajuste la taille des boutons pour le mobile */
-            div[data-testid="stHorizontalBlock"]:has(button[key^="nav_c_btn_"]) button {
-                width: 100% !important;
-                max-width: 100% !important;
-                min-width: 0 !important;
-                padding: 8px 2px !important;
-                overflow: hidden !important;
-            }
-            
-            /* Force le texte sur une seule ligne avec points de suspension */
-            div[data-testid="stHorizontalBlock"]:has(button[key^="nav_c_btn_"]) button p {
-                overflow: hidden !important;
-                text-overflow: ellipsis !important;
-                white-space: nowrap !important;
-                font-size: 11px !important;
+                text-align: center !important;
+                padding: 12px 4px !important;
                 font-weight: bold !important;
+                font-size: 12px !important;
             }
         </style>
     """, unsafe_allow_html=True)
 
-    # 5.5 - RENDU DIRECT DES COLONNES NATIVES
-    if st.session_state.is_admin:
-        col_m1, col_m2, col_m3, col_m4 = st.columns(4)
-    else:
-        col_m1, col_m2, col_m3 = st.columns(3)
+    # 5.4 & 5.5 - RENDU ET LOGIQUE DE NAVIGATION (NATIVE ET ROBUSTE)
+    choix_menu = st.segmented_control(
+        "Navigation",
+        options=options_menu,
+        format_func=lambda x: labels_menu.get(x, x),
+        default=st.session_state.onglet_actif,
+        label_visibility="collapsed",
+        key="barre_navigation_segmentee"
+    )
 
-    with col_m1:
-        type_m1 = "primary" if st.session_state.onglet_actif == "📊" else "secondary"
-        if st.button("📊 Général", key="nav_c_btn_1", type=type_m1, use_container_width=True):
-            st.session_state.onglet_actif = "📊"
-            st.rerun()
-
-    with col_m2:
-        type_m2 = "primary" if st.session_state.onglet_actif == "🏉" else "secondary"
-        if st.button("🏉 Pronos", key="nav_c_btn_2", type=type_m2, use_container_width=True):
-            st.session_state.onglet_actif = "🏉"
-            st.rerun()
-
-    with col_m3:
-        type_m3 = "primary" if st.session_state.onglet_actif == "📅" else "secondary"
-        if st.button("📅 Scores", key="nav_c_btn_3", type=type_m3, use_container_width=True):
-            st.session_state.onglet_actif = "📅"
-            st.rerun()
-
-    if st.session_state.is_admin:
-        with col_m4:
-            type_m4 = "primary" if st.session_state.onglet_actif == "⚙️" else "secondary"
-            if st.button("⚙️ Admin", key="nav_c_btn_4", type=type_m4, use_container_width=True):
-                st.session_state.onglet_actif = "⚙️"
-                st.rerun()
+    # Intercepteur de changement de page
+    if choix_menu and choix_menu != st.session_state.onglet_actif:
+        st.session_state.onglet_actif = choix_menu
+        st.rerun()
                 
     # --- 5.6 - EN-TÊTE DE LA PAGE AVEC DÉCONNEXION ---
     col_vide, col_deco = st.columns([4, 1])
