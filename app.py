@@ -255,7 +255,7 @@ else:
     except ValueError:
         index_defaut = 0
 
-# 5.4 - BARRE DE NAVIGATION ULTRA-ROBUSTE (IFRAME ISOLÉE COMPATIBLE 100% MOBILE)
+# 5.4 - BARRE DE NAVIGATION ULTRA-ROBUSTE (IFRAME ISOLÉE + INTERCEPTEUR FIABLE)
     import streamlit.components.v1 as components
 
     # On prépare la liste des onglets selon le rôle pour le rendu
@@ -316,19 +316,27 @@ else:
             white-space: nowrap !important;
             overflow: hidden !important;
             text-overflow: ellipsis !important;
-            transition: background-color 0.2s;
             box-sizing: border-box;
         }}
     </style>
     <script>
         function changerOnglet(idOnglet) {{
-            // Envoie l'information du clic en toute sécurité à la page parente Streamlit
-            window.parent.postMessage({{
-                isStreamlitMessage: true,
-                type: "streamlit:set_widget_value",
-                key: "IntercepteurMenu",
-                value: idOnglet
-            }}, "*");
+            // Sélectionne l'élément selectbox masqué de Streamlit dans la page principale et change sa valeur
+            var inputs = window.parent.document.querySelectorAll('div[data-testid="stSelectbox"] select');
+            for (var i = 0; i < inputs.length; i++) {{
+                // On vérifie qu'on cible bien notre intercepteur caché
+                if (inputs[i].getAttribute('aria-label') === 'IntercepteurMenu') {{
+                    // On cherche l'option correspondante
+                    for (var j = 0; j < inputs[i].options.length; j++) {{
+                        if (inputs[i].options[j].value === idOnglet) {{
+                            inputs[i].selectedIndex = j;
+                            // Déclenche l'événement de changement pour que Streamlit Python intercepte le clic
+                            inputs[i].dispatchEvent(new Event('change', {{ bubbles: true }}));
+                            break;
+                        }}
+                    }}
+                }}
+            }}
         }}
     </script>
     </head>
@@ -340,24 +348,34 @@ else:
     </html>
     """
 
-    # On affiche l'iframe graphique (hauteur fixe de 45px pour que le menu respire sans scroller)
+    # 1. CSS de masquage absolu pour l'intercepteur (il ne sera plus jamais visible)
+    st.markdown("""
+        <style>
+            /* Masque totalement et proprement le bloc selectbox qui sert d'intercepteur */
+            div[data-testid="stSelectbox"]:has(select[aria-label="IntercepteurMenu"]) {
+                display: none !important;
+                height: 0px !important;
+                margin: 0px !important;
+                padding: 0px !important;
+            }
+        </style>
+    """, unsafe_allow_html=True)
+
+    # 2. On affiche l'iframe graphique (hauteur fixe de 45px)
     components.html(code_composant_html, height=45)
 
-    # 3. L'intercepteur Streamlit natif caché qui reçoit le clic en arrière-plan
+    # 3. L'intercepteur Selectbox Streamlit natif (totalement invisible grâce au CSS du dessus)
     choix_options = [o[0] for o in onglets_config]
     try:
         index_defaut = choix_options.index(st.session_state.onglet_actif)
     except ValueError:
         index_defaut = 0
 
-    # On utilise un conteneur vide temporairement pour masquer le widget radio de contrôle
-    st.markdown("<style>div[data-testid='stRadio']:has(input[value='📊']) { display:none !important; }</style>", unsafe_allow_html=True)
-    
-    choix_onglet_invisible = st.radio(
+    choix_onglet_invisible = st.selectbox(
         "IntercepteurMenu",
         options=choix_options,
         index=index_defaut,
-        key="IntercepteurMenu"
+        label_visibility="collapsed"
     )
 
     # 5.5 - Déclenchement du changement de page instantané
