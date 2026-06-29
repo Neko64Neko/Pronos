@@ -643,65 +643,100 @@ else:
         except Exception as e: 
             st.error(f"Erreur lors du chargement : {e}")
 
-    # =====================================================================
-    # 8 - CONTENU DE L'ONGLET 3 : RÉSULTATS & DIRECT
-    # =====================================================================
-    elif st.session_state.onglet_actif == "📅":
-        st.title("📊 Résultats & Direct")
-        if matchs_en_direct:
-            st.success("⚡ **Mode Direct Actif** : Les scores se rafraîchissent automatiquement toutes les 5 minutes.")
-            
-# 8.1 - RÉSULTATS & DIRECT (VERSION UI + RÈGLES CONSERVÉES)
+# =====================================================================
+# 8 - CONTENU DE L'ONGLET 3 : RÉSULTATS & DIRECT (SÉCURISÉ & DYNAMIQUE)
+# =====================================================================
+if st.session_state.onglet_actif == "📅":
+    st.title("📅 Résultats & Matchs en Direct")
+    
+    with st.spinner("Mise à jour des scores..."):
         st.subheader("🏉 Matchs Clos / En cours")
         try:
-            matchs = supabase.table("Matchs").select("*").order("date_match", desc=True).execute().data
+            # Récupération de tous les matchs
+            tous_matchs_bdd = supabase.table("Matchs").select("*").order("date_match", desc=True).execute().data
+            matchs = []
             
-            for m in matchs:
-                # Calcul des conditions pour le match
-                # 1. Gestion sécurisée des scores (remplace None par 0)
-                sc_dom = m.get('score_dom') if m.get('score_dom') is not None else 0
-                sc_ext = m.get('score_ext') if m.get('score_ext') is not None else 0                
-                
-                vrai_gagnant_brut = "home" if sc_dom > sc_ext else ("away" if sc_dom < sc_ext else "draw")
-                diff = abs(sc_dom - sc_ext)
-                
-                # 2. Détermination de la tranche réelle
-                if diff <= 6: vraie_tranche = "1-6"
-                elif diff <= 10: vraie_tranche = "7-10"
-                elif diff <= 15: vraie_tranche = "11-15"
-                elif diff <= 20: vraie_tranche = "16-20"
-                elif diff <= 30: vraie_tranche = "21-30"
-                elif diff <= 40: vraie_tranche = "31-40"
-                elif diff <= 50: vraie_tranche = "41-50"
-                else: vraie_tranche = "51+"
-                
-                # UI : Utilisation d'un expander stylisé
-                label_live = "🔴 EN DIRECT" if m['statut'] == 'LIVE' else ""
-                with st.expander(f"{m['equipe_dom']} {sc_dom} - {sc_ext} {m['equipe_ext']} {label_live}"):
-                    
-                    # --- LOGIQUE DES POINTS CONSERVÉE ---
-                    all_pronos = supabase.table("Pronostics").select("gagnant_prevu, ecart_prevu, Joueurs(pseudo)").eq("match_id", m['id']).execute().data
-                    
-                    if all_pronos:
-                        # Calcul pour le mode OSÉ
-                        total_p = len(all_pronos)
-                        nb_bons = sum(1 for p in all_pronos if p['gagnant_prevu'] == vrai_gagnant_brut)
-                        pct_m = (nb_bons / total_p) * 100 if total_p > 0 else 0
-                        est_ose = pct_m <= seuil_ose_cfg and nb_bons > 0
+            if tous_matchs_bdd:
+                for m in tous_matchs_bdd:
+                    try:
+                        # Conversion de la date du match
+                        date_brute = m['date_match'].split("+")[0].split("Z")[0]
+                        dt_match = datetime.fromisoformat(date_brute)
                         
-                        for p in all_pronos:
-                            # Ici tu réintègres tes if/else de calcul de points
-                            pts_gagnes = 0
-                            if p['gagnant_prevu'] == vrai_gagnant_brut:
-                                pts_base = pts_gagnant_cfg + (pts_ecart_cfg if p['ecart_prevu'] == vraie_tranche else 0)
-                                pts_gagnes = pts_base * mult_ose_cfg if est_ose else pts_base
-                            
-                            # Affichage personnalisé
-                            badge = "🔥 OSÉ" if est_ose else ("⭐ PARFAIT" if pts_gagnes >= (pts_gagnant_cfg + pts_ecart_cfg) else "✅")
-                            st.markdown(f"👤 **{p['Joueurs']['pseudo']}** : `{badge} +{pts_gagnes} pts`")
-                    else:
-                        st.write("Aucun prono.")
-        except Exception as e:st.error(f"Erreur : {e}")
+                        # FILTRE : On affiche le match s'il est FT, LIVE ou si l'heure du coup d'envoi est passée
+                        if m['statut'] in ["FT", "LIVE"] or maintenant_paris >= dt_match:
+                            matchs.append(m)
+                    except Exception:
+                        # Sécurité
+                        if m['statut'] in ["FT", "LIVE"]:
+                            matchs.append(m)
+            
+            if matchs:
+                for m in matchs:
+                    # Détermination d'un label de statut visuel pour l'utilisateur
+                    label_statut = ""
+                    if m['statut'] == 'LIVE':
+                        label_statut = " 🔴 EN DIRECT"
+                    elif m['statut'] == 'NS':
+                        label_statut = " ⏳ EN COURS (En attente du score)"
+                    
+                    # Remplacement des valeurs None éventuelles par 0 pour éviter les plantages
+                    sc_dom = m.get('score_dom') if m.get('score_dom') is not None else 0
+                    sc_ext = m.get('score_ext') if m.get('score_ext') is not None else 0
+                    
+                    vrai_gagnant_brut = "home" if sc_dom > sc_ext else ("away" if sc_dom < sc_ext else "draw")
+                    diff = abs(sc_dom - sc_ext)
+                    
+                    # Détermination de la tranche d'écart réelle du match
+                    if diff <= 6: vraie_tranche = "1-6"
+                    elif diff <= 10: vraie_tranche = "7-10"
+                    elif diff <= 15: vraie_tranche = "11-15"
+                    elif diff <= 20: vraie_tranche = "16-20"
+                    elif diff <= 30: vraie_tranche = "21-30"
+                    elif diff <= 40: vraie_tranche = "31-40"
+                    elif diff <= 50: vraie_tranche = "41-50"
+                    else: vraie_tranche = "51+"
+
+                    # Affichage de la ligne du match avec son label dynamique
+                    with st.expander(f"🏉 {m['equipe_dom']} {sc_dom} - {sc_ext} {m['equipe_ext']}{label_statut}"):
+                        # Extraction des pronostics globaux pour ce match
+                        pronos = supabase.table("Pronostics").select("*, Joueurs(nom)").eq("match_id", m['id']).execute().data
+                        
+                        if pronos:
+                            st.markdown("**Pronostics des joueurs :**")
+                            for p in pronos:
+                                nom_joueur = p.get('Joueurs', {}).get('nom', 'Inconnu')
+                                g_prevu = p['gagnant_prevu']
+                                ec_prevu = p['ecart_prevu']
+                                
+                                nom_gagnant_prevu = m['equipe_dom'] if g_prevu == "home" else (m['equipe_ext'] if g_prevu == "away" else "Match Nul")
+                                
+                                # Calcul des points obtenus
+                                pts = 0
+                                detail_pts = "❌ 0 point"
+                                
+                                # Si le score n'a pas encore été mis à jour par le scraping, on affiche 0pt temporairement
+                                if m['statut'] == 'NS' and sc_dom == 0 and sc_ext == 0:
+                                    detail_pts = "⏳ En attente du résultat officiel"
+                                else:
+                                    if g_prevu == vrai_gagnant_brut:
+                                        pts += 2
+                                        detail_pts = "✅ Vainqueur trouvé (+2 pts)"
+                                        if ec_prevu == vraie_tranche and g_prevu != "draw":
+                                            pts += 2
+                                            detail_pts += " 🎯 Écart parfait (+2 pts)"
+                                
+                                # Couleur d'affichage selon le résultat
+                                color = "green" if pts > 0 else "red"
+                                if "En attente" in detail_pts: color = "orange"
+                                
+                                st.markdown(f"- **{nom_joueur}** : {nom_gagnant_prevu} ({ec_prevu}) ➔ <span style='color:{color}; font-weight:bold;'>{detail_pts} ({pts} pts)</span>", unsafe_allow_html=True)
+                        else:
+                            st.caption("Aucun pronostic enregistré pour ce match.")
+            else:
+                st.info("Aucun match terminé ou en cours pour le moment.")
+        except Exception as e:
+            st.error(f"Erreur lors du chargement des scores : {e}")
     # =====================================================================
     # 9 - CONTENU DE L'ONGLET 4 : CONSOLE ADMINISTRATION PRIVÉE
     # =====================================================================
