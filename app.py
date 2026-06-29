@@ -500,46 +500,46 @@ else:
             st.success("⚡ **Mode Direct Actif** : Les scores se rafraîchissent automatiquement toutes les 5 minutes.")
             
 # 8.1 - RÉSULTATS & DIRECT (VERSION UI + RÈGLES CONSERVÉES)
-st.subheader("🏉 Matchs Clos / En cours")
-try:
-    matchs = supabase.table("Matchs").select("*").order("date_match", desc=True).execute().data
-    
-    for m in matchs:
-        # Calcul des conditions pour le match
-        sc_dom, sc_ext = m.get('score_dom', 0), m.get('score_ext', 0)
-        vrai_gagnant_brut = "home" if sc_dom > sc_ext else ("away" if sc_dom < sc_ext else "draw")
-        vrai_ecart = abs(sc_dom - sc_ext)
-        
-        # Déterminer la tranche (ta logique actuelle)
-        vraie_tranche = "1-6" # ... (ajoute ici tes conditions if/elif pour la tranche)
-        
-        # UI : Utilisation d'un expander stylisé
-        label_live = "🔴 EN DIRECT" if m['statut'] == 'LIVE' else ""
-        with st.expander(f"{m['equipe_dom']} {sc_dom} - {sc_ext} {m['equipe_ext']} {label_live}"):
+        st.subheader("🏉 Matchs Clos / En cours")
+        try:
+            matchs = supabase.table("Matchs").select("*").order("date_match", desc=True).execute().data
             
-            # --- LOGIQUE DES POINTS CONSERVÉE ---
-            all_pronos = supabase.table("Pronostics").select("gagnant_prevu, ecart_prevu, Joueurs(pseudo)").eq("match_id", m['id']).execute().data
-            
-            if all_pronos:
-                # Calcul pour le mode OSÉ
-                total_p = len(all_pronos)
-                nb_bons = sum(1 for p in all_pronos if p['gagnant_prevu'] == vrai_gagnant_brut)
-                pct_m = (nb_bons / total_p) * 100 if total_p > 0 else 0
-                est_ose = pct_m <= seuil_ose_cfg and nb_bons > 0
+            for m in matchs:
+                # Calcul des conditions pour le match
+                sc_dom, sc_ext = m.get('score_dom', 0), m.get('score_ext', 0)
+                vrai_gagnant_brut = "home" if sc_dom > sc_ext else ("away" if sc_dom < sc_ext else "draw")
+                vrai_ecart = abs(sc_dom - sc_ext)
                 
-                for p in all_pronos:
-                    # Ici tu réintègres tes if/else de calcul de points
-                    pts_gagnes = 0
-                    if p['gagnant_prevu'] == vrai_gagnant_brut:
-                        pts_base = pts_gagnant_cfg + (pts_ecart_cfg if p['ecart_prevu'] == vraie_tranche else 0)
-                        pts_gagnes = pts_base * mult_ose_cfg if est_ose else pts_base
+                # Déterminer la tranche (ta logique actuelle)
+                vraie_tranche = "1-6" # ... (ajoute ici tes conditions if/elif pour la tranche)
+                
+                # UI : Utilisation d'un expander stylisé
+                label_live = "🔴 EN DIRECT" if m['statut'] == 'LIVE' else ""
+                with st.expander(f"{m['equipe_dom']} {sc_dom} - {sc_ext} {m['equipe_ext']} {label_live}"):
                     
-                    # Affichage personnalisé
-                    badge = "🔥 OSÉ" if est_ose else ("⭐ PARFAIT" if pts_gagnes >= (pts_gagnant_cfg + pts_ecart_cfg) else "✅")
-                    st.markdown(f"👤 **{p['Joueurs']['pseudo']}** : `{badge} +{pts_gagnes} pts`")
-            else:
-                st.write("Aucun prono.")
-except Exception as e:
+                    # --- LOGIQUE DES POINTS CONSERVÉE ---
+                    all_pronos = supabase.table("Pronostics").select("gagnant_prevu, ecart_prevu, Joueurs(pseudo)").eq("match_id", m['id']).execute().data
+                    
+                    if all_pronos:
+                        # Calcul pour le mode OSÉ
+                        total_p = len(all_pronos)
+                        nb_bons = sum(1 for p in all_pronos if p['gagnant_prevu'] == vrai_gagnant_brut)
+                        pct_m = (nb_bons / total_p) * 100 if total_p > 0 else 0
+                        est_ose = pct_m <= seuil_ose_cfg and nb_bons > 0
+                        
+                        for p in all_pronos:
+                            # Ici tu réintègres tes if/else de calcul de points
+                            pts_gagnes = 0
+                            if p['gagnant_prevu'] == vrai_gagnant_brut:
+                                pts_base = pts_gagnant_cfg + (pts_ecart_cfg if p['ecart_prevu'] == vraie_tranche else 0)
+                                pts_gagnes = pts_base * mult_ose_cfg if est_ose else pts_base
+                            
+                            # Affichage personnalisé
+                            badge = "🔥 OSÉ" if est_ose else ("⭐ PARFAIT" if pts_gagnes >= (pts_gagnant_cfg + pts_ecart_cfg) else "✅")
+                            st.markdown(f"👤 **{p['Joueurs']['pseudo']}** : `{badge} +{pts_gagnes} pts`")
+                    else:
+                        st.write("Aucun prono.")
+        except Exception as e:
     st.error(f"Erreur : {e}")
     # =====================================================================
     # 9 - CONTENU DE L'ONGLET 4 : CONSOLE ADMINISTRATION PRIVÉE
