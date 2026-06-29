@@ -255,22 +255,78 @@ else:
     except ValueError:
         index_defaut = 0
 
-    # 5.4 - L'ancre HTML qui sert de point d'attache au CSS exclusif
-    st.markdown('<div class="barre-navigation-fixe"></div>', unsafe_allow_html=True)
-    
-    choix_onglet = st.radio(
-        "MenuPrincipal",
-        options=icones_navigation,
-        index=index_defaut,
-        horizontal=True,
-        label_visibility="collapsed",
-        key="MenuPrincipal" 
-    )
+# 5.4 et 5.5 - CODE CORRIGÉ : BARRE DE NAVIGATION (VERSION BULLS HORIZONTALES UNIFORMES)
+    st.markdown("""
+        <style>
+            /* Force le conteneur des menus à rester sur une seule ligne horizontale */
+            div.nav-menu-container {
+                display: flex !important;
+                flex-wrap: nowrap !important;
+                gap: 6px !important;
+                width: 100% !important;
+                margin-top: 10px !important;
+                margin-bottom: 25px !important;
+            }
+            /* Style des boutons du menu */
+            div.nav-menu-container {
+                overflow: hidden !important;
+            }
+            div.nav-menu-container button {
+                flex: 1 !important; /* Donne exactement la même taille à chaque bouton (1/3 ou 1/4) */
+                min-width: 0 !important;
+                padding: 8px 4px !important;
+                overflow: hidden !important;
+            }
+            /* Force le texte du menu à couper proprement sans déborder sur mobile */
+            div.nav-menu-container button p {
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
+                white-space: nowrap !important;
+                font-size: 13px !important;
+                font-weight: bold !important;
+            }
+        </style>
+    """, unsafe_allow_html=True)
 
-    # 5.5 - Intercepteur de clic ultra-rapide
-    if choix_onglet != st.session_state.onglet_actif:
-        st.session_state.onglet_actif = choix_onglet
-        st.rerun()
+    # Conteneur HTML pour appliquer notre style CSS personnalisé
+    st.markdown('<div class="nav-menu-container">', unsafe_allow_html=True)
+
+    # On prépare les colonnes dynamiquement selon le rôle
+    if st.session_state.is_admin:
+        col_m1, col_m2, col_m3, col_m4 = st.columns(4)
+    else:
+        col_m1, col_m2, col_m3 = st.columns(3)
+
+    # Bouton Onglet 1 : Classement / Tableau de bord
+    with col_m1:
+        type_m1 = "primary" if st.session_state.onglet_actif == "📊" else "secondary"
+        if st.button("📊 Général", key="menu_tab_classement", type=type_m1, use_container_width=True):
+            st.session_state.onglet_actif = "📊"
+            st.rerun()
+
+    # Bouton Onglet 2 : Pronos
+    with col_m2:
+        type_m2 = "primary" if st.session_state.onglet_actif == "🏉" else "secondary"
+        if st.button("🏉 Pronos", key="menu_tab_pronos", type=type_m2, use_container_width=True):
+            st.session_state.onglet_actif = "🏉"
+            st.rerun()
+
+    # Bouton Onglet 3 : Résultats
+    with col_m3:
+        type_m3 = "primary" if st.session_state.onglet_actif == "📅" else "secondary"
+        if st.button("📅 Scores", key="menu_tab_resultats", type=type_m3, use_container_width=True):
+            st.session_state.onglet_actif = "📅"
+            st.rerun()
+
+    # Bouton Onglet 4 : Admin (Uniquement si Admin)
+    if st.session_state.is_admin:
+        with col_m4:
+            type_m4 = "primary" if st.session_state.onglet_actif == "⚙️" else "secondary"
+            if st.button("⚙️ Admin", key="menu_tab_admin", type=type_m4, use_container_width=True):
+                st.session_state.onglet_actif = "⚙️"
+                st.rerun()
+
+    st.markdown('</div>', unsafe_allow_html=True)
 
     # --- 5.6 - EN-TÊTE DE LA PAGE AVEC DÉCONNEXION ---
     col_vide, col_deco = st.columns([4, 1])
