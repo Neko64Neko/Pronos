@@ -450,14 +450,15 @@ else:
 if st.session_state.onglet_actif == "🏉":
     st.title("🏉 Espace Pronostics")
     
-    # --- 7.1 - LISTE DÉROULANTE JOUEUR (RÉSERVÉE ADMIN) ---
+# --- 7.1 - LISTE DÉROULANTE JOUEUR (RÉSERVÉE ADMIN) ---
     liste_joueurs = supabase.table("Joueurs").select("*").order("pseudo").execute().data
     
     if liste_joueurs:
         noms_joueurs = [j['pseudo'] for j in liste_joueurs]
         
-        # Par défaut, le joueur cible est l'utilisateur connecté
-        index_par_defaut = noms_joueurs.index(st.session_state.nom_utilisateur) if st.session_state.nom_utilisateur in noms_joueurs else 0
+        # Correction : Utilisation de st.session_state.username (qui contient le pseudo de session)
+        utilisateur_actuel = st.session_state.get("username", "")
+        index_par_defaut = noms_joueurs.index(utilisateur_actuel) if utilisateur_actuel in noms_joueurs else 0
         
         if st.session_state.is_admin:
             nom_selectionne = st.selectbox(
@@ -466,10 +467,10 @@ if st.session_state.onglet_actif == "🏉":
                 index=index_par_defaut
             )
         else:
-            nom_selectionne = st.session_state.nom_utilisateur
+            nom_selectionne = utilisateur_actuel
             st.info(f"👤 Connecté en tant que : **{nom_selectionne}**")
             
-        # Récupération de l'ID de la cible choisie
+        # Récupération de l'ID de la cible choisie via la colonne 'pseudo'
         joueur_cible = next(j for j in liste_joueurs if j['pseudo'] == nom_selectionne)
         id_joueur_cible = joueur_cible['id']
         
