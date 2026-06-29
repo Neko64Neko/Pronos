@@ -255,101 +255,46 @@ else:
     except ValueError:
         index_defaut = 0
 
-# 5.4 - CODE CORRIGÉ : BARRE DE NAVIGATION EN HTML PUR (INFAILLIBLE SUR SMARTPHONE)
-    
-    # 1. On prépare les onglets disponibles selon le rôle
-    onglets = [
-        {"id": "📊", "label": "📊 Général"},
-        {"id": "🏉", "label": "🏉 Pronos"},
-        {"id": "📅", "label": "📅 Scores"}
-    ]
-    if st.session_state.is_admin:
-        onglets.append({"id": "⚙️", "label": "⚙️ Admin"})
-        
-    # 2. On génère le style CSS de notre barre HTML personnalisée
-    html_css = """
-    <style>
-        .nav-container-custom {
-            display: flex !important;
-            flex-direction: row !important;
-            flex-wrap: nowrap !important;
-            justify-content: space-between !important;
-            width: 100% !important;
-            gap: 6px !important;
-            margin-bottom: 25px !important;
-        }
-        .nav-btn-custom {
-            flex: 1 !important;
-            text-align: center !important;
-            padding: 10px 4px !important;
-            font-size: 13px !important;
-            font-weight: bold !important;
-            border-radius: 8px !important;
-            border: 1px solid rgba(49, 51, 63, 0.2) !important;
-            text-decoration: none !important;
-            cursor: pointer !important;
-            white-space: nowrap !important;
-            overflow: hidden !important;
-            text-overflow: ellipsis !important;
-            display: block !important;
-        }
-        /* Style onglet actif (Bleu Streamlit) */
-        .nav-btn-active {
-            background-color: rgb(255, 75, 75) !important; /* Rouge ou Bleu d'origine, s'aligne sur le thème primary */
-            color: white !important;
-            border-color: rgb(255, 75, 75) !important;
-        }
-        /* Si ton app utilise le bleu classique par défaut en primary : */
-        .nav-btn-active-blue {
-            background-color: #1f77b4 !important;
-            color: white !important;
-            border-color: #1f77b4 !important;
-        }
-        /* Style onglet inactif (Gris) */
-        .nav-btn-inactive {
-            background-color: transparent !important;
-            color: rgb(49, 51, 63) !important;
-        }
-    </style>
-    """
-    st.markdown(html_css, unsafe_allow_html=True)
-
-    # 3. On affiche la barre d'onglets visuelle
-    html_menu = '<div class="nav-container-custom">'
-    for o in onglets:
-        # On détermine si l'onglet est actif pour lui mettre la couleur bleue (ou rouge selon ton thème)
-        is_active = o["id"] == st.session_state.onglet_actif
-        # Utilise 'nav-btn-active-blue' pour du bleu ou 'nav-btn-active' pour le rouge Streamlit par défaut
-        classe_statut = "nav-btn-active-blue" if is_active else "nav-btn-inactive"
-        
-        html_menu += f'<div class="nav-btn-custom {classe_statut}" onclick="window.parent.postMessage({{type: \'streamlit:set_widget_value\', key: \'click_tab\', value: \'{o["id"]}\'}}, \'*\')">{o["label"]}</div>'
-    
-    html_menu += '</div>'
-    
-    # 4. Un bouton radio invisible ou un selectbox masqué sert d'intercepteur pour mettre à jour la page
-    # On utilise plutôt un bouton transparent natif par colonne pour exécuter le code proprement sans iframe
-    # Pour garder la réactivité sans javascript bloqué sur mobile, voici l'alternative Streamlit native mais isolée :
-    
-    st.write("") # Petit espace
-    
-    # On recrée les colonnes mais en forçant l'affichage en ligne par un hack CSS ultra agressif sur l'ID parent direct
+# 5.4 - CODE CORRIGÉ : BARRE DE NAVIGATION (BRIDAGE STRICT 1/3 OU 1/4 SANS DÉBORDEMENT)
     st.markdown("""
         <style>
-            div[data-testid="stHorizontalBlock"] {
+            /* 1. On force le bloc de colonnes de Streamlit à rester sur une seule ligne */
+            div[data-testid="stHorizontalBlock"]:has(button[key^="m_tab_"]) {
                 display: flex !important;
                 flex-direction: row !important;
                 flex-wrap: nowrap !important;
+                gap: 4px !important; /* Espace réduit entre les bulles pour gagner de la place */
                 width: 100% !important;
             }
-            div[data-testid="stHorizontalBlock"] > div[data-testid="column"] {
-                width: 1px !important;
-                flex-grow: 1 !important;
-                flex-basis: 0 !important;
+            
+            /* 2. On redéfinit chaque colonne pour qu'elle prenne une taille identique exacte */
+            div[data-testid="stHorizontalBlock"]:has(button[key^="m_tab_"]) > div[data-testid="column"] {
+                flex: 1 1 0% !important; /* Force la distribution égale (1/3 ou 1/4 selon le nombre de colonnes) */
+                min-width: 0 !important; /* Supprime la limite minimale de Streamlit qui faisait déborder */
+                max-width: 100% !important;
+            }
+            
+            /* 3. On applique le bridage strict sur le bouton lui-même */
+            div[data-testid="stHorizontalBlock"]:has(button[key^="m_tab_"]) button {
+                width: 100% !important;
+                max-width: 100% !important;
                 min-width: 0 !important;
+                padding: 6px 2px !important; /* Padding ultra-réduit pour éviter que le texte pousse les bords */
+                overflow: hidden !important;
+            }
+            
+            /* 4. Force le texte à rester sur une seule ligne avec points de suspension si trop long */
+            div[data-testid="stHorizontalBlock"]:has(button[key^="m_tab_"]) button p {
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
+                white-space: nowrap !important;
+                font-size: 11px !important; /* Taille de police adaptée aux petits écrans mobiles */
+                font-weight: bold !important;
             }
         </style>
     """, unsafe_allow_html=True)
-    
+
+    # Création des colonnes dynamiques (génère automatiquement des colonnes de tailles égales)
     if st.session_state.is_admin:
         c1, c2, c3, c4 = st.columns(4)
     else:
@@ -372,6 +317,7 @@ else:
             if st.button("⚙️ Admin", key="m_tab_4", type="primary" if st.session_state.onglet_actif == "⚙️" else "secondary", use_container_width=True):
                 st.session_state.onglet_actif = "⚙️"
                 st.rerun()
+                
     # --- 5.6 - EN-TÊTE DE LA PAGE AVEC DÉCONNEXION ---
     col_vide, col_deco = st.columns([4, 1])
     with col_deco:
