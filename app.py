@@ -729,12 +729,14 @@ elif st.session_state.onglet_actif == "📅":
             st.error(f"Erreur lors du chargement des scores : {e}")
 
 # =====================================================================
-# 9 - CONTENU DE L'ONGLET 4 : ADMIN
+# 9 - CONTENU DE L'ONGLET 4 : ADMIN (AVEC GESTION DU BARÈME)
 # =====================================================================
 elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
     st.title("⚙️ Panneau d'Administration")
     
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    # Ajout de l'onglet Barème & Points en premier
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+        "⚙️ Barème & Points",
         "➕ Ajouter Match", 
         "📝 Matchs Existants", 
         "🎯 Questions Bonus", 
@@ -742,8 +744,37 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
         "🚨 Danger"
     ])
     
-    # 9.1 - TAB 1 : AJOUTER UN MATCH MANUEL
+    # 9.1 - TAB 1 : GESTION DES POINTS ET DU BARÈME
     with tab1:
+        st.subheader("📊 Configuration du Barème de Points")
+        st.info("Ajuste les coefficients ci-dessous. Ils seront appliqués lors du calcul des résultats.")
+        
+        # Initialisation des valeurs par défaut dans le session_state si elles n'existent pas
+        if "pts_vainqueur" not in st.session_state: st.session_state.pts_vainqueur = 2
+        if "pts_ecart" not in st.session_state: st.session_state.pts_ecart = 2
+        if "pct_ose" not in st.session_state: st.session_state.pct_ose = 20
+        if "mult_ose" not in st.session_state: st.session_state.mult_ose = 2.0
+        
+        with st.form("form_bareme_points"):
+            col_b1, col_b2 = st.columns(2)
+            with col_b1:
+                pts_v = st.number_input("Points Vainqueur trouvé", min_value=0, value=int(st.session_state.pts_vainqueur), step=1)
+                pts_e = st.number_input("Points Écart parfait (Bonus)", min_value=0, value=int(st.session_state.pts_ecart), step=1)
+            with col_b2:
+                pct_o = st.number_input("% max de déclenchement prono osé", min_value=1, max_value=100, value=int(st.session_state.pct_ose), step=1, help="Si moins de X% des joueurs ont misé sur cette équipe, le prono devient 'osé'")
+                mult_o = st.number_input("Multiplicateur du prono osé", min_value=1.0, max_value=10.0, value=float(st.session_state.mult_ose), step=0.5)
+            
+            if st.form_submit_button("💾 Sauvegarder le barème"):
+                st.session_state.pts_vainqueur = pts_v
+                st.session_state.pts_ecart = pts_e
+                st.session_state.pct_ose = pct_o
+                st.session_state.mult_ose = mult_o
+                st.success("🎉 Barème mis à jour avec succès pour cette session !")
+                time.sleep(1)
+                st.rerun()
+
+    # 9.2 - TAB 2 : AJOUTER UN MATCH MANUEL
+    with tab2:
         st.subheader("➕ Ajouter un Match Manuellement")
         with st.form("ajout_match_form"):
             eq_dom = st.text_input("Équipe Domicile (ex: Toulouse)")
@@ -767,8 +798,8 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
                     except Exception as e: st.error(f"Erreur : {e}")
                 else: st.warning("Veuillez remplir les équipes.")
 
-    # 9.2 - TAB 2 : GESTION DES MATCHS EXISTANTS
-    with tab2:
+    # 9.3 - TAB 3 : GESTION DES MATCHS EXISTANTS
+    with tab3:
         st.subheader("📝 Liste et scores des matchs")
         matchs_existants = supabase.table("Matchs").select("*").order("date_match", desc=True).execute().data
         
@@ -800,8 +831,8 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
                             except Exception as e: st.error(str(e))
                     st.markdown("---")
 
-    # 9.3 - TAB 3 : QUESTIONS BONUS
-    with tab3:
+    # 9.4 - TAB 4 : QUESTIONS BONUS
+    with tab4:
         st.subheader("🎯 Ajouter une Question Bonus")
         with st.form("ajout_q_form"):
             intitule_q = st.text_input("Intitulé de la question (ex: Qui marquera le premier essai ?)")
@@ -809,7 +840,6 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
             if st.form_submit_button("💾 Enregistrer la question"):
                 if intitule_q:
                     try:
-                        # Correction ici : on envoie bien la clé "question" à Supabase
                         supabase.table("Questions_Bonus").insert({
                             "question": intitule_q,
                             "points_bonus": pts_q
@@ -819,8 +849,8 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
                         st.rerun()
                     except Exception as e: st.error(str(e))
 
-    # 9.4 - TAB 4 : RE-SCRAPING MANUEL
-    with tab4:
+    # 9.5 - TAB 5 : RE-SCRAPING MANUEL
+    with tab5:
         st.subheader("🔄 Lanceur de Scraping Manuel")
         if st.button("⚡ Lancer la Synchronisation"):
             with st.spinner("Scraping en cours..."):
@@ -828,8 +858,8 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
                 st.success(f"Terminé ! {nb} matchs traités avec succès.")
                 st.rerun()
 
-    # 9.5 - TAB 5 : ZONE DE DANGER
-    with tab5:
+    # 9.6 - TAB 6 : ZONE DE DANGER
+    with tab6:
         st.subheader("🚨 Zone de Danger")
         confirmation_secu = st.checkbox("Je confirme vouloir tout réinitialiser.", key="danger_zone_confirm")
         if st.button("🔥 Réinitialiser l'application", type="primary", disabled=not confirmation_secu):
@@ -845,4 +875,5 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
                     time.sleep(1)
                     st.rerun()
                 except Exception as e: 
+                    st.error(f"Erreur : {e}")
                     st.error(f"Erreur : {e}")
