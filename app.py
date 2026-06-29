@@ -331,6 +331,7 @@ else:
             if st.button("⚙️ Admin", key="nav_c_btn_4", type=type_m4, use_container_width=True):
                 st.session_state.onglet_actif = "⚙️"
                 st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
                 
     # --- 5.6 - EN-TÊTE DE LA PAGE AVEC DÉCONNEXION ---
     col_vide, col_deco = st.columns([4, 1])
