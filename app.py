@@ -255,72 +255,112 @@ else:
     except ValueError:
         index_defaut = 0
 
-# 5.4 - CODE CORRIGÉ : DESIGN HORIZONTAL UNIFORME ET COMPATIBLE 100% SMARTPHONES
-    st.markdown("""
+# 5.4 - INJECTEUR D'ONGLETS HTML/JS COMPATIBLE SMARTPHONE (INFAILLIBLE)
+    
+    # On définit la liste des onglets selon le rôle pour calculer les tailles (1/3 ou 1/4)
+    if st.session_state.is_admin:
+        onglets_menu = [("📊", "📊 Général"), ("🏉", "🏉 Pronos"), ("📅", "📅 Scores"), ("⚙️", "⚙️ Admin")]
+        pourcentage_largeur = "25%"
+    else:
+        onglets_menu = [("📊", "📊 Général"), ("🏉", "🏉 Pronos"), ("📅", "📅 Scores")]
+        pourcentage_largeur = "33.33%"
+
+    # 1. Le style CSS de notre barre personnalisée
+    st.markdown(f"""
         <style>
-            /* 1. Force le bloc de colonnes de la barre à rester strictement en ligne */
-            .barre-horizon [data-testid="stHorizontalBlock"] {
+            /* Cache complètement le bouton radio natif de Streamlit */
+            div[data-testid="stRadio"]:has(input[value="📊"]) {{
+                display: none !important;
+            }}
+            
+            /* Conteneur horizontal strict et incassable */
+            .html-nav-container {{
                 display: flex !important;
                 flex-direction: row !important;
                 flex-wrap: nowrap !important;
-                gap: 4px !important;
                 width: 100% !important;
-            }
+                gap: 5px !important;
+                margin-top: 5px !important;
+                margin-bottom: 20px !important;
+            }}
             
-            /* 2. Égalise la taille des colonnes (1/3 ou 1/4) sans aucun débordement */
-            .barre-horizon [data-testid="column"] {
+            /* Style unitaire de chaque bulle de menu */
+            .html-nav-btn {{
+                width: {pourcentage_largeur} !important;
                 flex: 1 1 0% !important;
-                min-width: 0 !important;
-                max-width: 100% !important;
-            }
-            
-            /* 3. Ajuste la taille des boutons */
-            .barre-horizon button {
-                width: 100% !important;
-                max-width: 100% !important;
-                min-width: 0 !important;
-                padding: 8px 2px !important;
-                overflow: hidden !important;
-            }
-            
-            /* 4. Force les points de suspension sur le texte s'il est trop long */
-            .barre-horizon button p {
+                text-align: center !important;
+                padding: 10px 2px !important;
+                font-size: 12px !important;
+                font-weight: bold !important;
+                border-radius: 8px !important;
+                cursor: pointer !important;
+                white-space: nowrap !important;
                 overflow: hidden !important;
                 text-overflow: ellipsis !important;
-                white-space: nowrap !important;
-                font-size: 11px !important;
-                font-weight: bold !important;
-            }
+                user-select: none !important;
+                font-family: sans-serif !important;
+            }}
+            
+            /* Bulle de l'onglet actif (Style bleu "primary") */
+            .html-btn-active {{
+                background-color: #1f77b4 !important;
+                color: white !important;
+                border: 1px solid #1f77b4 !important;
+            }}
+            
+            /* Bulle des onglets inactifs (Style gris "secondary") */
+            .html-btn-inactive {{
+                background-color: transparent !important;
+                color: #31333F !important;
+                border: 1px solid rgba(49, 51, 63, 0.2) !important;
+            }}
         </style>
     """, unsafe_allow_html=True)
 
-    # On encapsule nos colonnes dans notre div personnalisée "barre-horizon"
-    st.markdown('<div class="barre-horizon">', unsafe_allow_html=True)
-
-    if st.session_state.is_admin:
-        c1, c2, c3, c4 = st.columns(4)
-    else:
-        c1, c2, c3 = st.columns(3)
+    # 2. Construction de la barre de navigation visuelle en HTML
+    html_barre = '<div class="html-nav-container">'
+    for code_onglet, nom_onglet in onglets_menu:
+        est_actif = (st.session_state.onglet_actif == code_onglet)
+        classe_style = "html-btn-active" if est_actif else "html-btn-inactive"
         
-    with c1:
-        if st.button("📊 Général", key="m_tab_1", type="primary" if st.session_state.onglet_actif == "📊" else "secondary", use_container_width=True):
-            st.session_state.onglet_actif = "📊"
-            st.rerun()
-    with c2:
-        if st.button("🏉 Pronos", key="m_tab_2", type="primary" if st.session_state.onglet_actif == "🏉" else "secondary", use_container_width=True):
-            st.session_state.onglet_actif = "🏉"
-            st.rerun()
-    with c3:
-        if st.button("📅 Scores", key="m_tab_3", type="primary" if st.session_state.onglet_actif == "📅" else "secondary", use_container_width=True):
-            st.session_state.onglet_actif = "📅"
-            st.rerun()
-    if st.session_state.is_admin:
-        with c4:
-            if st.button("⚙️ Admin", key="m_tab_4", type="primary" if st.session_state.onglet_actif == "⚙️" else "secondary", use_container_width=True):
-                st.session_state.onglet_actif = "⚙️"
-                st.rerun()
+        # Le code JavaScript "onclick" cherche l'input invisible de Streamlit et simule un clic dessus
+        html_barre += f"""
+            <div class="html-nav-btn {classe_style}" 
+                 onclick="
+                    var inputs = window.parent.document.querySelectorAll('div[data-testid=\\'stRadio\\'] input');
+                    for(var i=0; i<inputs.length; i++) {{
+                        if(inputs[i].value === '{code_onglet}') {{
+                            inputs[i].click();
+                            break;
+                        }}
+                    }}
+                 ">
+                {nom_onglet}
+            </div>
+        """
+    html_barre += '</div>'
+    
+    # On affiche la barre HTML
+    st.markdown(html_barre, unsafe_allow_html=True)
 
-    st.markdown('</div>', unsafe_allow_html=True)
+    # 3. Le bouton radio Streamlit (Invisible grâce au CSS ci-dessus) qui intercepte l'action
+    choix_options = [o[0] for o in onglets_menu]
+    try:
+        index_defaut = choix_options.index(st.session_state.onglet_actif)
+    except ValueError:
+        index_defaut = 0
+
+    choix_onglet_invisible = st.radio(
+        "IntercepteurMenu",
+        options=choix_options,
+        index=index_defaut,
+        key="IntercepteurMenu"
+    )
+
+    # 5.5 - Changement de page s'il y a eu un clic sur une bulle HTML
+    if choix_onglet_invisible != st.session_state.onglet_actif:
+        st.session_state.onglet_actif = choix_onglet_invisible
+        st.rerun()
                 
     # --- 5.6 - EN-TÊTE DE LA PAGE AVEC DÉCONNEXION ---
     col_vide, col_deco = st.columns([4, 1])
