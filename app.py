@@ -470,7 +470,7 @@ if st.session_state.onglet_actif == "🏉":
             st.info(f"👤 Connecté en tant que : **{nom_selectionne}**")
             
         # Récupération de l'ID de la cible choisie
-        joueur_cible = next(j for j in liste_joueurs if j['nom'] == nom_selectionne)
+        joueur_cible = next(j for j in liste_joueurs if j['pseudo'] == nom_selectionne)
         id_joueur_cible = joueur_cible['id']
         
         # --- 7.2 - ZONE DE JEU (QUESTIONS + MATCHS) ---
@@ -680,12 +680,12 @@ elif st.session_state.onglet_actif == "📅":
                     else: vraie_tranche = "51+"
 
                     with st.expander(f"🏉 {m['equipe_dom']} {sc_dom} - {sc_ext} {m['equipe_ext']}{label_statut}"):
-                        pronos = supabase.table("Pronostics").select("*, Joueurs(nom)").eq("match_id", m['id']).execute().data
+                        pronos = supabase.table("Pronostics").select("*, Joueurs(pseudo)").eq("match_id", m['id']).execute().data
                         
                         if pronos:
                             st.markdown("**Pronostics des joueurs :**")
                             for p in pronos:
-                                nom_joueur = p.get('Joueurs', {}).get('nom', 'Inconnu')
+                                nom_joueur = p.get('Joueurs', {}).get('pseudo', 'Inconnu')
                                 g_prevu = p['gagnant_prevu']
                                 ec_prevu = p['ecart_prevu']
                                 
