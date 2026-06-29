@@ -475,161 +475,161 @@ if st.session_state.onglet_actif == "🏉":
         
         # --- 7.2 - ZONE DE JEU (QUESTIONS + MATCHS) ---
         with st.spinner("Chargement de la grille..."):
-            
-            # 7.2.1 - SECTION QUESTIONS BONUS
-            st.subheader("🎯 Questions Bonus")
-            questions = supabase.table("Questions_Bonus").select("*").execute().data
-            
-            if questions:
-                for q in questions:
-                    rep_existante = supabase.table("Réponses_Questions").select("*").eq("user_id", id_joueur_cible).eq("question_id", q['id']).execute().data
-                    valeur_defaut = rep_existante[0]['reponse_prevue'] if rep_existante else ""
-                    
-                    st.text_input(
-                        f"❓ {q['intitule']} ({q['points_bonus']} pts)",
-                        value=valeur_defaut,
-                        key=f"q_{q['id']}_{id_joueur_cible}",
-                        on_change=sauvegarder_question_auto,
-                        args=(q['id'], id_joueur_cible)
-                    )
-            else:
-                st.caption("Aucune question bonus pour le moment.")
+            try:
+                # 7.2.1 - SECTION QUESTIONS BONUS
+                st.subheader("🎯 Questions Bonus")
+                questions = supabase.table("Questions_Bonus").select("*").execute().data
                 
-            # 7.2.2. SECTION MATCHS OUVERTS (VERSION TEMPORELLE + ACCÈS ADMIN FORCÉ)
-            st.markdown("""<hr style="border: 1px solid #e2e8f0; margin: 30px 0 20px 0;">""", unsafe_allow_html=True)
-            st.subheader("🏉 Liste des Matchs")
-
-            matchs_potentiels = supabase.table("Matchs").select("*").neq("statut", "FT").execute().data
-            matchs_visibles = []
-            
-            if matchs_potentiels:
-                for m in matchs_potentiels:
-                    try:
-                        date_brute = m['date_match'].split("+")[0].split("Z")[0]
-                        dt_match = datetime.fromisoformat(date_brute)
-                        if maintenant_paris < dt_match or st.session_state.is_admin:
-                            matchs_visibles.append(m)
-                    except Exception:
-                        if m['statut'] == "NS" or st.session_state.is_admin:
-                            matchs_visibles.append(m)
-
-            if matchs_visibles:
-                matchs_visibles = sorted(matchs_visibles, key=lambda x: x['date_match'])
-                
-                for m in matchs_visibles:
-                    st.markdown("""<hr style="border: 1px solid #f1f5f9; margin: 20px 0;">""", unsafe_allow_html=True)
-                    
-                    with st.container():
-                        st.markdown(f'<div class="match-card">', unsafe_allow_html=True)
-                        st.markdown(f'<div class="match-title">{m["equipe_dom"]} vs {m["equipe_ext"]}</div>', unsafe_allow_html=True)
+                if questions:
+                    for q in questions:
+                        rep_existante = supabase.table("Réponses_Questions").select("*").eq("user_id", id_joueur_cible).eq("question_id", q['id']).execute().data
+                        valeur_defaut = rep_existante[0]['reponse_prevue'] if rep_existante else ""
                         
-                        bouton_bloque = False
+                        st.text_input(
+                            f"❓ {q['intitule']} ({q['points_bonus']} pts)",
+                            value=valeur_defaut,
+                            key=f"q_{q['id']}_{id_joueur_cible}",
+                            on_change=sauvegarder_question_auto,
+                            args=(q['id'], id_joueur_cible)
+                        )
+                else:
+                    st.caption("Aucune question bonus pour le moment.")
+                    
+                # 7.2.2. SECTION MATCHS OUVERTS (VERSION TEMPORELLE + ACCÈS ADMIN FORCÉ)
+                st.markdown("""<hr style="border: 1px solid #e2e8f0; margin: 30px 0 20px 0;">""", unsafe_allow_html=True)
+                st.subheader("🏉 Liste des Matchs")
+
+                matchs_potentiels = supabase.table("Matchs").select("*").neq("statut", "FT").execute().data
+                matchs_visibles = []
+                
+                if matchs_potentiels:
+                    for m in matchs_potentiels:
                         try:
                             date_brute = m['date_match'].split("+")[0].split("Z")[0]
-                            dt_obj = datetime.fromisoformat(date_brute)
-                            date_affiche = dt_obj.strftime("%d/%m/%Y à %H:%M")
-                            match_commence = maintenant_paris >= dt_obj
-                            
-                            if match_commence:
-                                if st.session_state.is_admin:
-                                    st.markdown(f"<div style='text-align: center; color: #b7791f; font-size: 0.9em; font-weight: bold; margin-bottom: 10px;'>⚠️ Match commencé ({date_affiche}) - Autorisé (Admin)</div>", unsafe_allow_html=True)
-                                else:
-                                    st.markdown(f"<div style='text-align: center; color: #dc2626; font-size: 0.9em; font-weight: bold; margin-bottom: 10px;'>🔒 Match commencé le {date_affiche}</div>", unsafe_allow_html=True)
-                                    bouton_bloque = True
-                            else:
-                                st.markdown(f"<div style='text-align: center; color: #64748b; font-size: 0.9em; margin-bottom: 10px;'>📅 Match prévu le {date_affiche}</div>", unsafe_allow_html=True)
+                            dt_match = datetime.fromisoformat(date_brute)
+                            if maintenant_paris < dt_match or st.session_state.is_admin:
+                                matchs_visibles.append(m)
                         except Exception:
-                            pass
+                            if m['statut'] == "NS" or st.session_state.is_admin:
+                                matchs_visibles.append(m)
 
-                        prono_existant = supabase.table("Pronostics").select("*").eq("user_id", id_joueur_cible).eq("match_id", m['id']).execute().data
-                        choix_actuel = ""
-                        if prono_existant:
-                            g_prevu = prono_existant[0]['gagnant_prevu']
-                            if g_prevu == "home": choix_actuel = m['equipe_dom']
-                            elif g_prevu == "away": choix_actuel = m['equipe_ext']
-                            elif g_prevu == "draw": choix_actuel = "Match Nul"
-
-                        st.caption("Sélectionner le Vainqueur :")
+                if matchs_visibles:
+                    matchs_visibles = sorted(matchs_visibles, key=lambda x: x['date_match'])
+                    
+                    for m in matchs_visibles:
+                        st.markdown("""<hr style="border: 1px solid #f1f5f9; margin: 20px 0;">""", unsafe_allow_html=True)
                         
-                        st.markdown("""
-                            <style>
-                                .zone-matchs [data-testid="stHorizontalBlock"] {
-                                    flex-wrap: nowrap !important;
-                                    gap: 4px !important;
-                                    width: 100% !important;
-                                    overflow: hidden !important;
-                                    display: flex !important;
-                                    flex-direction: row !important;
-                                }
-                                .zone-matchs [data-testid="stHorizontalBlock"] > div {
-                                    width: calc(33.33% - 4px) !important;
-                                    min-width: 0 !important;
-                                    flex: 1 1 0% !important;
-                                }
-                                .zone-matchs [data-testid="stHorizontalBlock"] button {
-                                    width: 100% !important;
-                                    max-width: 100% !important;
-                                    min-width: 0 !important;
-                                    padding: 4px 4px !important;
-                                    overflow: hidden !important;
-                                }
-                                .zone-matchs [data-testid="stHorizontalBlock"] button p {
-                                    overflow: hidden !important;
-                                    text-overflow: ellipsis !important;
-                                    white-space: nowrap !important;
-                                    font-size: 11px !important;
-                                }
-                            </style>
-                        """, unsafe_allow_html=True)
-                        
-                        st.markdown('<div class="zone-matchs">', unsafe_allow_html=True)
-                        col_a, col_b, col_c = st.columns(3)
-                        
-                        with col_a:
-                            type_a = "primary" if choix_actuel == m['equipe_dom'] else "secondary"
-                            if st.button(f"🏉 {m['equipe_dom']}", key=f"btn_dom_{m['id']}_{id_joueur_cible}", type=type_a, use_container_width=True, disabled=bouton_bloque):
-                                st.session_state[f"w_{m['id']}"] = m['equipe_dom']
-                                sauvegarder_prono_auto(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
-                                st.rerun()
+                        with st.container():
+                            st.markdown(f'<div class="match-card">', unsafe_allow_html=True)
+                            st.markdown(f'<div class="match-title">{m["equipe_dom"]} vs {m["equipe_ext"]}</div>', unsafe_allow_html=True)
+                            
+                            bouton_bloque = False
+                            try:
+                                date_brute = m['date_match'].split("+")[0].split("Z")[0]
+                                dt_obj = datetime.fromisoformat(date_brute)
+                                date_affiche = dt_obj.strftime("%d/%m/%Y à %H:%M")
+                                match_commence = maintenant_paris >= dt_obj
                                 
-                        with col_b:
-                            type_b = "primary" if choix_actuel == "Match Nul" else "secondary"
-                            if st.button("🤝 Nul", key=f"btn_nul_{m['id']}_{id_joueur_cible}", type=type_b, use_container_width=True, disabled=bouton_bloque):
-                                st.session_state[f"w_{m['id']}"] = "Match Nul"
-                                sauvegarder_prono_auto(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
-                                st.rerun()
-                                
-                        with col_c:
-                            type_c = "primary" if choix_actuel == m['equipe_ext'] else "secondary"
-                            if st.button(f"🏉 {m['equipe_ext']}", key=f"btn_ext_{m['id']}_{id_joueur_cible}", type=type_c, use_container_width=True, disabled=bouton_bloque):
-                                st.session_state[f"w_{m['id']}"] = m['equipe_ext']
-                                sauvegarder_prono_auto(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
-                                st.rerun()
+                                if match_commence:
+                                    if st.session_state.is_admin:
+                                        st.markdown(f"<div style='text-align: center; color: #b7791f; font-size: 0.9em; font-weight: bold; margin-bottom: 10px;'>⚠️ Match commencé ({date_affiche}) - Autorisé (Admin)</div>", unsafe_allow_html=True)
+                                    else:
+                                        st.markdown(f"<div style='text-align: center; color: #dc2626; font-size: 0.9em; font-weight: bold; margin-bottom: 10px;'>🔒 Match commencé le {date_affiche}</div>", unsafe_allow_html=True)
+                                        bouton_bloque = True
+                                else:
+                                    st.markdown(f"<div style='text-align: center; color: #64748b; font-size: 0.9em; margin-bottom: 10px;'>📅 Match prévu le {date_affiche}</div>", unsafe_allow_html=True)
+                            except Exception:
+                                pass
 
-                        st.markdown('</div>', unsafe_allow_html=True)
+                            prono_existant = supabase.table("Pronostics").select("*").eq("user_id", id_joueur_cible).eq("match_id", m['id']).execute().data
+                            choix_actuel = ""
+                            if prono_existant:
+                                g_prevu = prono_existant[0]['gagnant_prevu']
+                                if g_prevu == "home": choix_actuel = m['equipe_dom']
+                                elif g_prevu == "away": choix_actuel = m['equipe_ext']
+                                elif g_prevu == "draw": choix_actuel = "Match Nul"
 
-                        st.markdown("<br>", unsafe_allow_html=True)
-                        index_ecart_defaut = 0
-                        if prono_existant and prono_existant[0]['ecart_prevu'] in TRANCHES_ECARTS:
-                            index_ecart_defaut = TRANCHES_ECARTS.index(prono_existant[0]['ecart_prevu']) + 1
-                        
-                        st.selectbox(
-                            "Écart (pts)", 
-                            ["..."] + TRANCHES_ECARTS, 
-                            index=index_ecart_defaut,
-                            key=f"m_{m['id']}_{id_joueur_cible}", 
-                            on_change=sauvegarder_prono_auto, 
-                            args=(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible),
-                            disabled=bouton_bloque
-                        )
-                        
-                        if prono_existant:
-                            st.success("✅ Pronostic enregistré")
-                        st.markdown('</div>', unsafe_allow_html=True)
-            else: 
-                st.info("Aucun match disponible à pronostiquer.")
-        except Exception as e: 
-            st.error(f"Erreur lors du chargement : {e}")
+                            st.caption("Sélectionner le Vainqueur :")
+                            
+                            st.markdown("""
+                                <style>
+                                    .zone-matchs [data-testid="stHorizontalBlock"] {
+                                        flex-wrap: nowrap !important;
+                                        gap: 4px !important;
+                                        width: 100% !important;
+                                        overflow: hidden !important;
+                                        display: flex !important;
+                                        flex-direction: row !important;
+                                    }
+                                    .zone-matchs [data-testid="stHorizontalBlock"] > div {
+                                        width: calc(33.33% - 4px) !important;
+                                        min-width: 0 !important;
+                                        flex: 1 1 0% !important;
+                                    }
+                                    .zone-matchs [data-testid="stHorizontalBlock"] button {
+                                        width: 100% !important;
+                                        max-width: 100% !important;
+                                        min-width: 0 !important;
+                                        padding: 4px 4px !important;
+                                        overflow: hidden !important;
+                                    }
+                                    .zone-matchs [data-testid="stHorizontalBlock"] button p {
+                                        overflow: hidden !important;
+                                        text-overflow: ellipsis !important;
+                                        white-space: nowrap !important;
+                                        font-size: 11px !important;
+                                    }
+                                </style>
+                            """, unsafe_allow_html=True)
+                            
+                            st.markdown('<div class="zone-matchs">', unsafe_allow_html=True)
+                            col_a, col_b, col_c = st.columns(3)
+                            
+                            with col_a:
+                                type_a = "primary" if choix_actuel == m['equipe_dom'] else "secondary"
+                                if st.button(f"🏉 {m['equipe_dom']}", key=f"btn_dom_{m['id']}_{id_joueur_cible}", type=type_a, use_container_width=True, disabled=bouton_bloque):
+                                    st.session_state[f"w_{m['id']}"] = m['equipe_dom']
+                                    sauvegarder_prono_auto(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
+                                    st.rerun()
+                                    
+                            with col_b:
+                                type_b = "primary" if choix_actuel == "Match Nul" else "secondary"
+                                if st.button("🤝 Nul", key=f"btn_nul_{m['id']}_{id_joueur_cible}", type=type_b, use_container_width=True, disabled=bouton_bloque):
+                                    st.session_state[f"w_{m['id']}"] = "Match Nul"
+                                    sauvegarder_prono_auto(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
+                                    st.rerun()
+                                    
+                            with col_c:
+                                type_c = "primary" if choix_actuel == m['equipe_ext'] else "secondary"
+                                if st.button(f"🏉 {m['equipe_ext']}", key=f"btn_ext_{m['id']}_{id_joueur_cible}", type=type_c, use_container_width=True, disabled=bouton_bloque):
+                                    st.session_state[f"w_{m['id']}"] = m['equipe_ext']
+                                    sauvegarder_prono_auto(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
+                                    st.rerun()
+
+                            st.markdown('</div>', unsafe_allow_html=True)
+
+                            st.markdown("<br>", unsafe_allow_html=True)
+                            index_ecart_defaut = 0
+                            if prono_existant and prono_existant[0]['ecart_prevu'] in TRANCHES_ECARTS:
+                                index_ecart_defaut = TRANCHES_ECARTS.index(prono_existant[0]['ecart_prevu']) + 1
+                            
+                            st.selectbox(
+                                "Écart (pts)", 
+                                ["..."] + TRANCHES_ECARTS, 
+                                index=index_ecart_defaut,
+                                key=f"m_{m['id']}_{id_joueur_cible}", 
+                                on_change=sauvegarder_prono_auto, 
+                                args=(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible),
+                                disabled=bouton_bloque
+                            )
+                            
+                            if prono_existant:
+                                st.success("✅ Pronostic enregistré")
+                            st.markdown('</div>', unsafe_allow_html=True)
+                else: 
+                    st.info("Aucun match disponible à pronostiquer.")
+            except Exception as e: 
+                st.error(f"Erreur lors du chargement : {e}")
     else:
         st.warning("⚠️ Aucun joueur trouvé dans la base.")
 
