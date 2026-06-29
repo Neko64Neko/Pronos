@@ -464,32 +464,32 @@ else:
         except Exception as e: st.error(f"Erreur questions bonus : {e}")
             
             # 7.1 - MATCHS OUVERTS (VERSION UI AMÉLIORÉE)
-            st.subheader("🏉 Matchs à venir")
-            if matchs_ouverts:
-                for m in matchs_ouverts:
-                    # Conteneur de carte
-                    with st.container():
-                        st.markdown(f'<div class="match-card">', unsafe_allow_html=True)
-                        st.markdown(f'<div class="match-title">{m["equipe_dom"]} vs {m["equipe_ext"]}</div>', unsafe_allow_html=True)
-                        
-                        prono_existant = supabase.table("Pronostics").select("*").eq("user_id", id_joueur_cible).eq("match_id", m['id']).execute().data
-                        
-                        # Grille pour les choix
-                        col1, col2 = st.columns(2)
-                        with col1:
-                            # Ton système de radio existant, mais plus propre
-                            st.radio("Vainqueur", ["...", m['equipe_dom'], m['equipe_ext'], "Match Nul"], 
-                                     key=f"w_{m['id']}", on_change=sauvegarder_prono_auto, args=(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible))
-                        with col2:
-                            st.selectbox("Écart (pts)", ["..."] + TRANCHES_ECARTS, 
-                                         key=f"m_{m['id']}", on_change=sauvegarder_prono_auto, args=(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible))
-                        
-                        if prono_existant:
-                            st.success("✅ Pronostic enregistré")
-                        st.markdown('</div>', unsafe_allow_html=True)
-            else: 
-                st.info("Aucun match ouvert.")
-        except Exception as e: st.error(f"Erreur match : {e}")
+        st.subheader("🏉 Matchs à venir")
+        if matchs_ouverts:
+            for m in matchs_ouverts:
+                # Conteneur de carte
+                with st.container():
+                    st.markdown(f'<div class="match-card">', unsafe_allow_html=True)
+                    st.markdown(f'<div class="match-title">{m["equipe_dom"]} vs {m["equipe_ext"]}</div>', unsafe_allow_html=True)
+                    
+                    prono_existant = supabase.table("Pronostics").select("*").eq("user_id", id_joueur_cible).eq("match_id", m['id']).execute().data
+                    
+                    # Grille pour les choix
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        # Ton système de radio existant, mais plus propre
+                        st.radio("Vainqueur", ["...", m['equipe_dom'], m['equipe_ext'], "Match Nul"], 
+                                 key=f"w_{m['id']}", on_change=sauvegarder_prono_auto, args=(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible))
+                    with col2:
+                        st.selectbox("Écart (pts)", ["..."] + TRANCHES_ECARTS, 
+                                     key=f"m_{m['id']}", on_change=sauvegarder_prono_auto, args=(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible))
+                    
+                    if prono_existant:
+                        st.success("✅ Pronostic enregistré")
+                    st.markdown('</div>', unsafe_allow_html=True)
+        else: 
+            st.info("Aucun match ouvert.")
+    except Exception as e: st.error(f"Erreur match : {e}")
 
     # =====================================================================
     # 8 - CONTENU DE L'ONGLET 3 : RÉSULTATS & DIRECT
