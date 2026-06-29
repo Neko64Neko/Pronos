@@ -510,7 +510,10 @@ else:
             
             for m in matchs:
                 # Calcul des conditions pour le match
-                sc_dom, sc_ext = m.get('score_dom', 0), m.get('score_ext', 0)
+                # 1. On remplace les None par 0 pour éviter l'erreur
+                sc_dom = m.get('score_dom') if m.get('score_dom') is not None else 0
+                sc_ext = m.get('score_ext') if m.get('score_ext') is not None else 0                
+                #sc_dom, sc_ext = m.get('score_dom', 0), m.get('score_ext', 0)
                 vrai_gagnant_brut = "home" if sc_dom > sc_ext else ("away" if sc_dom < sc_ext else "draw")
                 vrai_ecart = abs(sc_dom - sc_ext)
                 
