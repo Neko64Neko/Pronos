@@ -494,14 +494,33 @@ else:
             else: 
                 st.write("Aucune question bonus ouverte actuellement.")
 
-# 7.2.2. SECTION MATCHS OUVERTS (VERSION BULLS HORIZONTALES + DATE ET HEURE)
+# 7.2.2. SECTION MATCHS OUVERTS (VERSION TEMPORELLE + ACCÈS ADMIN FORCÉ)
             # Ligne de séparation gris clair sous les Questions Bonus
             st.markdown("""<hr style="border: 1px solid #e2e8f0; margin: 30px 0 20px 0;">""", unsafe_allow_html=True)
-            st.subheader("🏉 Matchs à venir")
+            st.subheader("🏉 Liste des Matchs")
 
-            matchs_ouverts = supabase.table("Matchs").select("*").eq("statut", "NS").execute().data
-            if matchs_ouverts:
-                for m in matchs_ouverts:
+            # Récupération de tous les matchs non définitivement terminés
+            matchs_potentiels = supabase.table("Matchs").select("*").neq("statut", "FT").execute().data
+            matchs_visibles = []
+            
+            if matchs_potentiels:
+                for m in matchs_potentiels:
+                    try:
+                        date_brute = m['date_match'].split("+")[0].split("Z")[0]
+                        dt_match = datetime.fromisoformat(date_brute)
+                        
+                        # RÈGLE : Un joueur normal voit le match s'il n'a pas commencé. L'admin voit TOUS les matchs.
+                        if maintenant_paris < dt_match or st.session_state.is_admin:
+                            matchs_visibles.append(m)
+                    except Exception:
+                        if m['statut'] == "NS" or st.session_state.is_admin:
+                            matchs_visibles.append(m)
+
+            if matchs_visibles:
+                # Tri chronologique des matchs
+                matchs_visibles = sorted(matchs_visibles, key=lambda x: x['date_match'])
+                
+                for m in matchs_visibles:
                     # Bandeau séparateur gris clair entre chaque match de la liste
                     st.markdown("""<hr style="border: 1px solid #f1f5f9; margin: 20px 0;">""", unsafe_allow_html=True)
                     
@@ -510,13 +529,23 @@ else:
                         st.markdown(f'<div class="match-title">{m["equipe_dom"]} vs {m["equipe_ext"]}</div>', unsafe_allow_html=True)
                         
                         # --- FORMATAGE DE LA DATE ET DE L'HEURE ---
+                        bouton_bloque = False
                         try:
-                            # On extrait la date brute et on la transforme en objet datetime
                             date_brute = m['date_match'].split("+")[0].split("Z")[0]
                             dt_obj = datetime.fromisoformat(date_brute)
-                            # Formatage en français (ex: "Samedi 12 Septembre à 15:00")
                             date_affiche = dt_obj.strftime("%d/%m/%Y à %H:%M")
-                            st.markdown(f"<div style='text-align: center; color: #64748b; font-size: 0.9em; margin-bottom: 10px;'>📅 Match prévu le {date_affiche}</div>", unsafe_allow_html=True)
+                            
+                            # Vérification du verrouillage temporel
+                            match_commence = maintenant_paris >= dt_obj
+                            
+                            if match_commence:
+                                if st.session_state.is_admin:
+                                    st.markdown(f"<div style='text-align: center; color: #b7791f; font-size: 0.9em; font-weight: bold; margin-bottom: 10px;'>⚠️ Match commencé ({date_affiche}) - Autorisé (Admin)</div>", unsafe_allow_html=True)
+                                else:
+                                    st.markdown(f"<div style='text-align: center; color: #dc2626; font-size: 0.9em; font-weight: bold; margin-bottom: 10px;'>🔒 Match commencé le {date_affiche}</div>", unsafe_allow_html=True)
+                                    bouton_bloque = True
+                            else:
+                                st.markdown(f"<div style='text-align: center; color: #64748b; font-size: 0.9em; margin-bottom: 10px;'>📅 Match prévu le {date_affiche}</div>", unsafe_allow_html=True)
                         except Exception:
                             pass
 
@@ -529,10 +558,9 @@ else:
                             elif g_prevu == "away": choix_actuel = m['equipe_ext']
                             elif g_prevu == "draw": choix_actuel = "Match Nul"
 
-# --- 7.2.3 - CHOIX DU VAINQUEUR ---
+                        # --- CHOIX DU VAINQUEUR ---
                         st.caption("Sélectionner le Vainqueur :")
                         
-                        # Style isolé uniquement pour les lignes de choix de vainqueurs de matchs
                         st.markdown("""
                             <style>
                                 .zone-matchs [data-testid="stHorizontalBlock"] {
@@ -564,33 +592,31 @@ else:
                             </style>
                         """, unsafe_allow_html=True)
                         
-                        # On ouvre la zone des matchs isolée
                         st.markdown('<div class="zone-matchs">', unsafe_allow_html=True)
-                        
                         col_a, col_b, col_c = st.columns(3)
                         
                         with col_a:
                             type_a = "primary" if choix_actuel == m['equipe_dom'] else "secondary"
-                            if st.button(f"🏉 {m['equipe_dom']}", key=f"btn_dom_{m['id']}_{id_joueur_cible}", type=type_a, use_container_width=True):
+                            if st.button(f"🏉 {m['equipe_dom']}", key=f"btn_dom_{m['id']}_{id_joueur_cible}", type=type_a, use_container_width=True, disabled=bouton_bloque):
                                 st.session_state[f"w_{m['id']}"] = m['equipe_dom']
                                 sauvegarder_prono_auto(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
                                 st.rerun()
                                 
                         with col_b:
                             type_b = "primary" if choix_actuel == "Match Nul" else "secondary"
-                            if st.button("🤝 Nul", key=f"btn_nul_{m['id']}_{id_joueur_cible}", type=type_b, use_container_width=True):
+                            if st.button("🤝 Nul", key=f"btn_nul_{m['id']}_{id_joueur_cible}", type=type_b, use_container_width=True, disabled=bouton_bloque):
                                 st.session_state[f"w_{m['id']}"] = "Match Nul"
                                 sauvegarder_prono_auto(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
-                                r_res = st.rerun()
+                                st.rerun()
                                 
                         with col_c:
                             type_c = "primary" if choix_actuel == m['equipe_ext'] else "secondary"
-                            if st.button(f"🏉 {m['equipe_ext']}", key=f"btn_ext_{m['id']}_{id_joueur_cible}", type=type_c, use_container_width=True):
+                            if st.button(f"🏉 {m['equipe_ext']}", key=f"btn_ext_{m['id']}_{id_joueur_cible}", type=type_c, use_container_width=True, disabled=bouton_bloque):
                                 st.session_state[f"w_{m['id']}"] = m['equipe_ext']
                                 sauvegarder_prono_auto(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
                                 st.rerun()
 
-                        st.markdown('</div>', unsafe_allow_html=True) # On ferme la zone des matchs
+                        st.markdown('</div>', unsafe_allow_html=True)
 
                         # --- CHOIX DE L'ÉCART ---
                         st.markdown("<br>", unsafe_allow_html=True)
@@ -605,14 +631,15 @@ else:
                             index=index_ecart_defaut,
                             key=f"m_{m['id']}_{id_joueur_cible}", 
                             on_change=sauvegarder_prono_auto, 
-                            args=(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
+                            args=(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible),
+                            disabled=bouton_bloque
                         )
                         
                         if prono_existant:
                             st.success("✅ Pronostic enregistré")
                         st.markdown('</div>', unsafe_allow_html=True)
             else: 
-                st.info("Aucun match ouvert.")
+                st.info("Aucun match disponible à pronostiquer.")
         except Exception as e: 
             st.error(f"Erreur lors du chargement : {e}")
 
