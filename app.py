@@ -249,33 +249,39 @@ else:
     </style>
     """, unsafe_allow_html=True)
 
-# --- 5.3 - CONFIGURATION DES COLONNES DE NAVIGATION ---
+# --- 5.3 - CONFIGURATION DES ONGLETS NAVIGATION ---
     try:
         index_defaut = icones_navigation.index(st.session_state.onglet_actif)
     except ValueError:
         index_defaut = 0
 
-    # 5.4 - BRIDAGE HORIZONTAL AGRESSIF PAR INJECTION CSS NATIF
+    # 5.4 - INJECTION CSS CENTRALISÉ (S'APPLIQUE À TOUTES LES PAGES)
     st.markdown("""
         <style>
-            /* Étape 1 : Force le conteneur Streamlit de la navigation à rester horizontal */
-            div[data-testid="stHorizontalBlock"]:has(button[key^="nav_menu_btn_"]) {
+            /* Force le conteneur du menu à rester horizontal partout */
+            .menu-horizontal-centralise {
                 display: flex !important;
                 flex-direction: row !important;
                 flex-wrap: nowrap !important;
-                gap: 4px !important;
                 width: 100% !important;
+                gap: 5px !important;
+                margin-bottom: 15px !important;
             }
             
-            /* Étape 2 : Égalise strictement la taille de chaque colonne (1/3 ou 1/4) */
-            div[data-testid="stHorizontalBlock"]:has(button[key^="nav_menu_btn_"]) > div[data-testid="column"] {
+            /* Égalise les colonnes du menu */
+            .menu-horizontal-centralise > div {
                 flex: 1 1 0% !important;
                 min-width: 0 !important;
                 max-width: 100% !important;
             }
             
-            /* Étape 3 : Ajuste l'épaisseur interne des boutons pour éviter qu'ils poussent sur les bords */
-            div[data-testid="stHorizontalBlock"]:has(button[key^="nav_menu_btn_"]) button {
+            .menu-horizontal-centralise div[data-testid="stVerticalBlock"] {
+                display: block !important;
+                width: 100% !important;
+            }
+            
+            /* Style des boutons du menu */
+            .menu-horizontal-centralise button {
                 width: 100% !important;
                 max-width: 100% !important;
                 min-width: 0 !important;
@@ -283,8 +289,7 @@ else:
                 overflow: hidden !important;
             }
             
-            /* Étape 4 : Force le texte à rester sur une seule ligne avec points de suspension */
-            div[data-testid="stHorizontalBlock"]:has(button[key^="nav_menu_btn_"]) button p {
+            .menu-horizontal-centralise button p {
                 overflow: hidden !important;
                 text-overflow: ellipsis !important;
                 white-space: nowrap !important;
@@ -294,18 +299,40 @@ else:
         </style>
     """, unsafe_allow_html=True)
 
-    # Création dynamique du nombre de colonnes selon le rôle
+    # 5.5 - RENDU DU MENU ENCAPSULÉ
+    st.markdown('<div class="menu-horizontal-centralise">', unsafe_allow_html=True)
+    
     if st.session_state.is_admin:
         col_m1, col_m2, col_m3, col_m4 = st.columns(4)
     else:
         col_m1, col_m2, col_m3 = st.columns(3)
 
-    # 5.5 - LOGIQUE ET AFFICHAGE DES BOUTONS DE NAVIGATION NATIFS
     with col_m1:
         type_m1 = "primary" if st.session_state.onglet_actif == "📊" else "secondary"
-        if st.button("📊 Général", key="nav_menu_btn_1", type=type_m1, use_container_width=True):
+        if st.button("📊 Général", key="nav_c_btn_1", type=type_m1, use_container_width=True):
             st.session_state.onglet_actif = "📊"
             st.rerun()
+
+    with col_m2:
+        type_m2 = "primary" if st.session_state.onglet_actif == "🏉" else "secondary"
+        if st.button("🏉 Pronos", key="nav_c_btn_2", type=type_m2, use_container_width=True):
+            st.session_state.onglet_actif = "🏉"
+            st.rerun()
+
+    with col_m3:
+        type_m3 = "primary" if st.session_state.onglet_actif == "📅" else "secondary"
+        if st.button("📅 Scores", key="nav_c_btn_3", type=type_m3, use_container_width=True):
+            st.session_state.onglet_actif = "📅"
+            st.rerun()
+
+    if st.session_state.is_admin:
+        with col_m4:
+            type_m4 = "primary" if st.session_state.onglet_actif == "⚙️" else "secondary"
+            if st.button("⚙️ Admin", key="nav_c_btn_4", type=type_m4, use_container_width=True):
+                st.session_state.onglet_actif = "⚙️"
+                st.rerun()
+
+    st.markdown('</div>', unsafe_allow_html=True)
 
     with col_m2:
         type_m2 = "primary" if st.session_state.onglet_actif == "🏉" else "secondary"
