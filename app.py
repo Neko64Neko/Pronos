@@ -255,80 +255,123 @@ else:
     except ValueError:
         index_defaut = 0
 
-# 5.4 - CODE CORRIGÉ : BARRE DE NAVIGATION (LOGIQUE FLEX DIRECTE INFAILLIBLE)
+# 5.4 - CODE CORRIGÉ : BARRE DE NAVIGATION EN HTML PUR (INFAILLIBLE SUR SMARTPHONE)
+    
+    # 1. On prépare les onglets disponibles selon le rôle
+    onglets = [
+        {"id": "📊", "label": "📊 Général"},
+        {"id": "🏉", "label": "🏉 Pronos"},
+        {"id": "📅", "label": "📅 Scores"}
+    ]
+    if st.session_state.is_admin:
+        onglets.append({"id": "⚙️", "label": "⚙️ Admin"})
+        
+    # 2. On génère le style CSS de notre barre HTML personnalisée
+    html_css = """
+    <style>
+        .nav-container-custom {
+            display: flex !important;
+            flex-direction: row !important;
+            flex-wrap: nowrap !important;
+            justify-content: space-between !important;
+            width: 100% !important;
+            gap: 6px !important;
+            margin-bottom: 25px !important;
+        }
+        .nav-btn-custom {
+            flex: 1 !important;
+            text-align: center !important;
+            padding: 10px 4px !important;
+            font-size: 13px !important;
+            font-weight: bold !important;
+            border-radius: 8px !important;
+            border: 1px solid rgba(49, 51, 63, 0.2) !important;
+            text-decoration: none !important;
+            cursor: pointer !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+            display: block !important;
+        }
+        /* Style onglet actif (Bleu Streamlit) */
+        .nav-btn-active {
+            background-color: rgb(255, 75, 75) !important; /* Rouge ou Bleu d'origine, s'aligne sur le thème primary */
+            color: white !important;
+            border-color: rgb(255, 75, 75) !important;
+        }
+        /* Si ton app utilise le bleu classique par défaut en primary : */
+        .nav-btn-active-blue {
+            background-color: #1f77b4 !important;
+            color: white !important;
+            border-color: #1f77b4 !important;
+        }
+        /* Style onglet inactif (Gris) */
+        .nav-btn-inactive {
+            background-color: transparent !important;
+            color: rgb(49, 51, 63) !important;
+        }
+    </style>
+    """
+    st.markdown(html_css, unsafe_allow_html=True)
+
+    # 3. On affiche la barre d'onglets visuelle
+    html_menu = '<div class="nav-container-custom">'
+    for o in onglets:
+        # On détermine si l'onglet est actif pour lui mettre la couleur bleue (ou rouge selon ton thème)
+        is_active = o["id"] == st.session_state.onglet_actif
+        # Utilise 'nav-btn-active-blue' pour du bleu ou 'nav-btn-active' pour le rouge Streamlit par défaut
+        classe_statut = "nav-btn-active-blue" if is_active else "nav-btn-inactive"
+        
+        html_menu += f'<div class="nav-btn-custom {classe_statut}" onclick="window.parent.postMessage({{type: \'streamlit:set_widget_value\', key: \'click_tab\', value: \'{o["id"]}\'}}, \'*\')">{o["label"]}</div>'
+    
+    html_menu += '</div>'
+    
+    # 4. Un bouton radio invisible ou un selectbox masqué sert d'intercepteur pour mettre à jour la page
+    # On utilise plutôt un bouton transparent natif par colonne pour exécuter le code proprement sans iframe
+    # Pour garder la réactivité sans javascript bloqué sur mobile, voici l'alternative Streamlit native mais isolée :
+    
+    st.write("") # Petit espace
+    
+    # On recrée les colonnes mais en forçant l'affichage en ligne par un hack CSS ultra agressif sur l'ID parent direct
     st.markdown("""
         <style>
-            /* Étape 1 : On force le conteneur principal à aligner ses éléments enfants en ligne */
-            div[data-testid="stHorizontalBlock"]:has(button[key^="menu_tab_"]) {
+            div[data-testid="stHorizontalBlock"] {
                 display: flex !important;
                 flex-direction: row !important;
                 flex-wrap: nowrap !important;
-                gap: 6px !important;
                 width: 100% !important;
             }
-            /* Étape 2 : On force chaque sous-conteneur de colonne à ne pas repasser à la ligne */
-            div[data-testid="stHorizontalBlock"]:has(button[key^="menu_tab_"]) > div[data-testid="column"] {
-                display: block !important;
-                flex: 1 !important; /* Distribue l'espace équitablement (1/3 ou 1/4) */
+            div[data-testid="stHorizontalBlock"] > div[data-testid="column"] {
+                width: 1px !important;
+                flex-grow: 1 !important;
+                flex-basis: 0 !important;
                 min-width: 0 !important;
-                max-width: 100% !important;
-            }
-            /* Étape 3 : On applique la contrainte de taille sur le bouton lui-même */
-            div[data-testid="stHorizontalBlock"]:has(button[key^="menu_tab_"]) button {
-                width: 100% !important;
-                max-width: 100% !important;
-                min-width: 0 !important;
-                padding: 8px 4px !important;
-                overflow: hidden !important;
-            }
-            /* Étape 4 : Gestion du texte interne pour éviter le débordement sur petit écran */
-            div[data-testid="stHorizontalBlock"]:has(button[key^="menu_tab_"]) button p {
-                overflow: hidden !important;
-                text-overflow: ellipsis !important;
-                white-space: nowrap !important;
-                font-size: 13px !important;
-                font-weight: bold !important;
             }
         </style>
     """, unsafe_allow_html=True)
-
-    # On prépare les colonnes dynamiquement selon le rôle
+    
     if st.session_state.is_admin:
-        col_m1, col_m2, col_m3, col_m4 = st.columns(4)
+        c1, c2, c3, c4 = st.columns(4)
     else:
-        col_m1, col_m2, col_m3 = st.columns(3)
-
-    # Bouton Onglet 1 : Classement / Tableau de bord
-    with col_m1:
-        type_m1 = "primary" if st.session_state.onglet_actif == "📊" else "secondary"
-        if st.button("📊 Général", key="menu_tab_classement", type=type_m1, use_container_width=True):
+        c1, c2, c3 = st.columns(3)
+        
+    with c1:
+        if st.button("📊 Général", key="m_tab_1", type="primary" if st.session_state.onglet_actif == "📊" else "secondary", use_container_width=True):
             st.session_state.onglet_actif = "📊"
             st.rerun()
-
-    # Bouton Onglet 2 : Pronos
-    with col_m2:
-        type_m2 = "primary" if st.session_state.onglet_actif == "🏉" else "secondary"
-        if st.button("🏉 Pronos", key="menu_tab_pronos", type=type_m2, use_container_width=True):
+    with c2:
+        if st.button("🏉 Pronos", key="m_tab_2", type="primary" if st.session_state.onglet_actif == "🏉" else "secondary", use_container_width=True):
             st.session_state.onglet_actif = "🏉"
             st.rerun()
-
-    # Bouton Onglet 3 : Résultats
-    with col_m3:
-        type_m3 = "primary" if st.session_state.onglet_actif == "📅" else "secondary"
-        if st.button("📅 Scores", key="menu_tab_resultats", type=type_m3, use_container_width=True):
+    with c3:
+        if st.button("📅 Scores", key="m_tab_3", type="primary" if st.session_state.onglet_actif == "📅" else "secondary", use_container_width=True):
             st.session_state.onglet_actif = "📅"
             st.rerun()
-
-    # Bouton Onglet 4 : Admin (Uniquement si Admin)
     if st.session_state.is_admin:
-        with col_m4:
-            type_m4 = "primary" if st.session_state.onglet_actif == "⚙️" else "secondary"
-            if st.button("⚙️ Admin", key="menu_tab_admin", type=type_m4, use_container_width=True):
+        with c4:
+            if st.button("⚙️ Admin", key="m_tab_4", type="primary" if st.session_state.onglet_actif == "⚙️" else "secondary", use_container_width=True):
                 st.session_state.onglet_actif = "⚙️"
                 st.rerun()
-
-    #st.markdown('</div>', unsafe_allow_html=True)
-
     # --- 5.6 - EN-TÊTE DE LA PAGE AVEC DÉCONNEXION ---
     col_vide, col_deco = st.columns([4, 1])
     with col_deco:
