@@ -249,92 +249,82 @@ else:
     </style>
     """, unsafe_allow_html=True)
 
-    # --- 5.3 - EN-TÊTE DU COMPOSANT RADIO DE NAVIGATION ---
+# --- 5.3 - CONFIGURATION DES COLONNES DE NAVIGATION ---
     try:
         index_defaut = icones_navigation.index(st.session_state.onglet_actif)
     except ValueError:
         index_defaut = 0
 
-# 5.4 - BARRE DE NAVIGATION (VERSION IFRAME + ÉCOUTEUR STREAMLIT DIRECT)
-    import streamlit.components.v1 as components
+    # 5.4 - BRIDAGE HORIZONTAL AGRESSIF PAR INJECTION CSS NATIF
+    st.markdown("""
+        <style>
+            /* Étape 1 : Force le conteneur Streamlit de la navigation à rester horizontal */
+            div[data-testid="stHorizontalBlock"]:has(button[key^="nav_menu_btn_"]) {
+                display: flex !important;
+                flex-direction: row !important;
+                flex-wrap: nowrap !important;
+                gap: 4px !important;
+                width: 100% !important;
+            }
+            
+            /* Étape 2 : Égalise strictement la taille de chaque colonne (1/3 ou 1/4) */
+            div[data-testid="stHorizontalBlock"]:has(button[key^="nav_menu_btn_"]) > div[data-testid="column"] {
+                flex: 1 1 0% !important;
+                min-width: 0 !important;
+                max-width: 100% !important;
+            }
+            
+            /* Étape 3 : Ajuste l'épaisseur interne des boutons pour éviter qu'ils poussent sur les bords */
+            div[data-testid="stHorizontalBlock"]:has(button[key^="nav_menu_btn_"]) button {
+                width: 100% !important;
+                max-width: 100% !important;
+                min-width: 0 !important;
+                padding: 8px 2px !important;
+                overflow: hidden !important;
+            }
+            
+            /* Étape 4 : Force le texte à rester sur une seule ligne avec points de suspension */
+            div[data-testid="stHorizontalBlock"]:has(button[key^="nav_menu_btn_"]) button p {
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
+                white-space: nowrap !important;
+                font-size: 11px !important;
+                font-weight: bold !important;
+            }
+        </style>
+    """, unsafe_allow_html=True)
+
+    # Création dynamique du nombre de colonnes selon le rôle
+    if st.session_state.is_admin:
+        col_m1, col_m2, col_m3, col_m4 = st.columns(4)
+    else:
+        col_m1, col_m2, col_m3 = st.columns(3)
+
+    # 5.5 - LOGIQUE ET AFFICHAGE DES BOUTONS DE NAVIGATION NATIFS
+    with col_m1:
+        type_m1 = "primary" if st.session_state.onglet_actif == "📊" else "secondary"
+        if st.button("📊 Général", key="nav_menu_btn_1", type=type_m1, use_container_width=True):
+            st.session_state.onglet_actif = "📊"
+            st.rerun()
+
+    with col_m2:
+        type_m2 = "primary" if st.session_state.onglet_actif == "🏉" else "secondary"
+        if st.button("🏉 Pronos", key="nav_menu_btn_2", type=type_m2, use_container_width=True):
+            st.session_state.onglet_actif = "🏉"
+            st.rerun()
+
+    with col_m3:
+        type_m3 = "primary" if st.session_state.onglet_actif == "📅" else "secondary"
+        if st.button("📅 Scores", key="nav_menu_btn_3", type=type_m3, use_container_width=True):
+            st.session_state.onglet_actif = "📅"
+            st.rerun()
 
     if st.session_state.is_admin:
-        onglets_config = [("📊", "📊 Général"), ("🏉", "🏉 Pronos"), ("📅", "📅 Scores"), ("⚙️", "⚙️ Admin")]
-        largeur_bulle = "calc(25% - 4px)"
-    else:
-        onglets_config = [("📊", "📊 Général"), ("🏉", "🏉 Pronos"), ("📅", "📅 Scores")]
-        largeur_bulle = "calc(33.33% - 4px)"
-
-    liens_html = ""
-    for code_o, nom_o in onglets_config:
-        est_actif = (st.session_state.onglet_actif == code_o)
-        style_bouton = f"""
-            background-color: {'#1f77b4' if est_actif else 'transparent'};
-            color: {'white' if est_actif else '#31333F'};
-            border: 1px solid {'#1f77b4' if est_actif else 'rgba(49, 51, 63, 0.2)'};
-        """
-        liens_html += f"""
-        <div class="nav-btn" style="{style_bouton}" onclick="changerOnglet('{code_o}')">
-            {nom_o}
-        </div>
-        """
-
-    code_composant_html = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-    <style>
-        body {{
-            margin: 0; padding: 0; overflow: hidden; background-color: transparent;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        }}
-        .nav-container {{
-            display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important;
-            width: 100% !important; gap: 5px !important; box-sizing: border-box;
-        }}
-        .nav-btn {{
-            width: {largeur_bulle} !important; flex: 1 1 0% !important; text-align: center !important;
-            padding: 10px 2px !important; font-size: 12px !important; font-weight: bold !important;
-            border-radius: 8px !important; cursor: pointer !important; white-space: nowrap !important;
-            overflow: hidden !important; text-overflow: ellipsis !important; box-sizing: border-box;
-            user-select: none; -webkit-tap-highlight-color: transparent;
-        }}
-    </style>
-    <script>
-        function changerOnglet(idOnglet) {{
-            // Envoi de la valeur directement à l'écouteur Streamlit parent sans cibler de widget HTML
-            window.parent.postMessage({{
-                isStreamlitMessage: true,
-                type: "streamlit:set_widget_value",
-                key: "nav_choice_sync",
-                value: idOnglet
-            }}, "*");
-        }}
-    </script>
-    </head>
-    <body>
-        <div class="nav-container">
-            {liens_html}
-        </div>
-    </body>
-    </html>
-    """
-
-    # Rendu du menu graphique
-    components.html(code_composant_html, height=45)
-
-    # Récupération de la valeur transmise par l'Iframe (Intercepteur virtuel sans aucun widget HTML visible)
-    choix_options = [o[0] for o in onglets_config]
-    
-    # Initialisation de la clé si elle n'existe pas dans le session_state
-    if "nav_choice_sync" not in st.session_state:
-        st.session_state["nav_choice_sync"] = st.session_state.onglet_actif
-
-    # 5.5 - Changement de page basé sur la variable d'écoute directe
-    if st.session_state["nav_choice_sync"] != st.session_state.onglet_actif:
-        if st.session_state["nav_choice_sync"] in choix_options:
-            st.session_state.onglet_actif = st.session_state["nav_choice_sync"]
-            st.rerun()
+        with col_m4:
+            type_m4 = "primary" if st.session_state.onglet_actif == "⚙️" else "secondary"
+            if st.button("⚙️ Admin", key="nav_menu_btn_4", type=type_m4, use_container_width=True):
+                st.session_state.onglet_actif = "⚙️"
+                st.rerun()
                 
     # --- 5.6 - EN-TÊTE DE LA PAGE AVEC DÉCONNEXION ---
     col_vide, col_deco = st.columns([4, 1])
