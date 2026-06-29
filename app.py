@@ -1,5 +1,5 @@
 import streamlit as st
-from modules import database, scraping # Importation de tes nouveaux modules
+from modules import database, scraping, utils
 import extra_streamlit_components as stx
 
 # CONFIGURATION DE LA PAGE
@@ -7,6 +7,7 @@ st.set_page_config(page_title="Pronos Top 14", page_icon="🏉", layout="centere
 
 def sauvegarder_prono_auto(match_id, equipe_dom, equipe_ext, user_id_cible):
     """Sauvegarde instantanément le pronostic dès qu'un élément change."""
+    # Utilise bien des espaces simples pour l'indentation (4 espaces)
     vrai_nom_gagnant = st.session_state.get(f"w_{match_id}")
     ecart = st.session_state.get(f"m_{match_id}")
     
