@@ -255,30 +255,31 @@ else:
     except ValueError:
         index_defaut = 0
 
-# 5.4 et 5.5 - CODE CORRIGÉ : BARRE DE NAVIGATION (VERSION BULLS HORIZONTALES UNIFORMES)
+# 5.4 - CODE CORRIGÉ : BARRE DE NAVIGATION (LOGIQUE COUPE-MOBILE HORIZONTALE STRICTE)
     st.markdown("""
         <style>
-            /* Force le conteneur des menus à rester sur une seule ligne horizontale */
-            div.nav-menu-container {
-                display: flex !important;
+            /* Force le conteneur de colonnes Streamlit du menu à rester horizontal sans retour à la ligne */
+            div[data-testid="stHorizontalBlock"]:has(button[key^="menu_tab_"]) {
                 flex-wrap: nowrap !important;
                 gap: 6px !important;
                 width: 100% !important;
-                margin-top: 10px !important;
-                margin-bottom: 25px !important;
+            }
+            /* On force chaque colonne du menu à occuper une taille équitable (1/3 ou 1/4) */
+            div[data-testid="stHorizontalBlock"]:has(button[key^="menu_tab_"]) > div {
+                width: 100% !important;
+                min-width: 0 !important;
+                flex: 1 !important;
             }
             /* Style des boutons du menu */
-            div.nav-menu-container {
-                overflow: hidden !important;
-            }
-            div.nav-menu-container button {
-                flex: 1 !important; /* Donne exactement la même taille à chaque bouton (1/3 ou 1/4) */
+            div[data-testid="stHorizontalBlock"]:has(button[key^="menu_tab_"]) button {
+                width: 100% !important;
+                max-width: 100% !important;
                 min-width: 0 !important;
                 padding: 8px 4px !important;
                 overflow: hidden !important;
             }
-            /* Force le texte du menu à couper proprement sans déborder sur mobile */
-            div.nav-menu-container button p {
+            /* Force le texte du menu à couper proprement sur mobile */
+            div[data-testid="stHorizontalBlock"]:has(button[key^="menu_tab_"]) button p {
                 overflow: hidden !important;
                 text-overflow: ellipsis !important;
                 white-space: nowrap !important;
@@ -287,9 +288,6 @@ else:
             }
         </style>
     """, unsafe_allow_html=True)
-
-    # Conteneur HTML pour appliquer notre style CSS personnalisé
-    st.markdown('<div class="nav-menu-container">', unsafe_allow_html=True)
 
     # On prépare les colonnes dynamiquement selon le rôle
     if st.session_state.is_admin:
