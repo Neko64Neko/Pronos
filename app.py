@@ -488,24 +488,38 @@ else:
                             elif g_prevu == "away": choix_actuel = m['equipe_ext']
                             elif g_prevu == "draw": choix_actuel = "Match Nul"
 
-                        # --- CHOIX DU VAINQUEUR (3 BULLS HORIZONTALES BRIDÉES POUR MOBILE) ---
+# --- CHOIX DU VAINQUEUR (3 BULLS HORIZONTALES BRIDÉES AVEC FORCE) ---
                         st.caption("Sélectionner le Vainqueur :")
                         
-                        # Style CSS avancé pour figer la taille et empêcher le débordement
+                        # CSS Ultra-Précis pour brider les boutons Streamlit sur Mobile
                         st.markdown("""
                             <style>
-                                /* Force les 3 colonnes à rester sur la même ligne */
+                                /* On force le conteneur à rester sur une ligne sans déborder */
                                 div[data-testid="stHorizontalBlock"] {
                                     flex-wrap: nowrap !important;
-                                    gap: 6px !important;
+                                    gap: 4px !important;
+                                    width: 100% !important;
+                                    overflow: hidden !important;
                                 }
-                                /* Fige la taille des boutons pour qu'ils respectent les colonnes sans déborder */
+                                /* On cible la div de chaque colonne pour lui donner un tiers de la taille max */
+                                div[data-testid="stHorizontalBlock"] > div {
+                                    width: calc(33.33% - 4px) !important;
+                                    min-width: 0 !important;
+                                }
+                                /* On applique le bridage sur le bouton lui-même */
                                 div[data-testid="stHorizontalBlock"] button {
-                                    padding: 4px 8px !important;
+                                    width: 100% !important;
+                                    max-width: 100% !important;
+                                    min-width: 0 !important; /* Supprime la largeur minimale par défaut */
+                                    padding: 4px 4px !important;
+                                    overflow: hidden !important;
+                                }
+                                /* On force le texte à l'intérieur du bouton à couper proprement */
+                                div[data-testid="stHorizontalBlock"] button p {
                                     overflow: hidden !important;
                                     text-overflow: ellipsis !important;
                                     white-space: nowrap !important;
-                                    font-size: 13px !important;
+                                    font-size: 12px !important;
                                 }
                             </style>
                         """, unsafe_allow_html=True)
