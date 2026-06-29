@@ -8,17 +8,18 @@ import random
 import extra_streamlit_components as stx
 from streamlit_autorefresh import st_autorefresh
 
-# CONFIGURATION DE LA PAGE
+# 1 - PARAMETRES ET CONNEXION
+# 1.1 - CONFIGURATION DE LA PAGE
 st.set_page_config(page_title="Pronos Top 14", page_icon="🏉", layout="centered")
 
-# 1. CONNEXION À SUPABASE
+# 1.2 - CONNEXION À SUPABASE
 supabase = create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
 
-# Gestionnaire de cookies
+# 1.3 - Gestionnaire de cookies
 cookie_manager = stx.CookieManager()
 
 # =====================================================================
-# SYSTEME DE SCRAPING GRATUIT ET AUTOMATIQUE
+# 2 - SYSTEME DE SCRAPING GRATUIT ET AUTOMATIQUE
 # =====================================================================
 
 def verifier_et_importer_matchs():
@@ -26,7 +27,7 @@ def verifier_et_importer_matchs():
     matchs_traites = 0
     url_scraping = "https://www.lequipe.fr/Rugby/Top-14/page-calendrier-resultats"
     
-    # 1. Tentative via le scraping L'Équipe
+    # 2.1 - Tentative via le scraping L'Équipe
     try:
         headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
         response = requests.get(url_scraping, headers=headers, timeout=10)
@@ -53,7 +54,7 @@ def verifier_et_importer_matchs():
                 except Exception: continue
     except Exception: pass
 
-    # 2. Sécurité TheSportsDB - CALCUL DYNAMIQUE DE LA SAISON
+    # 2.2 - Sécurité TheSportsDB - CALCUL DYNAMIQUE DE LA SAISON
     if matchs_traites == 0:
         maintenant = datetime.now()
         annee_saison_courante = maintenant.year - 1 if maintenant.month < 8 else maintenant.year
@@ -84,7 +85,8 @@ def verifier_et_importer_matchs():
             except Exception: pass
             
     return matchs_traites
-
+    
+#2.3 - SAUVEGARDE AUTO PRONO
 def sauvegarder_prono_auto(match_id, equipe_dom, equipe_ext, user_id_cible):
     """Sauvegarde instantanément le pronostic dès qu'un élément change."""
     vrai_nom_gagnant = st.session_state.get(f"w_{match_id}")
@@ -107,7 +109,8 @@ def sauvegarder_prono_auto(match_id, equipe_dom, equipe_ext, user_id_cible):
             supabase.table("Pronostics").insert(donnees_prono).execute()
     except Exception as e:
         st.error(f"Erreur sauvegarde automatique : {e}")
-
+        
+#2.4 - Sauvegarde Bonus AUTO
 def sauvegarder_bonus_auto(question_id, user_id_cible):
     """Sauvegarde instantanément la réponse à une question bonus."""
     choix = st.session_state.get(f"bonus_q_{question_id}")
@@ -126,7 +129,7 @@ def sauvegarder_bonus_auto(question_id, user_id_cible):
         st.error(f"Erreur sauvegarde bonus : {e}")
 
 # =====================================================================
-# INITIALISATION ET GESTION DE LA SESSION
+# 3 - INITIALISATION ET GESTION DE LA SESSION
 # =====================================================================
 if "user_id" not in st.session_state: st.session_state.user_id = None
 if "is_admin" not in st.session_state: st.session_state.is_admin = False
@@ -136,7 +139,7 @@ if "onglet_actif" not in st.session_state: st.session_state.onglet_actif = "📊
 TRANCHES_ECARTS = ["1-6", "7-10", "11-15", "16-20", "21-30", "31-40", "41-50", "51+"]
 maintenant_paris = datetime.utcnow() + timedelta(hours=2)
 
-# REFRESH AUTOMATIQUE INTELLIGENT SI MATCH EN DIRECT
+# 3.1 -REFRESH AUTOMATIQUE INTELLIGENT SI MATCH EN DIRECT
 try:
     matchs_en_direct = supabase.table("Matchs").select("id").eq("statut", "LIVE").execute().data
     if matchs_en_direct:
@@ -145,7 +148,7 @@ try:
 except Exception:
     pass
 
-# Tentative de reconnexion via COOKIE
+# 3.2 Tentative de reconnexion via COOKIE
 if st.session_state.user_id is None:
     saved_user_id = cookie_manager.get(cookie="top14_user_id")
     if saved_user_id:
@@ -160,7 +163,7 @@ if st.session_state.user_id is None:
             pass
 
 # =====================================================================
-# ÉCRAN DE CONNEXION / INSCRIPTION
+# 4 - ÉCRAN DE CONNEXION / INSCRIPTION
 # =====================================================================
 if st.session_state.user_id is None:
     st.title("🏉 Pronos Top 14")
@@ -209,15 +212,15 @@ if st.session_state.user_id is None:
             else: st.warning("Veuillez renseigner votre adresse email.")
 
 # =====================================================================
-# INTERFACE PRINCIPALE (UTILISATEUR CONNECTÉ)
+# 5 - INTERFACE PRINCIPALE (UTILISATEUR CONNECTÉ)
 # =====================================================================
 else:
-    # --- CONFIGURATION DES ONGLETS ACCESSIBLES ---
+    # --- 5.1 - CONFIGURATION DES ONGLETS ACCESSIBLES ---
     icones_navigation = ["📊", "🏉", "📅"]
     if st.session_state.is_admin:
         icones_navigation.append("⚙️")
 
-    # --- INJECTION DU STYLE CSS PARFAITEMENT CIBLÉ ---
+    # --- 5.2 - INJECTION DU STYLE CSS PARFAITEMENT CIBLÉ ---
     st.markdown("""
     <style>
         /* Espacement global pour éviter que le menu cache le contenu */
@@ -303,13 +306,13 @@ else:
     </style>
     """, unsafe_allow_html=True)
 
-    # --- EN-TÊTE DU COMPOSANT RADIO DE NAVIGATION ---
+    # --- 5.3 - EN-TÊTE DU COMPOSANT RADIO DE NAVIGATION ---
     try:
         index_defaut = icones_navigation.index(st.session_state.onglet_actif)
     except ValueError:
         index_defaut = 0
 
-    # L'ancre HTML qui sert de point d'attache au CSS exclusif
+    # 5.4 - L'ancre HTML qui sert de point d'attache au CSS exclusif
     st.markdown('<div class="barre-navigation-fixe"></div>', unsafe_allow_html=True)
     
     choix_onglet = st.radio(
@@ -321,12 +324,12 @@ else:
         key="MenuPrincipal" 
     )
 
-    # Intercepteur de clic ultra-rapide
+    # 5.5 - Intercepteur de clic ultra-rapide
     if choix_onglet != st.session_state.onglet_actif:
         st.session_state.onglet_actif = choix_onglet
         st.rerun()
 
-    # --- EN-TÊTE DE LA PAGE AVEC DÉCONNEXION ---
+    # --- 5.6 - EN-TÊTE DE LA PAGE AVEC DÉCONNEXION ---
     col_vide, col_deco = st.columns([4, 1])
     with col_deco:
         if st.button("🚪 Déconnexion", key="btn_logout", use_container_width=True):
@@ -337,7 +340,7 @@ else:
             
     st.markdown("---")
 
-    # --- CHARGEMENT DU BARÈME ET DE LA CONFIGURATION ---
+    # --- 5.7 - CHARGEMENT DU BARÈME ET DE LA CONFIGURATION ---
     try:
         conf = supabase.table("Configuration").select("*").eq("id", "default_config").single().execute().data
         pts_gagnant_cfg = conf.get("pts_gagnant", 3) if conf else 3
@@ -350,7 +353,7 @@ else:
     pts_parfait_cfg = pts_gagnant_cfg + pts_ecart_cfg
 
     # =====================================================================
-    # CONTENU DE L'ONGLET 1 : CLASSEMENT GÉNÉRAL
+    # 6 -CONTENU DE L'ONGLET 1 : CLASSEMENT GÉNÉRAL
     # =====================================================================
     if st.session_state.onglet_actif == "📊":
         st.markdown(f"### 🏉 Bienvenue sur ton tableau de bord, **{st.session_state.pseudo}** !")
@@ -469,7 +472,7 @@ else:
             st.info("Le classement est vide pour le moment.")
 
     # =====================================================================
-    # CONTENU DE L'ONGLET 2 : FAIRE MES PRONOSTICS
+    # 7 - CONTENU DE L'ONGLET 2 : FAIRE MES PRONOSTICS
     # =====================================================================
     elif st.session_state.onglet_actif == "🏉":
         st.title("✍ *Saisir les Pronostics*")
@@ -517,7 +520,7 @@ else:
             else: st.write("Aucune question bonus ouverte actuellement.")
         except Exception as e: st.error(f"Erreur questions bonus : {e}")
 
-        # --- MATCHS OUVERTS ---
+        # ---  7.1 - MATCHS OUVERTS ---
         st.subheader("🏉 Matchs ouverts du Top 14")
         try:
             matchs = supabase.table("Matchs").select("*").order("date_match").execute().data
@@ -553,7 +556,7 @@ else:
         except Exception as e: st.error(f"Erreur match : {e}")
 
     # =====================================================================
-    # CONTENU DE L'ONGLET 3 : RÉSULTATS & DIRECT
+    # 8 - CONTENU DE L'ONGLET 3 : RÉSULTATS & DIRECT
     # =====================================================================
     elif st.session_state.onglet_actif == "📅":
         st.title("📊 Résultats & Direct")
@@ -624,12 +627,12 @@ else:
         except Exception as e: st.error(f"Erreur matchs clos : {e}")
 
     # =====================================================================
-    # CONTENU DE L'ONGLET 4 : CONSOLE ADMINISTRATION PRIVÉE
+    # 9 - CONTENU DE L'ONGLET 4 : CONSOLE ADMINISTRATION PRIVÉE
     # =====================================================================
     elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
         st.title("⚙️ Console d'Administration Privée")
         tab1, tab2, tab3, tab4, tab5 = st.tabs(["🎯 Configuration", "➕ Matchs Manuels", "🎁 Questions Bonus", "🔄 Synchro Scraping", "🚨 Zone Danger"])
-        
+      # 9.1 - TAB 1   
         with tab1:
             st.subheader("🎛️ Configuration du Barème")
             try: current_config = supabase.table("Configuration").select("*").eq("id", "default_config").single().execute().data
@@ -644,7 +647,7 @@ else:
                     supabase.table("Configuration").upsert({"id": "default_config", "pts_gagnant": val_gagnant, "pts_ecart": val_ecart, "seuil_poursentage_ose": val_seuil, "multiplicateur_ose": val_mult}).execute()
                     st.success("Barème enregistré !")
                     st.rerun()
-
+#9.2 - TAB 2
         with tab2:
             st.subheader("➕ Ajouter un Match manuellement")
             with st.form("form_ajout_match"):
@@ -721,7 +724,7 @@ else:
                                         time.sleep(1)
                                         st.rerun()
             except Exception as e: st.error(f"Erreur admin matchs : {e}")
-
+#9.3 - TAB 3
         with tab3:
             st.subheader("📝 Créer une Question Bonus")
             with st.form("form_bonus"):
@@ -763,7 +766,7 @@ else:
                         time.sleep(1)
                         st.rerun()
             except Exception as e: st.error(f"Erreur validation bonus : {e}")
-
+#9.4 - TAB 4
         with tab4:
             st.subheader("🔄 Lanceur de Scraping Manuel")
             if st.button("⚡ Lancer la Synchronisation"):
@@ -771,7 +774,7 @@ else:
                     nb = verifier_et_importer_matchs()
                     st.success(f"Terminé ! {nb} matchs traités avec succès.")
                     st.rerun()
-
+#9.5 - TAB 5 
         with tab5:
             st.subheader("🚨 Zone de Danger")
             confirmation_secu = st.checkbox("Je confirme vouloir tout réinitialiser.", key="danger_zone_confirm")
