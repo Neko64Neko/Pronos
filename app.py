@@ -331,27 +331,6 @@ else:
             if st.button("⚙️ Admin", key="nav_c_btn_4", type=type_m4, use_container_width=True):
                 st.session_state.onglet_actif = "⚙️"
                 st.rerun()
-
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    with col_m2:
-        type_m2 = "primary" if st.session_state.onglet_actif == "🏉" else "secondary"
-        if st.button("🏉 Pronos", key="nav_menu_btn_2", type=type_m2, use_container_width=True):
-            st.session_state.onglet_actif = "🏉"
-            st.rerun()
-
-    with col_m3:
-        type_m3 = "primary" if st.session_state.onglet_actif == "📅" else "secondary"
-        if st.button("📅 Scores", key="nav_menu_btn_3", type=type_m3, use_container_width=True):
-            st.session_state.onglet_actif = "📅"
-            st.rerun()
-
-    if st.session_state.is_admin:
-        with col_m4:
-            type_m4 = "primary" if st.session_state.onglet_actif == "⚙️" else "secondary"
-            if st.button("⚙️ Admin", key="nav_menu_btn_4", type=type_m4, use_container_width=True):
-                st.session_state.onglet_actif = "⚙️"
-                st.rerun()
                 
     # --- 5.6 - EN-TÊTE DE LA PAGE AVEC DÉCONNEXION ---
     col_vide, col_deco = st.columns([4, 1])
