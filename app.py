@@ -112,22 +112,28 @@ def sauvegarder_prono_auto(match_id, equipe_dom, equipe_ext, user_id_cible):
         
 #2.4 - Sauvegarde Bonus AUTO
 def sauvegarder_bonus_auto(question_id, user_id_cible):
-    """Sauvegarde instantanément la réponse à une question bonus."""
-    choix = st.session_state.get(f"bonus_q_{question_id}")
-    if choix == "...":
-        return
-        
-    deja_repondu = supabase.table("Réponses_Questions").select("id").eq("user_id", user_id_cible).eq("question_id", question_id).execute().data
-    data_pb = {"user_id": user_id_cible, "question_id": question_id, "reponse_joueur": choix}
-    
-    try:
-        if deja_repondu:
-            supabase.table("Réponses_Questions").update(data_pb).eq("id", deja_repondu[0]['id']).execute()
-        else:
-            supabase.table("Réponses_Questions").insert(data_pb).execute()
-    except Exception as e:
-        st.error(f"Erreur sauvegarde bonus : {e}")
-
+"""Sauvegarde automatique de la réponse à une question bonus."""
+    cle_state = f"q_{id_question}_{id_joueur}"
+    if cle_state in st.session_state:
+        valeur = st.session_state[cle_state]
+        try:
+            # Vérification si une réponse existe déjà
+            rep_existante = supabase.table("Réponses_Questions").select("*").eq("user_id", id_joueur).eq("question_id", id_question).execute().data
+            
+            if rep_existante:
+                # Mise à jour avec la colonne reponse_joueur
+                supabase.table("Réponses_Questions").update({
+                    "reponse_joueur": valeur
+                }).eq("id", rep_existante[0]['id']).execute()
+            else:
+                # Insertion avec la colonne reponse_joueur
+                supabase.table("Réponses_Questions").insert({
+                    "user_id": id_joueur,
+                    "question_id": id_question,
+                    "reponse_joueur": valeur
+                }).execute()
+        except Exception as e:
+            st.error(f"Erreur lors de la sauvegarde de la question : {e}")
 # =====================================================================
 # 3 - INITIALISATION ET GESTION DE LA SESSION
 # =====================================================================
