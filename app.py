@@ -454,7 +454,7 @@ if st.session_state.onglet_actif == "🏉":
     liste_joueurs = supabase.table("Joueurs").select("*").order("pseudo").execute().data
     
     if liste_joueurs:
-        noms_joueurs = [j['nom'] for j in liste_joueurs]
+        noms_joueurs = [j['pseudo'] for j in liste_joueurs]
         
         # Par défaut, le joueur cible est l'utilisateur connecté
         index_par_defaut = noms_joueurs.index(st.session_state.nom_utilisateur) if st.session_state.nom_utilisateur in noms_joueurs else 0
