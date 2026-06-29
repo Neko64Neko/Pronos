@@ -255,10 +255,9 @@ else:
     except ValueError:
         index_defaut = 0
 
-# 5.4 - BARRE DE NAVIGATION ULTRA-ROBUSTE (IFRAME ISOLÉE + INTERCEPTEUR FIABLE)
+# 5.4 - BARRE DE NAVIGATION (VERSION IFRAME + ÉCOUTEUR STREAMLIT DIRECT)
     import streamlit.components.v1 as components
 
-    # On prépare la liste des onglets selon le rôle pour le rendu
     if st.session_state.is_admin:
         onglets_config = [("📊", "📊 Général"), ("🏉", "🏉 Pronos"), ("📅", "📅 Scores"), ("⚙️", "⚙️ Admin")]
         largeur_bulle = "calc(25% - 4px)"
@@ -266,77 +265,50 @@ else:
         onglets_config = [("📊", "📊 Général"), ("🏉", "🏉 Pronos"), ("📅", "📅 Scores")]
         largeur_bulle = "calc(33.33% - 4px)"
 
-    # Construction dynamique des boutons HTML
     liens_html = ""
     for code_o, nom_o in onglets_config:
         est_actif = (st.session_state.onglet_actif == code_o)
-        # Style Bleu "Primary" si actif, Gris "Secondary" si inactif
         style_bouton = f"""
             background-color: {'#1f77b4' if est_actif else 'transparent'};
             color: {'white' if est_actif else '#31333F'};
             border: 1px solid {'#1f77b4' if est_actif else 'rgba(49, 51, 63, 0.2)'};
         """
-        
         liens_html += f"""
         <div class="nav-btn" style="{style_bouton}" onclick="changerOnglet('{code_o}')">
             {nom_o}
         </div>
         """
 
-    # Code HTML + CSS complet à injecter dans l'iframe isolée
     code_composant_html = f"""
     <!DOCTYPE html>
     <html>
     <head>
     <style>
         body {{
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-            background-color: transparent;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0; padding: 0; overflow: hidden; background-color: transparent;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         }}
         .nav-container {{
-            display: flex !important;
-            flex-direction: row !important;
-            flex-wrap: nowrap !important;
-            width: 100% !important;
-            gap: 5px !important;
-            box-sizing: border-box;
+            display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important;
+            width: 100% !important; gap: 5px !important; box-sizing: border-box;
         }}
         .nav-btn {{
-            width: {largeur_bulle} !important;
-            flex: 1 1 0% !important;
-            text-align: center !important;
-            padding: 10px 2px !important;
-            font-size: 12px !important;
-            font-weight: bold !important;
-            border-radius: 8px !important;
-            cursor: pointer !important;
-            white-space: nowrap !important;
-            overflow: hidden !important;
-            text-overflow: ellipsis !important;
-            box-sizing: border-box;
+            width: {largeur_bulle} !important; flex: 1 1 0% !important; text-align: center !important;
+            padding: 10px 2px !important; font-size: 12px !important; font-weight: bold !important;
+            border-radius: 8px !important; cursor: pointer !important; white-space: nowrap !important;
+            overflow: hidden !important; text-overflow: ellipsis !important; box-sizing: border-box;
+            user-select: none; -webkit-tap-highlight-color: transparent;
         }}
     </style>
     <script>
         function changerOnglet(idOnglet) {{
-            // Sélectionne l'élément selectbox masqué de Streamlit dans la page principale et change sa valeur
-            var inputs = window.parent.document.querySelectorAll('div[data-testid="stSelectbox"] select');
-            for (var i = 0; i < inputs.length; i++) {{
-                // On vérifie qu'on cible bien notre intercepteur caché
-                if (inputs[i].getAttribute('aria-label') === 'IntercepteurMenu') {{
-                    // On cherche l'option correspondante
-                    for (var j = 0; j < inputs[i].options.length; j++) {{
-                        if (inputs[i].options[j].value === idOnglet) {{
-                            inputs[i].selectedIndex = j;
-                            // Déclenche l'événement de changement pour que Streamlit Python intercepte le clic
-                            inputs[i].dispatchEvent(new Event('change', {{ bubbles: true }}));
-                            break;
-                        }}
-                    }}
-                }}
-            }}
+            // Envoi de la valeur directement à l'écouteur Streamlit parent sans cibler de widget HTML
+            window.parent.postMessage({{
+                isStreamlitMessage: true,
+                type: "streamlit:set_widget_value",
+                key: "nav_choice_sync",
+                value: idOnglet
+            }}, "*");
         }}
     </script>
     </head>
@@ -348,40 +320,21 @@ else:
     </html>
     """
 
-    # 1. CSS de masquage absolu pour l'intercepteur (il ne sera plus jamais visible)
-    st.markdown("""
-        <style>
-            /* Masque totalement et proprement le bloc selectbox qui sert d'intercepteur */
-            div[data-testid="stSelectbox"]:has(select[aria-label="IntercepteurMenu"]) {
-                display: none !important;
-                height: 0px !important;
-                margin: 0px !important;
-                padding: 0px !important;
-            }
-        </style>
-    """, unsafe_allow_html=True)
-
-    # 2. On affiche l'iframe graphique (hauteur fixe de 45px)
+    # Rendu du menu graphique
     components.html(code_composant_html, height=45)
 
-    # 3. L'intercepteur Selectbox Streamlit natif (totalement invisible grâce au CSS du dessus)
+    # Récupération de la valeur transmise par l'Iframe (Intercepteur virtuel sans aucun widget HTML visible)
     choix_options = [o[0] for o in onglets_config]
-    try:
-        index_defaut = choix_options.index(st.session_state.onglet_actif)
-    except ValueError:
-        index_defaut = 0
+    
+    # Initialisation de la clé si elle n'existe pas dans le session_state
+    if "nav_choice_sync" not in st.session_state:
+        st.session_state["nav_choice_sync"] = st.session_state.onglet_actif
 
-    choix_onglet_invisible = st.selectbox(
-        "IntercepteurMenu",
-        options=choix_options,
-        index=index_defaut,
-        label_visibility="collapsed"
-    )
-
-    # 5.5 - Déclenchement du changement de page instantané
-    if choix_onglet_invisible != st.session_state.onglet_actif:
-        st.session_state.onglet_actif = choix_onglet_invisible
-        st.rerun()
+    # 5.5 - Changement de page basé sur la variable d'écoute directe
+    if st.session_state["nav_choice_sync"] != st.session_state.onglet_actif:
+        if st.session_state["nav_choice_sync"] in choix_options:
+            st.session_state.onglet_actif = st.session_state["nav_choice_sync"]
+            st.rerun()
                 
     # --- 5.6 - EN-TÊTE DE LA PAGE AVEC DÉCONNEXION ---
     col_vide, col_deco = st.columns([4, 1])
