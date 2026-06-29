@@ -539,8 +539,7 @@ else:
                             st.markdown(f"👤 **{p['Joueurs']['pseudo']}** : `{badge} +{pts_gagnes} pts`")
                     else:
                         st.write("Aucun prono.")
-        except Exception as e:
-    st.error(f"Erreur : {e}")
+        except Exception as e:st.error(f"Erreur : {e}")
     # =====================================================================
     # 9 - CONTENU DE L'ONGLET 4 : CONSOLE ADMINISTRATION PRIVÉE
     # =====================================================================
