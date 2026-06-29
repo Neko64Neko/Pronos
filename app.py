@@ -483,7 +483,7 @@ if st.session_state.onglet_actif == "🏉":
         # --- 7.2 - ZONE DE JEU (QUESTIONS + MATCHS) ---
         with st.spinner("Chargement de la grille..."):
             try:
-# 7.2.1 - SECTION QUESTIONS BONUS (CORRIGÉE)
+# 7.2.1 - SECTION QUESTIONS BONUS (CORRIGÉE AVEC 'QUESTION')
                 st.subheader("🎯 Questions Bonus")
                 questions = supabase.table("Questions_Bonus").select("*").execute().data
                 
@@ -494,8 +494,12 @@ if st.session_state.onglet_actif == "🏉":
                         # Utilisation de la colonne exacte : reponse_joueur
                         valeur_defaut = rep_existante[0]['reponse_joueur'] if rep_existante and rep_existante[0].get('reponse_joueur') is not None else ""
                         
+                        # Utilisation de la colonne exacte de ta base : question
+                        texte_question = q.get('question') or "Question Bonus"
+                        pts_bonus = q.get('points_bonus') or q.get('points') or 0
+                        
                         st.text_input(
-                            f"❓ {q['intitule']} ({q['points_bonus']} pts)",
+                            f"❓ {texte_question} ({pts_bonus} pts)",
                             value=valeur_defaut,
                             key=f"q_{q['id']}_{id_joueur_cible}",
                             on_change=sauvegarder_question_auto,
