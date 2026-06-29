@@ -464,7 +464,7 @@ else:
             else: 
                 st.write("Aucune question bonus ouverte actuellement.")
 
-# 7.2.2. SECTION MATCHS OUVERTS (VERSION BULLS HORIZONTALES COUPE-MOBILE)
+# 7.2.2. SECTION MATCHS OUVERTS (VERSION BULLS HORIZONTALES AVEC FIX MOBILE)
             # Ligne de séparation gris clair sous les Questions Bonus
             st.markdown("""<hr style="border: 1px solid #e2e8f0; margin: 30px 0 20px 0;">""", unsafe_allow_html=True)
             st.subheader("🏉 Matchs à venir")
@@ -488,15 +488,24 @@ else:
                             elif g_prevu == "away": choix_actuel = m['equipe_ext']
                             elif g_prevu == "draw": choix_actuel = "Match Nul"
 
-                        # --- CHOIX DU VAINQUEUR (3 BULLS STRICTEMENT HORIZONTALES) ---
+                        # --- CHOIX DU VAINQUEUR (3 BULLS HORIZONTALES BRIDÉES POUR MOBILE) ---
                         st.caption("Sélectionner le Vainqueur :")
                         
-                        # Astuce CSS : On force le conteneur de colonnes Streamlit à ne pas revenir à la ligne (flex-wrap: nowrap)
+                        # Style CSS avancé pour figer la taille et empêcher le débordement
                         st.markdown("""
                             <style>
+                                /* Force les 3 colonnes à rester sur la même ligne */
                                 div[data-testid="stHorizontalBlock"] {
                                     flex-wrap: nowrap !important;
-                                    gap: 8px !important;
+                                    gap: 6px !important;
+                                }
+                                /* Fige la taille des boutons pour qu'ils respectent les colonnes sans déborder */
+                                div[data-testid="stHorizontalBlock"] button {
+                                    padding: 4px 8px !important;
+                                    overflow: hidden !important;
+                                    text-overflow: ellipsis !important;
+                                    white-space: nowrap !important;
+                                    font-size: 13px !important;
                                 }
                             </style>
                         """, unsafe_allow_html=True)
@@ -513,9 +522,9 @@ else:
                         with col_b:
                             type_b = "primary" if choix_actuel == "Match Nul" else "secondary"
                             if st.button("🤝 Nul", key=f"btn_nul_{m['id']}_{id_joueur_cible}", type=type_b, use_container_width=True):
-                                        st.session_state[f"w_{m['id']}"] = "Match Nul"
-                                        sauvegarder_prono_auto(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
-                                        st.rerun()
+                                st.session_state[f"w_{m['id']}"] = "Match Nul"
+                                sauvegarder_prono_auto(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
+                                st.rerun()
                                 
                         with col_c:
                             type_c = "primary" if choix_actuel == m['equipe_ext'] else "secondary"
