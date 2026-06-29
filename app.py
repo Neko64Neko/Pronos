@@ -469,10 +469,7 @@ else:
 
             # 7.2.3. On initialise la variable par défaut (liste vide)
             matchs_ouverts = [] 
-        
-            try:
-                # 7.2.4. On essaie de récupérer les données
-                matchs_ouverts = supabase.table("Matchs").select("*").eq("statut", "A VENIR").execute().data
+            matchs_ouverts = supabase.table("Matchs").select("*").eq("statut", "A VENIR").execute().data
             if matchs_ouverts:
                 for m in matchs_ouverts:
                     with st.container():
