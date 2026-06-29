@@ -809,8 +809,9 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
             if st.form_submit_button("💾 Enregistrer la question"):
                 if intitule_q:
                     try:
+                        # Correction ici : on envoie bien la clé "question" à Supabase
                         supabase.table("Questions_Bonus").insert({
-                            "intitule": intitule_q,
+                            "question": intitule_q,
                             "points_bonus": pts_q
                         }).execute()
                         st.success("Question ajoutée !")
