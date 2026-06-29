@@ -513,14 +513,24 @@ else:
                                 sauvegarder_prono_auto(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
                                 st.rerun()
 
-                        # --- CHOIX DE L'ÉCART ---
+# --- CHOIX DE L'ÉCART (CORRIGÉ POUR CONSERVER LA VALEUR) ---
                         st.markdown("<br>", unsafe_allow_html=True)
-                        st.selectbox("Écart (pts)", ["..."] + TRANCHES_ECARTS, 
-                                     key=f"m_{m['id']}", on_change=sauvegarder_prono_auto, args=(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible))
                         
-                        if prono_existant:
-                            st.success("✅ Pronostic enregistré")
-                        st.markdown('</div>', unsafe_allow_html=True)
+                        # 1. On calcule l'index de la tranche déjà enregistrée si elle existe
+                        index_ecart_defaut = 0
+                        if prono_existant and prono_existant[0]['ecart_prevu'] in TRANCHES_ECARTS:
+                            # +1 car il y a "..." en position 0
+                            index_ecart_defaut = TRANCHES_ECARTS.index(prono_existant[0]['ecart_prevu']) + 1
+                        
+                        # 2. On applique l'index par défaut au selectbox
+                        st.selectbox(
+                            "Écart (pts)", 
+                            ["..."] + TRANCHES_ECARTS, 
+                            index=index_ecart_defaut,
+                            key=f"m_{m['id']}", 
+                            on_change=sauvegarder_prono_auto, 
+                            args=(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
+                        )
             else: 
                 st.info("Aucun match ouvert.")
 
