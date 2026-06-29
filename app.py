@@ -255,22 +255,25 @@ else:
     except ValueError:
         index_defaut = 0
 
-# 5.4 - CODE CORRIGÉ : BARRE DE NAVIGATION (LOGIQUE COUPE-MOBILE HORIZONTALE STRICTE)
+# 5.4 - CODE CORRIGÉ : BARRE DE NAVIGATION (LOGIQUE FLEX DIRECTE INFAILLIBLE)
     st.markdown("""
         <style>
-            /* Force le conteneur de colonnes Streamlit du menu à rester horizontal sans retour à la ligne */
+            /* Étape 1 : On force le conteneur principal à aligner ses éléments enfants en ligne */
             div[data-testid="stHorizontalBlock"]:has(button[key^="menu_tab_"]) {
+                display: flex !important;
+                flex-direction: row !important;
                 flex-wrap: nowrap !important;
                 gap: 6px !important;
                 width: 100% !important;
             }
-            /* On force chaque colonne du menu à occuper une taille équitable (1/3 ou 1/4) */
-            div[data-testid="stHorizontalBlock"]:has(button[key^="menu_tab_"]) > div {
-                width: 100% !important;
+            /* Étape 2 : On force chaque sous-conteneur de colonne à ne pas repasser à la ligne */
+            div[data-testid="stHorizontalBlock"]:has(button[key^="menu_tab_"]) > div[data-testid="column"] {
+                display: block !important;
+                flex: 1 !important; /* Distribue l'espace équitablement (1/3 ou 1/4) */
                 min-width: 0 !important;
-                flex: 1 !important;
+                max-width: 100% !important;
             }
-            /* Style des boutons du menu */
+            /* Étape 3 : On applique la contrainte de taille sur le bouton lui-même */
             div[data-testid="stHorizontalBlock"]:has(button[key^="menu_tab_"]) button {
                 width: 100% !important;
                 max-width: 100% !important;
@@ -278,7 +281,7 @@ else:
                 padding: 8px 4px !important;
                 overflow: hidden !important;
             }
-            /* Force le texte du menu à couper proprement sur mobile */
+            /* Étape 4 : Gestion du texte interne pour éviter le débordement sur petit écran */
             div[data-testid="stHorizontalBlock"]:has(button[key^="menu_tab_"]) button p {
                 overflow: hidden !important;
                 text-overflow: ellipsis !important;
@@ -324,7 +327,7 @@ else:
                 st.session_state.onglet_actif = "⚙️"
                 st.rerun()
 
-    st.markdown('</div>', unsafe_allow_html=True)
+    #st.markdown('</div>', unsafe_allow_html=True)
 
     # --- 5.6 - EN-TÊTE DE LA PAGE AVEC DÉCONNEXION ---
     col_vide, col_deco = st.columns([4, 1])
