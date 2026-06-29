@@ -112,7 +112,7 @@ def sauvegarder_prono_auto(match_id, equipe_dom, equipe_ext, user_id_cible):
         
 #2.4 - Sauvegarde Bonus AUTO
 def sauvegarder_bonus_auto(question_id, user_id_cible):
-"""Sauvegarde automatique de la réponse à une question bonus."""
+    """Sauvegarde automatique de la réponse à une question bonus."""
     cle_state = f"q_{id_question}_{id_joueur}"
     if cle_state in st.session_state:
         valeur = st.session_state[cle_state]
