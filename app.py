@@ -502,7 +502,7 @@ if st.session_state.onglet_actif == "🏉":
                             f"❓ {texte_question} ({pts_bonus} pts)",
                             value=valeur_defaut,
                             key=f"q_{q['id']}_{id_joueur_cible}",
-                            on_change=sauvegarder_question_auto,
+                            on_change=sauvegarder_bonus_auto,
                             args=(q['id'], id_joueur_cible)
                         )
                 else:
