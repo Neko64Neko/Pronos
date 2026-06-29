@@ -560,34 +560,33 @@ else:
                             elif g_prevu == "away": choix_actuel = m['equipe_ext']
                             elif g_prevu == "draw": choix_actuel = "Match Nul"
 
-                        # --- CHOIX DU VAINQUEUR (3 BULLS HORIZONTALES BRIDÉES AVEC FORCE) ---
+# --- CHOIX DU VAINQUEUR ---
                         st.caption("Sélectionner le Vainqueur :")
                         
-                        # CSS Ultra-Précis pour brider les boutons Streamlit sur Mobile
+                        # Style isolé uniquement pour les lignes de choix de vainqueurs de matchs
                         st.markdown("""
                             <style>
-                                /* On force le conteneur à rester sur une ligne sans déborder */
-                                div[data-testid="stHorizontalBlock"] {
+                                .zone-matchs [data-testid="stHorizontalBlock"] {
                                     flex-wrap: nowrap !important;
                                     gap: 4px !important;
                                     width: 100% !important;
                                     overflow: hidden !important;
+                                    display: flex !important;
+                                    flex-direction: row !important;
                                 }
-                                /* On cible la div de chaque colonne pour lui donner un tiers de la taille max */
-                                div[data-testid="stHorizontalBlock"] > div {
+                                .zone-matchs [data-testid="stHorizontalBlock"] > div {
                                     width: calc(33.33% - 4px) !important;
                                     min-width: 0 !important;
+                                    flex: 1 1 0% !important;
                                 }
-                                /* On applique le bridage sur le bouton lui-même */
-                                div[data-testid="stHorizontalBlock"] button {
+                                .zone-matchs [data-testid="stHorizontalBlock"] button {
                                     width: 100% !important;
                                     max-width: 100% !important;
                                     min-width: 0 !important;
                                     padding: 4px 4px !important;
                                     overflow: hidden !important;
                                 }
-                                /* On force le texte à l'intérieur du bouton à couper proprement */
-                                div[data-testid="stHorizontalBlock"] button p {
+                                .zone-matchs [data-testid="stHorizontalBlock"] button p {
                                     overflow: hidden !important;
                                     text-overflow: ellipsis !important;
                                     white-space: nowrap !important;
@@ -595,6 +594,9 @@ else:
                                 }
                             </style>
                         """, unsafe_allow_html=True)
+                        
+                        # On ouvre la zone des matchs isolée
+                        st.markdown('<div class="zone-matchs">', unsafe_allow_html=True)
                         
                         col_a, col_b, col_c = st.columns(3)
                         
@@ -610,7 +612,7 @@ else:
                             if st.button("🤝 Nul", key=f"btn_nul_{m['id']}_{id_joueur_cible}", type=type_b, use_container_width=True):
                                 st.session_state[f"w_{m['id']}"] = "Match Nul"
                                 sauvegarder_prono_auto(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
-                                st.rerun()
+                                r_res = st.rerun()
                                 
                         with col_c:
                             type_c = "primary" if choix_actuel == m['equipe_ext'] else "secondary"
@@ -618,6 +620,8 @@ else:
                                 st.session_state[f"w_{m['id']}"] = m['equipe_ext']
                                 sauvegarder_prono_auto(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
                                 st.rerun()
+
+                        st.markdown('</div>', unsafe_allow_html=True) # On ferme la zone des matchs
 
                         # --- CHOIX DE L'ÉCART ---
                         st.markdown("<br>", unsafe_allow_html=True)
