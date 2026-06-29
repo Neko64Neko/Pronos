@@ -647,10 +647,16 @@ if st.session_state.onglet_actif == "🏉":
         st.warning("⚠️ Aucun joueur trouvé dans la base.")
 
 # =====================================================================
-# 8 - CONTENU DE L'ONGLET 3 : RÉSULTATS & DIRECT
+# 8 - CONTENU DE L'ONGLET 3 : RÉSULTATS & DIRECT (DYNAMIQUE AVEC BARÈME ADM)
 # =====================================================================
 elif st.session_state.onglet_actif == "📅":
     st.title("📅 Résultats & Matchs en Direct")
+    
+    # Récupération des valeurs du barème configurées par l'admin (ou valeurs par défaut)
+    coef_vainqueur = st.session_state.get("pts_vainqueur", 2)
+    coef_ecart = st.session_state.get("pts_ecart", 2)
+    pct_max_ose = st.session_state.get("pct_ose", 20)
+    multiplicateur_ose = st.session_state.get("mult_ose", 2.0)
     
     with st.spinner("Mise à jour des scores..."):
         st.subheader("🏉 Matchs Clos / En cours")
@@ -696,6 +702,15 @@ elif st.session_state.onglet_actif == "📅":
                         pronos = supabase.table("Pronostics").select("*, Joueurs(pseudo)").eq("match_id", m['id']).execute().data
                         
                         if pronos:
+                            # --- CALCUL STATISTIQUE POUR LE PRONO OSÉ ---
+                            total_pronos_match = len(pronos)
+                            mises_home = sum(1 for p in pronos if p['gagnant_prevu'] == "home")
+                            mises_away = sum(1 for p in pronos if p['gagnant_prevu'] == "away")
+                            
+                            # Pourcentages de mise sur chaque équipe
+                            pct_home = (mises_home / total_pronos_match * 100) if total_pronos_match > 0 else 100
+                            pct_away = (mises_away / total_pronos_match * 100) if total_pronos_match > 0 else 100
+                            
                             st.markdown("**Pronostics des joueurs :**")
                             for p in pronos:
                                 nom_joueur = p.get('Joueurs', {}).get('pseudo', 'Inconnu')
@@ -706,21 +721,39 @@ elif st.session_state.onglet_actif == "📅":
                                 
                                 pts = 0
                                 detail_pts = "❌ 0 point"
+                                badge_ose = ""
                                 
                                 if m['statut'] == 'NS' and sc_dom == 0 and sc_ext == 0:
                                     detail_pts = "⏳ En attente du résultat officiel"
                                 else:
                                     if g_prevu == vrai_gagnant_brut:
-                                        pts += 2
-                                        detail_pts = "✅ Vainqueur trouvé (+2 pts)"
+                                        # Le joueur a trouvé le bon vainqueur
+                                        base_match = coef_vainqueur
+                                        txt_win = f"Vainqueur (+{coef_vainqueur} pts)"
+                                        
+                                        # Bonus Écart
                                         if ec_prevu == vraie_tranche and g_prevu != "draw":
-                                            pts += 2
-                                            detail_pts += " 🎯 Écart parfait (+2 pts)"
+                                            base_match += coef_ecart
+                                            txt_win += f" + Écart (+{coef_ecart} pts)"
+                                        
+                                        # Vérification si c'est un prono osé (l'équipe choisie a reçu moins de X% des votes globaux)
+                                        is_ose = (g_prevu == "home" and pct_home <= pct_max_ose) or (g_prevu == "away" and pct_away <= pct_max_ose)
+                                        
+                                        if is_ose:
+                                            pts = float(base_match * multiplicateur_ose)
+                                            badge_ose = f" 🔥 **[OSÉ x{multiplicateur_ose}]**"
+                                            detail_pts = f"✅ {txt_win} {badge_ose}"
+                                        else:
+                                            pts = float(base_match)
+                                            detail_pts = f"✅ {txt_win}"
                                 
                                 color = "green" if pts > 0 else "red"
                                 if "En attente" in detail_pts: color = "orange"
                                 
-                                st.markdown(f"- **{nom_joueur}** : {nom_gagnant_prevu} ({ec_prevu}) ➔ <span style='color:{color}; font-weight:bold;'>{detail_pts} ({pts} pts)</span>", unsafe_allow_html=True)
+                                # Formatage propre des points (.0 effacé si entier)
+                                pts_affiche = int(pts) if pts.is_integer() else pts
+                                
+                                st.markdown(f"- **{nom_joueur}** : {nom_gagnant_prevu} ({ec_prevu}){badge_ose} ➔ <span style='color:{color}; font-weight:bold;'>{detail_pts} ({pts_affiche} pts)</span>", unsafe_allow_html=True)
                         else:
                             st.caption("Aucun pronostic enregistré pour ce match.")
             else:
