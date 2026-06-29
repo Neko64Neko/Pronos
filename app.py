@@ -8,25 +8,47 @@ import random
 import extra_streamlit_components as stx
 from streamlit_autorefresh import st_autorefresh
 
-# CONFIGURATION DE LA PAGE
+# ==============================================================
+# 0. EN-TÊTE ET CONFIGURATION GLOBALE
+# 0.1 Importations (au-dessus)
+# 0.2 Configuration de la page
+# ==============================================================
 st.set_page_config(page_title="Pronos Top 14", page_icon="🏉", layout="centered")
 
-# 1. CONNEXION À SUPABASE
+# ==============================================================
+# 1. CONNEXION ET CLIENTS EXTERNES
+# 1.1 Connexion à Supabase
+# 1.2 Gestionnaire de cookies
+# (Remplacer ce bloc si tu veux changer le backend / méthode d'auth)
+# ==============================================================
+# 1.1 Connexion à Supabase
 supabase = create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
 
-# Gestionnaire de cookies
+# 1.2 Gestionnaire de cookies
 cookie_manager = stx.CookieManager()
 
-# =====================================================================
-# SYSTEME DE SCRAPING GRATUIT ET AUTOMATIQUE
-# =====================================================================
-
+# ==============================================================
+# 2. SYSTÈME DE SCRAPING (IMPORT / SYNCHRO DES MATCHS)
+# 2.1 Fonction principale de synchronisation : verifier_et_importer_matchs
+#   - 2.1.1 Tentative L'Équipe (scraping HTML)
+#   - 2.1.2 Sécurité / fallback : TheSportsDB (API)
+# 2.2 Points d'extension : logs, throttle, user-agent, caching, tests
+# (Tu peux remplacer l'une des sous-sections par une version plus robuste)
+# ==============================================================
 def verifier_et_importer_matchs():
     """Version robuste : scanne L'Équipe et dynamiquement TheSportsDB selon la saison en cours."""
     matchs_traites = 0
     url_scraping = "https://www.lequipe.fr/Rugby/Top-14/page-calendrier-resultats"
     
-    # 1. Tentative via le scraping L'Équipe
+    # ----------------------------------------------------------
+    # 2.1.1 Tentative via le scraping L'Équipe
+    # - parse HTML, récupérer équipes, score et statut
+    # - upsert en base (table Matchs)
+    # Remplacements possibles :
+    #   * Extraction plus robuste (selectors, fallback)
+    #   * Ajout d'un cache temporaire
+    #   * Gestion des fuseaux horaires
+    # ----------------------------------------------------------
     try:
         headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
         response = requests.get(url_scraping, headers=headers, timeout=10)
@@ -50,10 +72,19 @@ def verifier_et_importer_matchs():
                         "score_dom": sc_dom, "score_ext": sc_ext, "statut": statut
                     }).execute()
                     matchs_traites += 1
-                except Exception: continue
-    except Exception: pass
+                except Exception:
+                    # 2.1.1.a Ignorer l'élément si parsing échoue
+                    continue
+    except Exception:
+        # 2.1.1.b Erreur réseau ou parsing L'Équipe : on tente le fallback
+        pass
 
-    # 2. Sécurité TheSportsDB - CALCUL DYNAMIQUE DE LA SAISON
+    # ----------------------------------------------------------
+    # 2.1.2 Sécurité TheSportsDB - CALCUL DYNAMIQUE DE LA SAISON
+    # - Calcul de la saison courante (ex: mois < août -> saison précédente)
+    # - Tester plusieurs années et upsert des événements
+    # - Remplacement possible : autre API (mySportsDB, API payante) / clé API
+    # ----------------------------------------------------------
     if matchs_traites == 0:
         maintenant = datetime.now()
         annee_saison_courante = maintenant.year - 1 if maintenant.month < 8 else maintenant.year
@@ -81,25 +112,38 @@ def verifier_et_importer_matchs():
                             "statut": statut
                         }).execute()
                         matchs_traites += 1
-            except Exception: pass
+            except Exception:
+                # 2.1.2.a Ignorer erreur sur une année puis continuer la suivante
+                pass
             
     return matchs_traites
 
+# ==============================================================
+# 3. SAUVEGARDE AUTOMATIQUE (ACTION SUR CHANGEMENT UI)
+# 3.1 sauvegarder_prono_auto (sauvegarde pronos)
+# 3.2 sauvegarder_bonus_auto (sauvegarde réponses bonus)
+# ==============================================================
 def sauvegarder_prono_auto(match_id, equipe_dom, equipe_ext, user_id_cible):
     """Sauvegarde instantanément le pronostic dès qu'un élément change."""
+    # 3.1.1 Récupère l'état temporaire dans st.session_state
     vrai_nom_gagnant = st.session_state.get(f"w_{match_id}")
     ecart = st.session_state.get(f"m_{match_id}")
     
+    # 3.1.2 Filtre les valeurs non-sélectionnées
     if vrai_nom_gagnant == "..." or ecart == "...":
         return
 
+    # 3.1.3 Normalise le gagnant en valeur 'home'/'away'/'draw'
     val_gagnant = "home" if vrai_nom_gagnant == equipe_dom else ("away" if vrai_nom_gagnant == equipe_ext else "draw")
+
+    # 3.1.4 Vérifie s'il existe déjà un prono en base
     prono_existant = supabase.table("Pronostics").select("id").eq("user_id", user_id_cible).eq("match_id", match_id).execute().data
     
     donnees_prono = {
         "user_id": user_id_cible, "match_id": match_id, "gagnant_prevu": val_gagnant, "ecart_prevu": ecart
     }
     
+    # 3.1.5 Upsert / insert du prono
     try:
         if prono_existant:
             supabase.table("Pronostics").update(donnees_prono).eq("id", prono_existant[0]["id"]).execute()
@@ -110,13 +154,16 @@ def sauvegarder_prono_auto(match_id, equipe_dom, equipe_ext, user_id_cible):
 
 def sauvegarder_bonus_auto(question_id, user_id_cible):
     """Sauvegarde instantanément la réponse à une question bonus."""
+    # 3.2.1 Lecture de la valeur depuis st.session_state
     choix = st.session_state.get(f"bonus_q_{question_id}")
     if choix == "...":
         return
         
+    # 3.2.2 Vérifier si l'utilisateur a déjà répondu
     deja_repondu = supabase.table("Réponses_Questions").select("id").eq("user_id", user_id_cible).eq("question_id", question_id).execute().data
     data_pb = {"user_id": user_id_cible, "question_id": question_id, "reponse_joueur": choix}
     
+    # 3.2.3 Upsert de la réponse
     try:
         if deja_repondu:
             supabase.table("Réponses_Questions").update(data_pb).eq("id", deja_repondu[0]['id']).execute()
@@ -125,27 +172,35 @@ def sauvegarder_bonus_auto(question_id, user_id_cible):
     except Exception as e:
         st.error(f"Erreur sauvegarde bonus : {e}")
 
-# =====================================================================
-# INITIALISATION ET GESTION DE LA SESSION
-# =====================================================================
+# ==============================================================
+# 4. INITIALISATION ET GESTION DE LA SESSION
+# 4.1 Valeurs par défaut session_state
+# 4.2 Constantes globales (tranches, fuseau)
+# 4.3 Refresh automatique si match en live
+# 4.4 Reconnexion via cookie
+# ==============================================================
+# 4.1 Valeurs par défaut session_state
 if "user_id" not in st.session_state: st.session_state.user_id = None
 if "is_admin" not in st.session_state: st.session_state.is_admin = False
 if "pseudo" not in st.session_state: st.session_state.pseudo = ""
 if "onglet_actif" not in st.session_state: st.session_state.onglet_actif = "📊"
 
+# 4.2 Constantes globales
 TRANCHES_ECARTS = ["1-6", "7-10", "11-15", "16-20", "21-30", "31-40", "41-50", "51+"]
 maintenant_paris = datetime.utcnow() + timedelta(hours=2)
 
-# REFRESH AUTOMATIQUE INTELLIGENT SI MATCH EN DIRECT
+# 4.3 REFRESH AUTOMATIQUE INTELLIGENT SI MATCH EN DIRECT
 try:
     matchs_en_direct = supabase.table("Matchs").select("id").eq("statut", "LIVE").execute().data
     if matchs_en_direct:
+        # 4.3.1 Rafraîchissement côté client toutes les 5 minutes
         st_autorefresh(interval=300000, key="live_rugby_refresh")
+        # 4.3.2 Synchronisation initiale des matchs
         verifier_et_importer_matchs()
 except Exception:
     pass
 
-# Tentative de reconnexion via COOKIE
+# 4.4 Tentative de reconnexion via COOKIE
 if st.session_state.user_id is None:
     saved_user_id = cookie_manager.get(cookie="top14_user_id")
     if saved_user_id:
@@ -159,13 +214,20 @@ if st.session_state.user_id is None:
         except Exception:
             pass
 
-# =====================================================================
-# ÉCRAN DE CONNEXION / INSCRIPTION
-# =====================================================================
+# ==============================================================
+# 5. ÉCRAN DE CONNEXION / INSCRIPTION (utilisateur non connecté)
+# 5.1 Onglets : Se connecter / S'inscrire / Mot de passe oublié
+# 5.1.1 Connexion (sign_in)
+# 5.1.2 Inscription (sign_up)
+# 5.1.3 Reset password
+# ==============================================================
 if st.session_state.user_id is None:
     st.title("🏉 Pronos Top 14")
     onglet_connexion = st.tabs(["Se connecter", "S'inscrire", "Mot de passe oublié"])
     
+    # ----------------------------------------------------------
+    # 5.1.1 Se connecter
+    # ----------------------------------------------------------
     with onglet_connexion[0]:
         mail = st.text_input("Email", key="login_email")
         mdp = st.text_input("Mot de passe", type="password", key="login_pass")
@@ -182,21 +244,30 @@ if st.session_state.user_id is None:
                 st.success(f"Ravi de vous revoir {st.session_state.pseudo} !")
                 time.sleep(0.5)
                 st.rerun()
-            except Exception: st.error("Identifiants incorrects.")
+            except Exception:
+                st.error("Identifiants incorrects.")
 
+    # ----------------------------------------------------------
+    # 5.1.2 S'inscrire
+    # ----------------------------------------------------------
     with onglet_connexion[1]:
         new_mail = st.text_input("Email", key="reg_email")
         new_mdp = st.text_input("Mot de passe", type="password", key="reg_pass")
         pseudo = st.text_input("Pseudo")
         if st.button("Créer mon compte"):
-            if len(pseudo) < 3: st.error("Pseudo trop court !")
+            if len(pseudo) < 3:
+                st.error("Pseudo trop court !")
             else:
                 try:
                     res = supabase.auth.sign_up({"email": new_mail, "password": new_mdp})
                     supabase.table("Joueurs").insert({"id": res.user.id, "pseudo": pseudo, "email": new_mail, "score": 0, "is_admin": False}).execute()
                     st.success("Compte créé avec succès !")
-                except Exception as e: st.error(f"Erreur : {e}")
+                except Exception as e:
+                    st.error(f"Erreur : {e}")
 
+    # ----------------------------------------------------------
+    # 5.1.3 Mot de passe oublié
+    # ----------------------------------------------------------
     with onglet_connexion[2]:
         st.subheader("Réinitialiser mon mot de passe")
         reset_email = st.text_input("Entrez votre adresse email de connexion", key="reset_mail")
@@ -205,19 +276,31 @@ if st.session_state.user_id is None:
                 try:
                     supabase.auth.reset_password_for_email(reset_email)
                     st.success("✉️ Si ce compte existe, un email de réinitialisation vous a été envoyé !")
-                except Exception as e: st.error(f"Erreur : {e}")
-            else: st.warning("Veuillez renseigner votre adresse email.")
+                except Exception as e:
+                    st.error(f"Erreur : {e}")
+            else:
+                st.warning("Veuillez renseigner votre adresse email.")
 
-# =====================================================================
-# INTERFACE PRINCIPALE (UTILISATEUR CONNECTÉ)
-# =====================================================================
+# ==============================================================
+# 6. INTERFACE PRINCIPALE (UTILISATEUR CONNECTÉ)
+# 6.1 Navigation / icônes / onglets
+# 6.2 Injection CSS (styling)
+# 6.3 Composant de navigation (radio)
+# 6.4 En-tête / déconnexion
+# 6.5 Chargement de la configuration du barème
+# 6.6 Contenu par onglet :
+#   - 6.6.1 Onglet "📊" : Classement général
+#   - 6.6.2 Onglet "🏉" : Saisie pronostics
+#   - 6.6.3 Onglet "📅" : Résultats & Direct
+#   - 6.6.4 Onglet "⚙️" : Console Admin (si admin)
+# ==============================================================
 else:
-    # --- CONFIGURATION DES ONGLETS ACCESSIBLES ---
+    # 6.1 Configuration des onglets accessibles
     icones_navigation = ["📊", "🏉", "📅"]
     if st.session_state.is_admin:
         icones_navigation.append("⚙️")
 
-    # --- INJECTION DU STYLE CSS PARFAITEMENT CIBLÉ ---
+    # 6.2 Injection du style CSS ciblé (si besoin, remplacer ce bloc par un import CSS)
     st.markdown("""
     <style>
         /* Espacement global pour éviter que le menu cache le contenu */
@@ -303,13 +386,16 @@ else:
     </style>
     """, unsafe_allow_html=True)
 
-    # --- EN-TÊTE DU COMPOSANT RADIO DE NAVIGATION ---
+    # ----------------------------------------------------------
+    # 6.3 EN-TÊTE DU COMPOSANT RADIO DE NAVIGATION (choix onglet)
+    # - 6.3.1 Déterminer index par défaut
+    # ----------------------------------------------------------
     try:
         index_defaut = icones_navigation.index(st.session_state.onglet_actif)
     except ValueError:
         index_defaut = 0
 
-    # L'ancre HTML qui sert de point d'attache au CSS exclusif
+    # 6.3.2 L'ancre HTML qui sert de point d'attache au CSS exclusif
     st.markdown('<div class="barre-navigation-fixe"></div>', unsafe_allow_html=True)
     
     choix_onglet = st.radio(
@@ -321,12 +407,14 @@ else:
         key="MenuPrincipal" 
     )
 
-    # Intercepteur de clic ultra-rapide
+    # 6.3.3 Intercepteur de clic : changement d'onglet -> rerun
     if choix_onglet != st.session_state.onglet_actif:
         st.session_state.onglet_actif = choix_onglet
         st.rerun()
 
-    # --- EN-TÊTE DE LA PAGE AVEC DÉCONNEXION ---
+    # ----------------------------------------------------------
+    # 6.4 EN-TÊTE DE LA PAGE AVEC DÉCONNEXION
+    # ----------------------------------------------------------
     col_vide, col_deco = st.columns([4, 1])
     with col_deco:
         if st.button("🚪 Déconnexion", key="btn_logout", use_container_width=True):
@@ -337,7 +425,10 @@ else:
             
     st.markdown("---")
 
-    # --- CHARGEMENT DU BARÈME ET DE LA CONFIGURATION ---
+    # ----------------------------------------------------------
+    # 6.5 CHARGEMENT DU BARÈME ET DE LA CONFIGURATION (Configuration table)
+    # - Remplacer par API de config ou settings si besoin
+    # ----------------------------------------------------------
     try:
         conf = supabase.table("Configuration").select("*").eq("id", "default_config").single().execute().data
         pts_gagnant_cfg = conf.get("pts_gagnant", 3) if conf else 3
@@ -349,13 +440,14 @@ else:
 
     pts_parfait_cfg = pts_gagnant_cfg + pts_ecart_cfg
 
-    # =====================================================================
-    # CONTENU DE L'ONGLET 1 : CLASSEMENT GÉNÉRAL
-    # =====================================================================
+    # ==============================================================
+    # 6.6 Onglet "📊" : Classement Général (dashboard)
+    # ==============================================================
     if st.session_state.onglet_actif == "📊":
         st.markdown(f"### 🏉 Bienvenue sur ton tableau de bord, **{st.session_state.pseudo}** !")
         
         try:
+            # 6.6.1 Récupération joueur connecté & classement
             joueur_connecte = supabase.table("Joueurs").select("*").eq("id", st.session_state.user_id).single().execute().data
             tous_les_joueurs = supabase.table("Joueurs").select("*").order("score", desc=True).execute().data
             
@@ -366,6 +458,7 @@ else:
                         rang_joueur = idx + 1
                         break
             
+            # 6.6.2 Statistiques personnelles (bons vainqueurs / parfaits / osés)
             pronos_joueur = supabase.table("Pronostics").select("*, Matchs(*)").eq("user_id", st.session_state.user_id).execute().data
             stats_bons_gagnants, stats_parfaits, stats_oses = 0, 0, 0
             
@@ -376,6 +469,7 @@ else:
                     vrai_gagnant = "home" if sc_dom > sc_ext else ("away" if sc_dom < sc_ext else "draw")
                     vrai_ecart_points = abs(sc_dom - sc_ext)
                     
+                    # 6.6.2.a Calcul tranche d'écart réelle
                     vraie_tranche = "1-6"
                     if 7 <= vrai_ecart_points <= 10: vraie_tranche = "7-10"
                     elif 11 <= vrai_ecart_points <= 15: vraie_tranche = "11-15"
@@ -390,6 +484,7 @@ else:
                         if p['ecart_prevu'] == vraie_tranche:
                             stats_parfaits += 1
                         
+                        # 6.6.2.b Calcul du mode "osé"
                         tous_pronos_match = supabase.table("Pronostics").select("gagnant_prevu").eq("match_id", match['id']).execute().data
                         if tous_pronos_match:
                             total_m = len(tous_pronos_match)
@@ -399,6 +494,7 @@ else:
                                 stats_oses += 1
                                 
         except Exception:
+            # 6.6.1.b Fallback si erreur DB
             joueur_connecte = {"score": 0}
             tous_les_joueurs = []
             rang_joueur = "-"
@@ -406,28 +502,29 @@ else:
 
         suffixe = "er" if rang_joueur == 1 else "e"
         
+        # 6.6.3 Carte résumé (HTML inline)
         st.markdown(f"""
         <div style="background-color: #f0f4f8; border-radius: 16px; padding: 15px; border: 1px solid #d3e2f2; margin-bottom: 25px;">
             <div style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 10px;">
-                <div style="background-color: #ffffff; border-radius: 10px; padding: 8px; min-width: 90px; max-width: 110px; flex: 1; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;">
+                <div style="background-color: #ffffff; border-radius: 10px; padding: 8px; min-width: 90px; max-width: 110px; flex: 1; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border[...]
                     <span style="color: #627d98; font-size: 11px; font-weight: bold; display:block; margin-bottom:2px;">🏆 Rang</span>
                     <span style="color:#1e3a8a; font-size: 26px; font-weight: 900;">{rang_joueur}{suffixe}</span>
                     <span style="display:block; font-size:10px; color:#627d98;">/{len(tous_les_joueurs)}</span>
                 </div>
-                <div style="background-color: #ffffff; border-radius: 10px; padding: 8px; min-width: 90px; max-width: 110px; flex: 1; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;">
+                <div style="background-color: #ffffff; border-radius: 10px; padding: 8px; min-width: 90px; max-width: 110px; flex: 1; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border[...]
                     <span style="color: #627d98; font-size: 11px; font-weight: bold; display:block; margin-bottom:2px;">🎯 Score</span>
                     <span style="color:#1e3a8a; font-size: 26px; font-weight: 900;">{joueur_connecte.get('score', 0) if joueur_connecte else 0}</span>
                     <span style="display:block; font-size:10px; color:#627d98;">pts</span>
                 </div>
-                <div style="background-color: #ffffff; border-radius: 10px; padding: 8px; min-width: 100px; max-width: 120px; flex: 1; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;">
+                <div style="background-color: #ffffff; border-radius: 10px; padding: 8px; min-width: 100px; max-width: 120px; flex: 1; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); borde[...]
                     <span style="color: #43a047; font-size: 11px; font-weight: bold; display:block; margin-bottom:2px;">✅ Vainqueurs</span>
                     <span style="color: #43a047; font-size: 32px; font-weight: 900;">{stats_bons_gagnants}</span>
                 </div>
-                <div style="background-color: #ffffff; border-radius: 10px; padding: 8px; min-width: 100px; max-width: 120px; flex: 1; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;">
+                <div style="background-color: #ffffff; border-radius: 10px; padding: 8px; min-width: 100px; max-width: 120px; flex: 1; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); borde[...]
                     <span style="color: #0a3613; font-size: 11px; font-weight: bold; display:block; margin-bottom:2px;">⭐ + Écart</span>
                     <span style="color: #0a3613; font-size: 32px; font-weight: 900;">{stats_parfaits}</span>
                 </div>
-                <div style="background-color: #ffffff; border-radius: 10px; padding: 8px; min-width: 100px; max-width: 120px; flex: 1; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;">
+                <div style="background-color: #ffffff; border-radius: 10px; padding: 8px; min-width: 100px; max-width: 120px; flex: 1; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); borde[...]
                     <span style="color: #b7791f; font-size: 11px; font-weight: bold; display:block; margin-bottom:2px;">🔥 Osés</span>
                     <span style="color: #b7791f; font-size: 32px; font-weight: 900;">{stats_oses}</span>
                 </div>
@@ -449,7 +546,7 @@ else:
                     style_ligne = "color: #2d3748;"
                     pseudo_affiche = joueur['pseudo']
                 
-                lignes_html += f'<tr style="{style_ligne} border-bottom: 1px solid #e2e8f0;"><td style="padding: 12px; text-align: left; color: inherit;">{prefixe_rang}</td><td style="padding: 12px; text-align: left; color: inherit;">{pseudo_affiche}</td><td style="padding: 12px; text-align: right; font-weight: bold; color: #000000;">{joueur["score"]} pts</td></tr>'
+                lignes_html += f'<tr style="{style_ligne} border-bottom: 1px solid #e2e8f0;"><td style="padding: 12px; text-align: left; color: inherit;">{prefixe_rang}</td><td style="padding: 12px; t[...]
             
             st.markdown(f"""
             <div style="background-color: #f8fafc; border-radius: 12px; padding: 15px; border: 1px solid #e2e8f0;">
@@ -468,9 +565,9 @@ else:
         else:
             st.info("Le classement est vide pour le moment.")
 
-    # =====================================================================
-    # CONTENU DE L'ONGLET 2 : FAIRE MES PRONOSTICS
-    # =====================================================================
+    # ==============================================================
+    # 6.7 Onglet "🏉" : Faire mes pronostics (saisie)
+    # ==============================================================
     elif st.session_state.onglet_actif == "🏉":
         st.title("✍ *Saisir les Pronostics*")
 
@@ -478,9 +575,10 @@ else:
             st.markdown(f"""
             * **Bon Vainqueur / Match Nul** : `{pts_gagnant_cfg} points`
             * **Tranche d'écart exacte** : `+{pts_ecart_cfg} points` (soit `{pts_parfait_cfg} points` pour un prono parfait)
-            * **🔥 Mode OSÉ Actif** : Si moins de `{seuil_ose_cfg}%` des joueurs trouvent le score parfait (Vainqueur + Écart), leurs points sur ce match sont multipliés par `{mult_ose_cfg}` (soit `{pts_parfait_cfg * mult_ose_cfg} points` au lieu de `{pts_parfait_cfg}`) !
+            * **🔥 Mode OSÉ Actif** : Si moins de `{seuil_ose_cfg}%` des joueurs trouvent le score parfait (Vainqueur + Écart), leurs points sur ce match sont multipliés par `{mult_ose_cfg}` (soi[...]
             """)
 
+        # 6.7.1 Déterminer quel user_id est visé (mode admin peut remplacer)
         id_joueur_cible = st.session_state.user_id
         if st.session_state.is_admin:
             try:
@@ -492,9 +590,12 @@ else:
                     st.warning("🛠 **Mode Admin actif** : Vous pouvez pronostiquer à la place d'un autre joueur.")
                     choix_membre = st.selectbox("Sélectionner le compte joueur à utiliser :", options=liste_membres, format_func=lambda x: x['pseudo'], index=index_admin)
                     if choix_membre: id_joueur_cible = choix_membre['id']
-            except Exception as e: st.error(f"Erreur membres : {e}")
+            except Exception as e:
+                st.error(f"Erreur membres : {e}")
 
-        # --- QUESTIONS BONUS ---
+        # ----------------------------------------------------------
+        # 6.7.2 QUESTIONS BONUS (affichage et saisie)
+        # ----------------------------------------------------------
         st.subheader("🎯 Questions Bonus du moment")
         try:
             questions = supabase.table("Questions_Bonus").select("*").eq("statut", "En cours").order("date_limite").execute().data
@@ -514,10 +615,15 @@ else:
                     st.radio("Ta réponse :", options=options_rep, index=index_defaut, key=f"bonus_q_{q['id']}", on_change=sauvegarder_bonus_auto, args=(q['id'], id_joueur_cible))
                     if deja_repondu: st.caption("✅ _Enregistré automatiquement_")
                     st.markdown("---")
-            else: st.write("Aucune question bonus ouverte actuellement.")
-        except Exception as e: st.error(f"Erreur questions bonus : {e}")
+            else:
+                st.write("Aucune question bonus ouverte actuellement.")
+        except Exception as e:
+            st.error(f"Erreur questions bonus : {e}")
 
-        # --- MATCHS OUVERTS ---
+        # ----------------------------------------------------------
+        # 6.7.3 MATCHS OUVERTS (liste des matchs et formulaires de prono)
+        # - Remplacement fréquent : pagination, filtre, import CSV
+        # ----------------------------------------------------------
         st.subheader("🏉 Matchs ouverts du Top 14")
         try:
             matchs = supabase.table("Matchs").select("*").order("date_match").execute().data
@@ -549,15 +655,17 @@ else:
                     st.selectbox("Écart ?", liste_ecarts, index=def_margin_idx, key=f"m_{m['id']}", on_change=sauvegarder_prono_auto, args=(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible))
                     if prono_existant: st.caption("✅ _Pronostic enregistré automatiquement_")
                     st.markdown("---")
-            else: st.info("Aucun match ouvert aux pronostics pour l'instant.")
-        except Exception as e: st.error(f"Erreur match : {e}")
+            else:
+                st.info("Aucun match ouvert aux pronostics pour l'instant.")
+        except Exception as e:
+            st.error(f"Erreur match : {e}")
 
-    # =====================================================================
-    # CONTENU DE L'ONGLET 3 : RÉSULTATS & DIRECT
-    # =====================================================================
+    # ==============================================================
+    # 6.8 Onglet "📅" : Résultats & Direct
+    # ==============================================================
     elif st.session_state.onglet_actif == "📅":
         st.title("📊 Résultats & Direct")
-        if matchs_en_direct:
+        if 'matchs_en_direct' in locals() and matchs_en_direct:
             st.success("⚡ **Mode Direct Actif** : Les scores se rafraîchissent automatiquement toutes les 5 minutes.")
             
         st.subheader("🏉 Matchs Clos / En cours")
@@ -618,22 +726,35 @@ else:
                                             detail_badge = f"{badge_icon} +{pts_visuels} pts ({label_base})"
                                 
                                 st.markdown(f"👤 **{pseudo_j}** : {nom_prevu} ({p['ecart_prevu']}) — `{detail_badge}`")
-                        else: st.write("Aucun prono enregistré pour ce match.")
+                        else:
+                            st.write("Aucun prono enregistré pour ce match.")
                     st.markdown("---")
-            else: st.info("Aucun match n'a encore débuté.")
-        except Exception as e: st.error(f"Erreur matchs clos : {e}")
+            else:
+                st.info("Aucun match n'a encore débuté.")
+        except Exception as e:
+            st.error(f"Erreur matchs clos : {e}")
 
-    # =====================================================================
-    # CONTENU DE L'ONGLET 4 : CONSOLE ADMINISTRATION PRIVÉE
-    # =====================================================================
+    # ==============================================================
+    # 6.9 Onglet "⚙️" : Console Administration Privée (uniquement admin)
+    # - Tab1: Configuration du barème
+    # - Tab2: Matchs manuels (ajout / saisie score / distrib points)
+    # - Tab3: Questions bonus
+    # - Tab4: Synchro scraping
+    # - Tab5: Zone danger (reset)
+    # ==============================================================
     elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
         st.title("⚙️ Console d'Administration Privée")
         tab1, tab2, tab3, tab4, tab5 = st.tabs(["🎯 Configuration", "➕ Matchs Manuels", "🎁 Questions Bonus", "🔄 Synchro Scraping", "🚨 Zone Danger"])
         
+        # ----------------------------------------------------------
+        # 6.9.1 Tab 1 - Configuration du barème
+        # ----------------------------------------------------------
         with tab1:
             st.subheader("🎛️ Configuration du Barème")
-            try: current_config = supabase.table("Configuration").select("*").eq("id", "default_config").single().execute().data
-            except Exception: current_config = {}
+            try:
+                current_config = supabase.table("Configuration").select("*").eq("id", "default_config").single().execute().data
+            except Exception:
+                current_config = {}
             
             with st.form("form_points"):
                 val_gagnant = st.number_input("Points pour le bon vainqueur", value=current_config.get("pts_gagnant", 3) if current_config else 3)
@@ -645,6 +766,9 @@ else:
                     st.success("Barème enregistré !")
                     st.rerun()
 
+        # ----------------------------------------------------------
+        # 6.9.2 Tab 2 - Ajouter un match manuellement / Saisir résultat & distribuer points
+        # ----------------------------------------------------------
         with tab2:
             st.subheader("➕ Ajouter un Match manuellement")
             with st.form("form_ajout_match"):
@@ -665,7 +789,7 @@ else:
             try:
                 tous_matchs = supabase.table("Matchs").select("*").order("date_match", desc=True).execute().data
                 if tous_matchs:
-                    match_selectionne = st.selectbox("Sélectionner le match :", options=tous_matchs, format_func=lambda m: f"{m['equipe_dom']} ({m['score_dom'] if m['score_dom'] is not None else '?'}) vs ({m['score_ext'] if m['score_ext'] is not None else '?'}) {m['equipe_ext']} - [{m['statut']}]")
+                    match_selectionne = st.selectbox("Sélectionner le match :", options=tous_matchs, format_func=lambda m: f"{m['equipe_dom']} ({m['score_dom'] if m['score_dom'] is not None else '?'} - {m['score_ext'] if m['score_ext'] is not None else '?'}) vs {m['equipe_ext']}")
                     if match_selectionne:
                         with st.form(f"form_score_manual_{match_selectionne['id']}"):
                             nouveau_score_dom = st.number_input(f"Score {match_selectionne['equipe_dom']}", min_value=0, value=match_selectionne['score_dom'] if match_selectionne['score_dom'] is not None else 0)
@@ -678,6 +802,9 @@ else:
                                 r_res = st.success("Résultat enregistré !")
                                 st.rerun()
 
+                        # ----------------------------------------------------------
+                        # 6.9.2.a Si match terminé -> calcul et distribution des points
+                        # ----------------------------------------------------------
                         if match_selectionne['statut'] == "FT":
                             if st.button(f"🎯 Calculer et Distribuer les points", type="primary"):
                                 with st.spinner("Calcul..."):
@@ -720,8 +847,12 @@ else:
                                         st.balloons()
                                         time.sleep(1)
                                         st.rerun()
-            except Exception as e: st.error(f"Erreur admin matchs : {e}")
+            except Exception as e:
+                st.error(f"Erreur admin matchs : {e}")
 
+        # ----------------------------------------------------------
+        # 6.9.3 Tab 3 - Créer / Valider question bonus
+        # ----------------------------------------------------------
         with tab3:
             st.subheader("📝 Créer une Question Bonus")
             with st.form("form_bonus"):
@@ -762,8 +893,12 @@ else:
                         st.balloons()
                         time.sleep(1)
                         st.rerun()
-            except Exception as e: st.error(f"Erreur validation bonus : {e}")
+            except Exception as e:
+                st.error(f"Erreur validation bonus : {e}")
 
+        # ----------------------------------------------------------
+        # 6.9.4 Tab 4 - Lanceur de scraping manuel
+        # ----------------------------------------------------------
         with tab4:
             st.subheader("🔄 Lanceur de Scraping Manuel")
             if st.button("⚡ Lancer la Synchronisation"):
@@ -772,6 +907,9 @@ else:
                     st.success(f"Terminé ! {nb} matchs traités avec succès.")
                     st.rerun()
 
+        # ----------------------------------------------------------
+        # 6.9.5 Tab 5 - Zone Danger : reset complet
+        # ----------------------------------------------------------
         with tab5:
             st.subheader("🚨 Zone de Danger")
             confirmation_secu = st.checkbox("Je confirme vouloir tout réinitialiser.", key="danger_zone_confirm")
@@ -787,4 +925,5 @@ else:
                         st.balloons()
                         time.sleep(1)
                         st.rerun()
-                    except Exception as e: st.error(f"Erreur reset : {e}")
+                    except Exception as e:
+                        st.error(f"Erreur reset : {e}")
