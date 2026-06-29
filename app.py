@@ -489,7 +489,7 @@ else:
                     st.markdown('</div>', unsafe_allow_html=True)
         else: 
             st.info("Aucun match ouvert.")
-    except Exception as e: st.error(f"Erreur match : {e}")
+        except Exception as e: st.error(f"Erreur match : {e}")
 
     # =====================================================================
     # 8 - CONTENU DE L'ONGLET 3 : RÉSULTATS & DIRECT
