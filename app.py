@@ -529,7 +529,7 @@ if st.session_state.onglet_actif == "🏉":
                         on_change=sauvegarder_bonus_auto,
                         args=(q['id'], id_joueur_cible) # L'id de la question en 1er, l'id du joueur cible en 2e
                         )
-                                    else:
+                else:
                     st.caption("Aucune question bonus pour le moment.")
                     
                 # 7.2.2. SECTION MATCHS OUVERTS (VERSION TEMPORELLE + ACCÈS ADMIN FORCÉ)
