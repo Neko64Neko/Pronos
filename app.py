@@ -256,6 +256,20 @@ else:
     """, unsafe_allow_html=True)
 
 # --- 5.3 - CONFIGURATION DES ONGLETS DE NAVIGATION ---
+        # Initialisation de la variable si elle n'existe pas
+    if "mode_admin_actif" not in st.session_state:
+        st.session_state.mode_admin_actif = True  # Activé par défaut
+    
+    # Si l'utilisateur est admin, on lui affiche le bouton de contrôle
+    if st.session_state.is_admin:
+        st.sidebar.markdown("---")
+        st.sidebar.subheader("🛠️ Options Développeur")
+        st.session_state.mode_admin_actif = st.sidebar.toggle(
+            "Activer les droits d'édition", 
+            value=st.session_state.mode_admin_actif,
+            help="Désactivez cette option pour naviguer et tester l'application comme un joueur classique."
+        )
+    
     # On définit les options et les labels associés
     if st.session_state.is_admin:
         options_menu = ["📊", "🏉", "📅", "⚙️"]
