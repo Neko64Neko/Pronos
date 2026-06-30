@@ -536,7 +536,7 @@ if st.session_state.onglet_actif == "🏉":
                 except Exception as e:
                     st.error(f"Erreur lors du chargement des questions bonus : {e}")
                         
-# 7.2.2 - SECTION MATCHS OUVERTS (CORRIGÉE AVEC SYNCHRONISATION DE L'ÉCART)
+# 7.2.2 - SECTION MATCHS OUVERTS (SÉCURITÉ DOUBLE VERROU TOGGLE ADMIN)
                 st.markdown("""<hr style="border: 1px solid #e2e8f0; margin: 30px 0 20px 0;">""", unsafe_allow_html=True)
                 st.subheader("🏉 Liste des Matchs")
 
@@ -571,6 +571,7 @@ if st.session_state.onglet_actif == "🏉":
                                     match_commence = maintenant_paris >= dt_obj
                                     
                                     if match_commence:
+                                        # ACCÈS INTERDIT SI LE TOGGLE EST SUR OFF (MÊME SI COMPTE ADMIN)
                                         if st.session_state.is_admin and st.session_state.mode_admin_actif:
                                             st.markdown(f"<div style='text-align: center; color: #b7791f; font-size: 0.9em; font-weight: bold; margin-bottom: 10px;'>⚠️ Match commencé ({date_affiche}) - Autorisé (Admin)</div>", unsafe_allow_html=True)
                                         else:
@@ -581,7 +582,6 @@ if st.session_state.onglet_actif == "🏉":
                                 except Exception:
                                     pass
 
-                                # Récupération du pronostic existant pour le joueur actuellement ciblé
                                 prono_existant = supabase.table("Pronostics").select("*").eq("user_id", id_joueur_cible).eq("match_id", m['id']).execute().data
                                 choix_actuel = ""
                                 ecart_existant = "..."
@@ -595,7 +595,6 @@ if st.session_state.onglet_actif == "🏉":
                                     if prono_existant[0].get('ecart_prevu'):
                                         ecart_existant = prono_existant[0]['ecart_prevu']
                                 
-                                # CRUCIAL : On force Streamlit à synchroniser ses états de session internes avec la base de données
                                 st.session_state[f"w_{m['id']}_{id_joueur_cible}"] = choix_actuel
                                 st.session_state[f"m_{m['id']}_{id_joueur_cible}"] = ecart_existant
 
@@ -660,7 +659,6 @@ if st.session_state.onglet_actif == "🏉":
 
                                 st.markdown("<br>", unsafe_allow_html=True)
                                 
-                                # Calcul dynamique de l'index du selectbox
                                 index_ecart_defaut = 0
                                 if ecart_existant in TRANCHES_ECARTS:
                                     index_ecart_defaut = TRANCHES_ECARTS.index(ecart_existant) + 1
