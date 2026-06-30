@@ -638,21 +638,21 @@ if st.session_state.onglet_actif == "🏉":
                             
                             if date_limite_str:
                                 try:
-                                    # 1. On parse la date complète reçue de Supabase (ex: 2026-06-30T18:00:00+00:00)
-                                    # Si elle finit par Z, on la remplace par +00:00 pour fromisoformat
+                                    # 1. On parse la date de Supabase et on extrait l'heure "brute" calculée à Paris
                                     if date_limite_str.endswith('Z'):
                                         date_limite_str = date_limite_str[:-1] + '+00:00'
                                     dt_limite_utc = datetime.fromisoformat(date_limite_str)
                                     
-                                    # 2. On la convertit précisément dans le fuseau horaire de Paris
                                     tz_paris = pytz.timezone('Europe/Paris')
                                     dt_limite_q = dt_limite_utc.astimezone(tz_paris)
-                                    maintenant_compare = maintenant_paris
-                                    if maintenant_compare.tzinfo is None:
-                                        maintenant_compare = tz_paris.localize(maintenant_compare)
                                     
-                                    # 3. Comparaison (les deux variables ont maintenant le même fuseau horaire)
-                                    if maintenant_paris >= dt_limite_q:
+                                    # 2. STRIP DES FUSEAUX (On rend les deux dates "naïves" pour la comparaison)
+                                    # On extrait juste l'année, mois, jour, heure, minute sans l'étiquette de fuseau
+                                    limite_naive = dt_limite_q.replace(tzinfo=None)
+                                    maintenant_naif = maintenant_paris.replace(tzinfo=None)
+                                    
+                                    # 3. Comparaison brute sécurisée
+                                    if maintenant_naif >= limite_naive:
                                         if droits_admin_totalement_actifs:
                                             st.markdown(f"<div style='color: #b7791f; font-size: 0.85em; font-weight: bold;'>⚠️ Temps écoulé ({dt_limite_q.strftime('%d/%m/%Y à %H:%M')}) - Saisie Admin Autorisée</div>", unsafe_allow_html=True)
                                         else:
@@ -661,7 +661,6 @@ if st.session_state.onglet_actif == "🏉":
                                     else:
                                         st.markdown(f"<div style='color: #64748b; font-size: 0.85em;'>⏳ Limite : {dt_limite_q.strftime('%d/%m/%Y à %H:%M')}</div>", unsafe_allow_html=True)
                                 except Exception as e:
-                                    # En cas d'erreur de parsing, on affiche un petit message discret pour débugger au besoin
                                     st.caption(f"Erreur date : {e}")
 
                             # Récupération de la réponse existante du joueur cible
