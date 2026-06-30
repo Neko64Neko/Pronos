@@ -618,7 +618,7 @@ if st.session_state.onglet_actif == "🏉":
             # --- 7.2 - ZONE DE JEU (QUESTIONS + MATCHS) ---
             with st.spinner("Chargement de la grille..."):
                 try:
-                    # 7.2.1 - SECTION QUESTIONS BONUS AVEC BLOCAGE TEMPOREL
+# 7.2.1 - SECTION QUESTIONS BONUS AVEC BLOCAGE TEMPOREL & SELECTBOX
                     st.subheader("🎯 Questions Bonus")
                     questions = supabase.table("Questions_Bonus").select("*").eq("statut", "open").execute().data
                     
@@ -651,36 +651,74 @@ if st.session_state.onglet_actif == "🏉":
                                 except Exception:
                                     pass
 
+                            # Récupération de la réponse existante du joueur cible
                             rep_existante = supabase.table("Réponses_Questions").select("*").eq("user_id", id_joueur_cible).eq("question_id", q['id']).execute().data
-                            
                             valeur_defaut = rep_existante[0]['reponse_joueur'] if rep_existante and rep_existante[0].get('reponse_joueur') is not None else ""
+                            
                             texte_question = q.get('question') or "Question Bonus"
                             pts_bonus = q.get('points') or q.get('points_bonus') or 0
                             
-                            # Rendu dynamique du barème visuel pour le joueur s'il y a des choix multiples
+                            # Extraction des options possibles pour créer le selectbox
                             pts_config_str = str(pts_bonus).strip()
+                            options_joueur = []
+                            
                             if ":" in pts_config_str:
                                 segments = pts_config_str.split(";")
                                 html_bareme = "<div style='display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 5px;'>"
                                 for s in segments:
                                     if ":" in s:
                                         choix, pts = s.split(":")
-                                        html_bareme += f'<span style="background-color: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 6px; padding: 2px 6px; font-size: 0.75em; color: #1e3a8a;"><b>{choix.strip()}</b> : +{pts.strip()} pts</span>'
+                                        nom_option = choix.strip()
+                                        options_joueur.append(nom_option)
+                                        html_bareme += f'<span style="background-color: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 6px; padding: 2px 6px; font-size: 0.75em; color: #1e3a8a;"><b>{nom_option}</b> : +{pts.strip()} pts</span>'
                                 html_bareme += "</div>"
                                 st.markdown(html_bareme, unsafe_allow_html=True)
                                 label_input = f"❓ {texte_question}"
                             else:
                                 label_input = f"❓ {texte_question} ({pts_bonus} pts)"
 
-                            st.text_input(
-                                label_input,
-                                value=valeur_defaut,
-                                key=f"q_{q['id']}_{id_joueur_cible}",
-                                on_change=sauvegarder_bonus_auto,
-                                args=(q['id'], id_joueur_cible),
-                                disabled=question_bloquee,
-                                placeholder="Écris ta réponse ici..."
-                            )
+                            # --- SÉLECTION DU COMPORTEMENT GRAPHIQUE (LISTE DÉROULANTE VS TEXTE) ---
+                            nouvelle_rep = valeur_defaut
+                            
+                            if options_joueur:
+                                # Création des options avec une valeur neutre
+                                options_formatees = ["-- Choisir une option --"] + options_joueur
+                                
+                                # Détermination de l'index si une réponse existe déjà (insensible à la casse)
+                                index_actuel = 0
+                                if valeur_defaut:
+                                    for idx, opt in enumerate(options_formatees):
+                                        if opt.lower().strip() == valeur_defaut.lower().strip():
+                                            index_actuel = idx
+                                            break
+                                
+                                choix_selectbox = st.selectbox(
+                                    label_input,
+                                    options=options_formatees,
+                                    index=index_actuel,
+                                    key=f"q_{q['id']}_{id_joueur_cible}",
+                                    disabled=question_bloquee
+                                )
+                                
+                                if choix_selectbox == "-- Choisir une option --":
+                                    nouvelle_rep = ""
+                                else:
+                                    nouvelle_rep = choix_selectbox
+                            else:
+                                # Mode de secours (Point unique) : Saisie textuelle classique
+                                nouvelle_rep = st.text_input(
+                                    label_input,
+                                    value=valeur_defaut,
+                                    key=f"q_txt_{q['id']}_{id_joueur_cible}",
+                                    disabled=question_bloquee,
+                                    placeholder="Écris ta réponse ici..."
+                                )
+
+                            # Déclenchement manuel contrôlé de la sauvegarde automatique en cas de changement
+                            if nouvelle_rep != valeur_defaut:
+                                sauvegarder_bonus_auto(q['id'], id_joueur_cible, nouvelle_rep)
+                                st.rerun()
+
                             st.markdown("<br>", unsafe_allow_html=True)
                     else:
                         st.caption("Aucune question bonus pour le moment.")
