@@ -647,7 +647,7 @@ if st.session_state.onglet_actif == "🏉":
         st.warning("⚠️ Aucun joueur trouvé dans la base.")
 
 # =====================================================================
-# 8 - CONTENU DE L'ONGLET 3 : RÉSULTATS & DIRECT (DYNAMIQUE AVEC BARÈME ADM)
+# 8 - CONTENU DE L'ONGLET 3 : RÉSULTATS & DIRECT (COULEURS ADAPTÉES)
 # =====================================================================
 elif st.session_state.onglet_actif == "📅":
     st.title("📅 Résultats & Matchs en Direct")
@@ -702,12 +702,10 @@ elif st.session_state.onglet_actif == "📅":
                         pronos = supabase.table("Pronostics").select("*, Joueurs(pseudo)").eq("match_id", m['id']).execute().data
                         
                         if pronos:
-                            # --- CALCUL STATISTIQUE POUR LE PRONO OSÉ ---
                             total_pronos_match = len(pronos)
                             mises_home = sum(1 for p in pronos if p['gagnant_prevu'] == "home")
                             mises_away = sum(1 for p in pronos if p['gagnant_prevu'] == "away")
                             
-                            # Pourcentages de mise sur chaque équipe
                             pct_home = (mises_home / total_pronos_match * 100) if total_pronos_match > 0 else 100
                             pct_away = (mises_away / total_pronos_match * 100) if total_pronos_match > 0 else 100
                             
@@ -723,15 +721,22 @@ elif st.session_state.onglet_actif == "📅":
                                 badge_ose = ""
                                 en_attente = False
                                 
+                                # Détermination de la couleur par défaut (rouge si perdant)
+                                color = "#dc2626" 
+                                
                                 if m['statut'] == 'NS' and sc_dom == 0 and sc_ext == 0:
                                     en_attente = True
                                 else:
                                     if g_prevu == vrai_gagnant_brut:
                                         base_match = coef_vainqueur
+                                        is_ecart_exact = (ec_prevu == vraie_tranche and g_prevu != "draw")
                                         
-                                        # Bonus Écart
-                                        if ec_prevu == vraie_tranche and g_prevu != "draw":
+                                        # Gestion de la couleur de base (Bleu si vainqueur simple, Vert si score/écart exact)
+                                        if is_ecart_exact:
                                             base_match += coef_ecart
+                                            color = "#10b981" # Vert
+                                        else:
+                                            color = "#2563eb" # Bleu
                                         
                                         # Vérification si c'est un prono osé
                                         is_ose = (g_prevu == "home" and pct_home <= pct_max_ose) or (g_prevu == "away" and pct_away <= pct_max_ose)
@@ -739,17 +744,16 @@ elif st.session_state.onglet_actif == "📅":
                                         if is_ose:
                                             pts = float(base_match * multiplicateur_ose)
                                             badge_ose = f" 🔥 **[OSÉ x{multiplicateur_ose}]**"
+                                            color = "#d97706" # Doré / Ambre pour tout prono osé réussi
                                         else:
                                             pts = float(base_match)
                                 
-                                # Détermination de la couleur et de l'affichage du score
+                                # Formatage final de l'affichage textuel
                                 if en_attente:
                                     color = "orange"
                                     texte_points = "⏳ En attente"
                                 else:
-                                    color = "green" if pts > 0 else "red"
                                     pts_affiche = int(pts) if pts.is_integer() else pts
-                                    # Gestion du singulier / pluriel pour les points
                                     accord_pts = "pt" if pts_affiche <= 1 else "pts"
                                     texte_points = f"{pts_affiche} {accord_pts}"
                                 
