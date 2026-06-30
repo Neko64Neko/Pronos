@@ -779,20 +779,26 @@ elif st.session_state.onglet_actif == "📅":
         except Exception as e:
             st.error(f"Erreur lors du chargement des scores : {e}")
 # =====================================================================
-# 9 - CONTENU DE L'ONGLET 4 : ADMIN (AVEC GESTION DU BARÈME)
+# 9 - CONTENU DE L'ONGLET 4 : ADMIN (SÉCURISÉ AVEC LE TOGGLE)
 # =====================================================================
 elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
-    st.title("⚙️ Panneau d'Administration")
     
-    # Ajout de l'onglet Barème & Points en premier
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
-        "⚙️ Barème & Points",
-        "➕ Ajouter Match", 
-        "📝 Matchs Existants", 
-        "🎯 Questions Bonus", 
-        "🔄 Scraping", 
-        "🚨 Danger"
-    ])
+    # Si le bouton est sur OFF, on bloque l'accès visuel
+    if not st.session_state.mode_admin_actif:
+        st.title("⚙️ Panneau d'Administration")
+        st.warning("⚠️ Le mode d'édition admin est actuellement désactivé. Activez-le dans la barre latérale pour modifier le barème, ajouter des matchs ou modifier des scores.")
+    else:
+        st.title("⚙️ Panneau d'Administration")
+        
+        # Ajout de l'onglet Barème & Points en premier
+        tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+            "⚙️ Barème & Points",
+            "➕ Ajouter Match", 
+            "📝 Matchs Existants", 
+            "🎯 Questions Bonus", 
+            "🔄 Scraping", 
+            "🚨 Danger"
+        ])
     
     # 9.1 - TAB 1 : GESTION DES POINTS ET DU BARÈME
     with tab1:
