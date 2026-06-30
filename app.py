@@ -856,7 +856,7 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
                 time.sleep(1)
                 st.rerun()
 
-# 9.2 - TAB 2 : AJOUTER UN MATCH MANUELLEMENT (CORRECTION DÉCALAGE HORAIRE)
+# 9.2 - TAB 2 : AJOUTER UN MATCH MANUELLEMENT (SAISIE SANS CONVERSION)
     with tab2:
         st.subheader("➕ Ajouter un Match Manuellement")
         with st.form("form_ajout_match", clear_on_submit=True):
@@ -870,19 +870,14 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
             if submit_match:
                 if eq_dom and eq_ext:
                     try:
-                        # Fusion de la date et de l'heure saisies (considérées à l'heure locale)
+                        # Fusion brute de la date et de l'heure sans fuseau horaire forcé
                         dt_combinee = datetime.combine(date_m, heure_m)
-                        
-                        # CORRECTION : On convertit l'heure locale en UTC en retirant le décalage (2h en été, 1h en hiver)
-                        # pour que l'affichage de l'application (qui rajoute ce décalage) retombe pile sur l'heure saisie.
-                        decalage_heures = 2 if datetime.now().month in [4, 5, 6, 7, 8, 9, 10] else 1
-                        dt_utc = dt_combinee - timedelta(hours=decalage_heures)
-                        iso_date = dt_utc.isoformat() + "Z"
+                        iso_date = dt_combinee.isoformat() # Pas de "Z" à la fin, reste en heure locale brute
                         
                         # Génération d'un ID numérique unique
                         id_unique_match = random.randint(100000, 999999)
                         
-                        # Insertion dans Supabase
+                        # Insertion directe dans Supabase
                         supabase.table("Matchs").insert({
                             "id": id_unique_match,
                             "equipe_dom": eq_dom.strip(),
@@ -893,7 +888,7 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
                             "score_ext": None
                         }).execute()
                         
-                        st.success(f"🎉 Match ajouté ! Saisi à {heure_m.strftime('%H:%M')} -> Affiché à {heure_m.strftime('%H:%M')}")
+                        st.success(f"🎉 Match ajouté avec succès ! Il s'affichera pile à {heure_m.strftime('%H:%M')}")
                         time.sleep(1)
                         st.rerun()
                     except Exception as e:
