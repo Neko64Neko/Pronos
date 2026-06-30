@@ -720,47 +720,46 @@ elif st.session_state.onglet_actif == "📅":
                                 nom_gagnant_prevu = m['equipe_dom'] if g_prevu == "home" else (m['equipe_ext'] if g_prevu == "away" else "Match Nul")
                                 
                                 pts = 0
-                                detail_pts = "❌ 0 point"
                                 badge_ose = ""
+                                en_attente = False
                                 
                                 if m['statut'] == 'NS' and sc_dom == 0 and sc_ext == 0:
-                                    detail_pts = "⏳ En attente du résultat officiel"
+                                    en_attente = True
                                 else:
                                     if g_prevu == vrai_gagnant_brut:
-                                        # Le joueur a trouvé le bon vainqueur
                                         base_match = coef_vainqueur
-                                        txt_win = f"Vainqueur (+{coef_vainqueur} pts)"
                                         
                                         # Bonus Écart
                                         if ec_prevu == vraie_tranche and g_prevu != "draw":
                                             base_match += coef_ecart
-                                            txt_win += f" + Écart (+{coef_ecart} pts)"
                                         
-                                        # Vérification si c'est un prono osé (l'équipe choisie a reçu moins de X% des votes globaux)
+                                        # Vérification si c'est un prono osé
                                         is_ose = (g_prevu == "home" and pct_home <= pct_max_ose) or (g_prevu == "away" and pct_away <= pct_max_ose)
                                         
                                         if is_ose:
                                             pts = float(base_match * multiplicateur_ose)
                                             badge_ose = f" 🔥 **[OSÉ x{multiplicateur_ose}]**"
-                                            detail_pts = f"✅ {txt_win} {badge_ose}"
                                         else:
                                             pts = float(base_match)
-                                            detail_pts = f"✅ {txt_win}"
                                 
-                                color = "green" if pts > 0 else "red"
-                                if "En attente" in detail_pts: color = "orange"
+                                # Détermination de la couleur et de l'affichage du score
+                                if en_attente:
+                                    color = "orange"
+                                    texte_points = "⏳ En attente"
+                                else:
+                                    color = "green" if pts > 0 else "red"
+                                    pts_affiche = int(pts) if pts.is_integer() else pts
+                                    # Gestion du singulier / pluriel pour les points
+                                    accord_pts = "pt" if pts_affiche <= 1 else "pts"
+                                    texte_points = f"{pts_affiche} {accord_pts}"
                                 
-                                # Formatage propre des points (.0 effacé si entier)
-                                pts_affiche = int(pts) if pts.is_integer() else pts
-                                
-                                st.markdown(f"- **{nom_joueur}** : {nom_gagnant_prevu} ({ec_prevu}){badge_ose} ➔ <span style='color:{color}; font-weight:bold;'>{detail_pts} ({pts_affiche} pts)</span>", unsafe_allow_html=True)
+                                st.markdown(f"- **{nom_joueur}** : {nom_gagnant_prevu} ({ec_prevu}){badge_ose} ➔ <span style='color:{color}; font-weight:bold;'>{texte_points}</span>", unsafe_allow_html=True)
                         else:
                             st.caption("Aucun pronostic enregistré pour ce match.")
             else:
                 st.info("Aucun match terminé ou en cours pour le moment.")
         except Exception as e:
             st.error(f"Erreur lors du chargement des scores : {e}")
-
 # =====================================================================
 # 9 - CONTENU DE L'ONGLET 4 : ADMIN (AVEC GESTION DU BARÈME)
 # =====================================================================
