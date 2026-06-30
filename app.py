@@ -656,7 +656,7 @@ if st.session_state.onglet_actif == "🏉":
                                         st.rerun()
                                         
                                 with col_c:
-                                    type_c = "primary" if choix_actuel == m['ext'] if 'ext' in m else m['equipe_ext'] == m['equipe_ext'] else "secondary"
+                                    type_c = "primary" if choix_actuel == m['equipe_ext'] else "secondary"
                                     if st.button(f"🏉 {m['equipe_ext']}", key=f"btn_ext_{m['id']}_{id_joueur_cible}", type=type_c, use_container_width=True, disabled=bouton_bloque):
                                         st.session_state[f"w_{m['id']}_{id_joueur_cible}"] = m['equipe_ext']
                                         sauvegarder_prono_auto(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
