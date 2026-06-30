@@ -113,12 +113,13 @@ def sauvegarder_prono_auto(match_id, equipe_dom, equipe_ext, user_id_cible):
 #2.4 - Sauvegarde Bonus AUTO
 def sauvegarder_bonus_auto(question_id, user_id_cible):
     """Sauvegarde automatique de la réponse à une question bonus."""
-    cle_state = f"q_{id_question}_{id_joueur}"
+    # Correction : On utilise les bons noms de variables passés en arguments (question_id et user_id_cible)
+    cle_state = f"q_{question_id}_{user_id_cible}"
     if cle_state in st.session_state:
         valeur = st.session_state[cle_state]
         try:
             # Vérification si une réponse existe déjà
-            rep_existante = supabase.table("Réponses_Questions").select("*").eq("user_id", id_joueur).eq("question_id", id_question).execute().data
+            rep_existante = supabase.table("Réponses_Questions").select("*").eq("user_id", user_id_cible).eq("question_id", question_id).execute().data
             
             if rep_existante:
                 # Mise à jour avec la colonne reponse_joueur
@@ -128,8 +129,8 @@ def sauvegarder_bonus_auto(question_id, user_id_cible):
             else:
                 # Insertion avec la colonne reponse_joueur
                 supabase.table("Réponses_Questions").insert({
-                    "user_id": id_joueur,
-                    "question_id": id_question,
+                    "user_id": user_id_cible,
+                    "question_id": question_id,
                     "reponse_joueur": valeur
                 }).execute()
         except Exception as e:
