@@ -631,15 +631,23 @@ if st.session_state.onglet_actif == "🏉":
 
                     if questions:
                         for q in questions:
-                            # Vérification de la date limite
+                            # Vérification de la date limite avec gestion propre du fuseau horaire
                             question_bloquee = False
                             date_limite_str = q.get('date_limite')
                             
                             if date_limite_str:
                                 try:
-                                    date_brute_q = date_limite_str.split("+")[0].split("Z")[0]
-                                    dt_limite_q = datetime.fromisoformat(date_brute_q)
+                                    # 1. On parse la date complète reçue de Supabase (ex: 2026-06-30T18:00:00+00:00)
+                                    # Si elle finit par Z, on la remplace par +00:00 pour fromisoformat
+                                    if date_limite_str.endswith('Z'):
+                                        date_limite_str = date_limite_str[:-1] + '+00:00'
+                                    dt_limite_utc = datetime.fromisoformat(date_limite_str)
                                     
+                                    # 2. On la convertit précisément dans le fuseau horaire de Paris
+                                    tz_paris = pytz.timezone('Europe/Paris')
+                                    dt_limite_q = dt_limite_utc.astimezone(tz_paris)
+                                    
+                                    # 3. Comparaison (les deux variables ont maintenant le même fuseau horaire)
                                     if maintenant_paris >= dt_limite_q:
                                         if droits_admin_totalement_actifs:
                                             st.markdown(f"<div style='color: #b7791f; font-size: 0.85em; font-weight: bold;'>⚠️ Temps écoulé ({dt_limite_q.strftime('%d/%m/%Y à %H:%M')}) - Saisie Admin Autorisée</div>", unsafe_allow_html=True)
@@ -648,8 +656,9 @@ if st.session_state.onglet_actif == "🏉":
                                             question_bloquee = True
                                     else:
                                         st.markdown(f"<div style='color: #64748b; font-size: 0.85em;'>⏳ Limite : {dt_limite_q.strftime('%d/%m/%Y à %H:%M')}</div>", unsafe_allow_html=True)
-                                except Exception:
-                                    pass
+                                except Exception as e:
+                                    # En cas d'erreur de parsing, on affiche un petit message discret pour débugger au besoin
+                                    st.caption(f"Erreur date : {e}")
 
                             # Récupération de la réponse existante du joueur cible
                             rep_existante = supabase.table("Réponses_Questions").select("*").eq("user_id", id_joueur_cible).eq("question_id", q['id']).execute().data
