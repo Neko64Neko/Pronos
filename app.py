@@ -1080,14 +1080,28 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
         # Champ pour l'intitulé de la question
         txt_question = st.text_input("Intitulé de la question bonus :", key="admin_txt_question_94")
 
+        # --- NOUVEAUTÉ : Saisie de la date et heure limite ---
+        st.markdown("📅 **Date et Heure limite pour répondre :**")
+        col_date_q, col_heure_q = st.columns(2)
+        with col_date_q:
+            date_limite_q = st.date_input("Date limite :", value=datetime.now().date(), key="date_limite_q_bonus")
+        with col_heure_q:
+            heure_limite_q = st.time_input("Heure limite :", value=datetime.now().time(), key="heure_limite_q_bonus")
+
         if st.button("Créer la question bonus", key="admin_btn_creer_94", use_container_width=True):
             if txt_question and points_stockes:
                 try:
-                    # Enregistrement dans la table Questions_Bonus
+                    # Combinaison date + heure et compensation de +2h pour l'affichage (comme pour les matchs)
+                    dt_limite_combinee = datetime.combine(date_limite_q, heure_limite_q)
+                    dt_limite_compensee = dt_limite_combinee + timedelta(hours=2)
+                    iso_date_limite = dt_limite_compensee.isoformat()
+
+                    # Enregistrement dans la table Questions_Bonus (Utilisation de 'points' au lieu de 'points_bonus')
                     supabase.table("Questions_Bonus").insert({
                         "question": txt_question,
-                        "points_bonus": points_stockes,  # Stocke la structure brute texte
-                        "statut": "open"
+                        "points": points_stockes,  # Correction du nom de la colonne ici
+                        "statut": "open",
+                        "date_limite": iso_date_limite  # Enregistrement de la date limite
                     }).execute()
                     st.success("🎉 Question bonus créée avec succès !")
                     time.sleep(1)
@@ -1111,7 +1125,8 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
                 for q_a_valider in questions_ouvertes:
                     st.write(f"❓ **Question :** {q_a_valider['question']}")
                     
-                    pts_config = str(q_a_valider.get("points_bonus") or "").strip()
+                    # Lecture adaptative de la colonne (points ou points_bonus)
+                    pts_config = str(q_a_valider.get("points") or q_a_valider.get("points_bonus") or "").strip()
                     options_possibles = []
                     
                     # Détection et extraction automatique des options à mettre dans le selectbox
@@ -1145,7 +1160,7 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
                                 time.sleep(1)
                                 st.rerun()
                             except Exception as e:
-                                odds_err = st.error(f"Erreur lors de la validation : {e}")
+                                st.error(f"Erreur lors de la validation : {e}")
                     
                     else:
                         # Sécurité / Mode de secours : Si la question n'a pas de barème Option:Points
