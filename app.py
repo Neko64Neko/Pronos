@@ -593,28 +593,59 @@ if st.session_state.onglet_actif == "🏉":
             
 # --- 7.2 - ZONE DE JEU (QUESTIONS + MATCHS) ---
             with st.spinner("Chargement de la grille..."):
-                try:
                     # 7.2.1 - SECTION QUESTIONS BONUS
-                    st.subheader("🎯 Questions Bonus")
-                    questions = supabase.table("Questions_Bonus").select("*").execute().data
-                    
-                    if questions:
-                        for q in questions:
-                            rep_existante = supabase.table("Réponses_Questions").select("*").eq("user_id", id_joueur_cible).eq("question_id", q['id']).execute().data
-                            
-                            valeur_defaut = rep_existante[0]['reponse_joueur'] if rep_existante and rep_existante[0].get('reponse_joueur') is not None else ""
-                            texte_question = q.get('question') or "Question Bonus"
-                            pts_bonus = q.get('points_bonus') or q.get('points') or 0
-                            
-                            st.text_input(
-                                f"❓ {texte_question} ({pts_bonus} pts)",
-                                value=valeur_defaut,
-                                key=f"q_{q['id']}_{id_joueur_cible}",
-                                on_change=sauvegarder_bonus_auto,
-                                args=(q['id'], id_joueur_cible)
-                            )
-                    else:
-                        st.caption("Aucune question bonus pour le moment.")
+# --- AFFICHAGE DES QUESTIONS BONUS ACTIVES ---
+                try:
+                    questions_actives = supabase.table("Questions_Bonus").select("*").eq("statut", "open").execute().data
+                    if questions_actives:
+                        st.subheader("🎯 Questions Bonus du Moment")
+                        
+                        for q in questions_actives:
+                            with st.container():
+                                st.markdown(f'<div class="match-card">', unsafe_allow_html=True)
+                                st.markdown(f'<div class="match-title">❓ {q["question"]}</div>', unsafe_allow_html=True)
+                                
+                                # --- AFFICHAGE DYNAMIQUE DU BARÈME DE POINTS ---
+                                pts_config = str(q.get("points_bonus") or "").strip()
+                                
+                                if ":" in pts_config:
+                                    # C'est un barème multiple (ex: Toulouse:5 ; La Rochelle:2)
+                                    st.markdown("<div style='font-size: 0.85em; color: #475569; margin-bottom: 8px;'>💰 <b>Points à gagner :</b></div>", unsafe_allow_html=True)
+                                    segments = pts_config.split(";")
+                                    
+                                    # Génération des petits badges pour chaque option
+                                    html_bareme = "<div style='display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px;'>"
+                                    for s in segments:
+                                        if ":" in s:
+                                            choix, pts = s.split(":")
+                                            html_bareme += f'<span style="background-color: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 6px; padding: 3px 8px; font-size: 0.8em; color: #1e3a8a;"><b>{choix.strip()}</b> : +{pts.strip()} pts</span>'
+                                    html_bareme += "</div>"
+                                    st.markdown(html_bareme, unsafe_allow_html=True)
+                                else:
+                                    # C'est un barème classique (point unique)
+                                    pts_aff = pts_config if pts_config else "5"
+                                    st.markdown(f"<div style='font-size: 0.85em; color: #43a047; font-weight: bold; margin-bottom: 12px;'>💎 Valeur : +{pts_aff} pts</div>", unsafe_allow_html=True)
+                                # --------------------------------------------------
+
+                                # Récupération et affichage de la réponse du joueur (cible)
+                                rep_existante = supabase.table("Réponses_Questions").select("*").eq("user_id", id_joueur_cible).eq("question_id", q['id']).execute().data
+                                valeur_actuelle = rep_existante[0]['reponse_joueur'] if rep_existante else ""
+                                
+                                nouvelle_rep = st.text_input(
+                                    "Ta réponse :", 
+                                    value=valeur_actuelle, 
+                                    key=f"q_bonus_{q['id']}_{id_joueur_cible}",
+                                    placeholder="Écris ta réponse ici..."
+                                )
+                                
+                                if nouvelle_rep.strip() != valeur_actuelle:
+                                    if rep_existante:
+                                        supabase.table("Réponses_Questions").update({"reponse_joueur": nouvelle_rep.strip()}).eq("id", rep_existante[0]['id']).execute()
+                                    else:
+                                        supabase.table("Réponses_Questions").insert({"user_id": id_joueur_cible, "question_id": q['id'], "reponse_joueur": nouvelle_rep.strip()}).execute()
+                                    st.rerun()
+                                    
+                                st.markdown('</div>', unsafe_allow_html=True)
                 except Exception as e:
                     st.error(f"Erreur lors du chargement des questions bonus : {e}")
                         
