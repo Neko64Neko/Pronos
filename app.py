@@ -1023,18 +1023,53 @@ elif st.session_state.onglet_actif == "📅":
                 
                 for q in questions_bonus:
                     st.markdown(f"##### ❓ {q['question']}")
+                    
+                    # Vérification temporelle pour savoir si la question est fermée/expirée
+                    question_fermee = False
+                    date_limite_str = q.get('date_limite')
+                    if date_limite_str:
+                        try:
+                            if date_limite_str.endswith('Z'):
+                                date_limite_str = date_limite_str[:-1] + '+00:00'
+                            dt_limite_utc = datetime.fromisoformat(date_limite_str)
+                            tz_paris = pytz.timezone('Europe/Paris')
+                            dt_limite_q = dt_limite_utc.astimezone(tz_paris)
+                            
+                            # Comparaison naïve
+                            if maintenant_paris.replace(tzinfo=None) >= dt_limite_q.replace(tzinfo=None):
+                                question_fermee = True
+                        except Exception:
+                            pass
+                    
+                    # Si le statut de validation en BDD est passé sur "closed", on force à fermé
+                    if q.get('statut') == 'closed':
+                        question_fermee = True
+
                     if q.get('reponse_correcte'):
                         st.markdown(f"🎯 *Réponse officielle : `{q['reponse_correcte']}`*")
                     
-                    # Boucle sur TOUS les joueurs pour afficher leurs réponses à cette question
-                    for j in tous_les_joueurs:
-                        rep_joueur = dict_reponses.get((j['id'], q['id']))
+                    # --- AFFICHAGE CONDITIONNEL SELON LA TIMELINE ---
+                    if question_fermee:
+                        # La date limite est passée : on affiche tout le monde
+                        for j in tous_les_joueurs:
+                            rep_joueur = dict_reponses.get((j['id'], q['id']))
+                            
+                            if rep_joueur and rep_joueur.strip() != "":
+                                st.markdown(f"👤 **{j['pseudo']}** : `{rep_joueur}`")
+                            else:
+                                st.markdown(f"👤 **{j['pseudo']}** : <span style='color: #94a3b8; font-style: italic;'>❌ Pas de prono</span>", unsafe_allow_html=True)
+                    else:
+                        # La date limite n'est PAS passée : on masque les pronos des autres !
+                        st.markdown("<span style='color: #64748b; font-style: italic; font-size: 0.9em;'>🔒 Les réponses des autres joueurs seront visibles une fois la date limite dépassée.</span>", unsafe_allow_html=True)
                         
-                        if rep_joueur and rep_joueur.strip() != "":
-                            st.markdown(f"👤 **{j['pseudo']}** : `{rep_joueur}`")
+                        # Optionnel et sympa : On montre quand même au joueur connecté sa propre réponse actuelle
+                        ma_rep = dict_reponses.get((st.session_state.user_id, q['id']))
+                        if ma_rep and ma_rep.strip() != "":
+                            st.markdown(f"👤 **{st.session_state.pseudo} (Toi)** : `{ma_rep}`")
                         else:
-                            st.markdown(f"👤 **{j['pseudo']}** : <span style='color: #94a3b8; font-style: italic;'>❌ Pas de prono</span>", unsafe_allow_html=True)
-                    st.markdown("<br>", unsafe_allow_html=True)
+                            st.markdown(f"👤 **{st.session_state.pseudo} (Toi)** : <span style='color: #94a3b8; font-style: italic;'>❌ Tu n'as pas encore répondu</span>", unsafe_allow_html=True)
+                            
+                    st.markdown("---")
             else:
                 st.info("Aucune question bonus enregistrée pour le moment.")
                 
