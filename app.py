@@ -873,8 +873,8 @@ if st.session_state.onglet_actif == "🏉":
                     st.error(f"Erreur lors du chargement de la grille : {e}")
         else:
             st.error("Impossible de récupérer les informations du joueur sélectionné.")
-    else:
-        st.warning("⚠️ Aucun joueur trouvé dans la base.")
+else:
+    st.warning("⚠️ Aucun joueur trouvé dans la base.")
 
 # =====================================================================
 # 8 - CONTENU DE L'ONGLET 3 : RÉSULTATS & DIRECT (COULEURS ADAPTÉES)
