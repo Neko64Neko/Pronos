@@ -523,14 +523,13 @@ if st.session_state.onglet_actif == "🏉":
                         texte_question = q.get('question') or "Question Bonus"
                         pts_bonus = q.get('points_bonus') or q.get('points') or 0
                         
-                        st.text_input(
-                            f"❓ {texte_question} ({pts_bonus} pts)",
-                            value=valeur_defaut,
-                            key=f"q_{q['id']}_{id_joueur_cible}",
-                            on_change=sauvegarder_bonus_auto,
-                            args=(q['id'], id_joueur_cible)
+                        st.text_input(f"❓ {texte_question} ({pts_bonus} pts)",
+                        value=valeur_defaut,
+                        key=f"q_{q['id']}_{id_joueur_cible}",
+                        on_change=sauvegarder_bonus_auto,
+                        args=(q['id'], id_joueur_cible) # L'id de la question en 1er, l'id du joueur cible en 2e
                         )
-                else:
+                                    else:
                     st.caption("Aucune question bonus pour le moment.")
                     
                 # 7.2.2. SECTION MATCHS OUVERTS (VERSION TEMPORELLE + ACCÈS ADMIN FORCÉ)
