@@ -591,9 +591,10 @@ if st.session_state.onglet_actif == "🏉":
         if joueur_cible:
             id_joueur_cible = joueur_cible['id']
             
-# --- 7.2 - ZONE DE JEU (QUESTIONS + MATCHS) ---
+            # --- 7.2 - ZONE DE JEU (QUESTIONS + MATCHS) ---
             with st.spinner("Chargement de la grille..."):
-# 7.2.1 - SECTION QUESTIONS BONUS WITH TIME LOCK
+                try:
+                    # 7.2.1 - SECTION QUESTIONS BONUS AVEC BLOCAGE TEMPOREL
                     st.subheader("🎯 Questions Bonus")
                     questions = supabase.table("Questions_Bonus").select("*").eq("statut", "open").execute().data
                     
@@ -659,8 +660,10 @@ if st.session_state.onglet_actif == "🏉":
                             st.markdown("<br>", unsafe_allow_html=True)
                     else:
                         st.caption("Aucune question bonus pour le moment.")
+                except Exception as e:
+                    st.error(f"Erreur lors du chargement des questions bonus : {e}")
                         
-# 7.2.2 - SECTION MATCHS OUVERTS (SÉCURITÉ DOUBLE TOGGLE ALIGNÉE)
+                # 7.2.2 - SECTION MATCHS OUVERTS
                 st.markdown("""<hr style="border: 1px solid #e2e8f0; margin: 30px 0 20px 0;">""", unsafe_allow_html=True)
                 st.subheader("🏉 Liste des Matchs")
 
@@ -702,7 +705,6 @@ if st.session_state.onglet_actif == "🏉":
                                     match_commence = maintenant_paris >= dt_obj
                                     
                                     if match_commence:
-                                        # LE VERROU S'APPLIQUE SI L'UN DES DEUX BOUTONS ADMIN EST SUR OFF
                                         if droits_admin_totalement_actifs:
                                             st.markdown(f"<div style='text-align: center; color: #b7791f; font-size: 0.9em; font-weight: bold; margin-bottom: 10px;'>⚠️ Match commencé ({date_affiche}) - Autorisé (Admin)</div>", unsafe_allow_html=True)
                                         else:
@@ -787,7 +789,6 @@ if st.session_state.onglet_actif == "🏉":
                                         st.rerun()
 
                                 st.markdown('</div>', unsafe_allow_html=True)
-
                                 st.markdown("<br>", unsafe_allow_html=True)
                                 
                                 index_ecart_defaut = 0
