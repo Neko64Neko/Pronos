@@ -89,6 +89,18 @@ def verifier_et_importer_matchs():
             except Exception: pass
             
     return matchs_traites
+
+def tester_scraping_foot():
+    """Fonction de test isolée pour le Foot sans toucher au moteur Rugby."""
+    # URL de la page foot
+    url = "https://www.lequipe.fr/Football/coupe-du-monde/page-calendrier-resultats"
+    headers = {"User-Agent": "Mozilla/5.0"}
+    response = requests.get(url, headers=headers)
+    soup = BeautifulSoup(response.text, 'html.parser')
+    
+    # On regarde si on trouve des éléments de match
+    matchs = soup.find_all('div', class_='sc-1a3b5c6d') # Exemple générique
+    return f"Test effectué : {len(matchs)} éléments trouvés sur la page foot."
     
 #2.3 - SAUVEGARDE AUTO PRONO (CORRIGÉE AVEC ID JOUEUR CIBLE DANS LA CLÉ)
 def sauvegarder_prono_auto(match_id, equipe_dom, equipe_ext, user_id_cible):
