@@ -1046,24 +1046,121 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
                             except Exception as e: st.error(str(e))
                     st.markdown("---")
 
-    # 9.4 - TAB 4 : QUESTIONS BONUS
-    with tab4:
-        st.subheader("🎯 Ajouter une Question Bonus")
-        with st.form("ajout_q_form"):
-            intitule_q = st.text_input("Intitulé de la question (ex: Qui marquera le premier essai ?)")
-            pts_q = st.number_input("Points attribués", min_value=1, value=5, step=1)
-            if st.form_submit_button("💾 Enregistrer la question"):
-                if intitule_q:
-                    try:
-                        supabase.table("Questions_Bonus").insert({
-                            "question": intitule_q,
-                            "points_bonus": pts_q
-                        }).execute()
-                        st.success("Question ajoutée !")
-                        time.sleep(1)
-                        st.rerun()
-                    except Exception as e: st.error(str(e))
+# =====================================================================
+        # 9.4 - CRÉATION DES QUESTIONS BONUS (AVEC CONFIGURATION DU BARÈME)
+        # =====================================================================
+        st.markdown("### 🎯 Gestion des Questions Bonus")
+        st.markdown("#### ➕ Ajouter une nouvelle Question Bonus")
 
+        # Choix du type de barème à la création
+        type_bareme = st.radio(
+            "Type de barème pour les points :",
+            ["Point unique pour la bonne réponse", "Points différents par réponse"],
+            key="admin_type_bareme_94",
+            horizontal=True
+        )
+
+        points_stockes = ""
+
+        if type_bareme == "Point unique pour la bonne réponse":
+            pts_uniques = st.number_input("Nombre de points à gagner :", min_value=1, value=5, step=1, key="admin_pts_uniques_94")
+            points_stockes = str(pts_uniques)
+        else:
+            st.info("👉 Entrez les réponses possibles et les points associés sous la forme : `Réponse:Points`. Séparez les blocs par des points-virgules ( ; ).")
+            ex_bareme = st.text_input(
+                "Configuration du barème (Exemple: Toulouse:5 ; La Rochelle:3 ; Toulon:1) :",
+                placeholder="Option1:5 ; Option2:2",
+                key="admin_bareme_multiple_94"
+            )
+            points_stockes = ex_bareme.strip()
+
+        # Champ pour l'intitulé de la question
+        txt_question = st.text_input("Intitulé de la question bonus :", key="admin_txt_question_94")
+
+        if st.button("Créer la question bonus", key="admin_btn_creer_94"):
+            if txt_question and points_stockes:
+                try:
+                    # Enregistrement dans la table Questions_Bonus
+                    supabase.table("Questions_Bonus").insert({
+                        "question": txt_question,
+                        "points_bonus": points_stockes,  # Stocke la structure brute texte
+                        "statut": "open"
+                    }).execute()
+                    st.success("🎉 Question bonus créée avec succès !")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Erreur lors de la création dans Supabase : {e}")
+            else:
+                st.warning("⚠️ Veuillez remplir l'intitulé de la question et la configuration des points.")
+# =====================================================================
+        # 9.45 - VALIDATION ET SÉLECTION DES RÉSULTATS BONUS (LISTE DÉROULANTE)
+        # =====================================================================
+        st.markdown("#### 🎯 Valider et Clôturer une Question Bonus")
+        
+        try:
+            # Récupération des questions encore ouvertes
+            questions_ouvertes = supabase.table("Questions_Bonus").select("*").eq("statut", "open").execute().data
+            
+            if questions_ouvertes:
+                for q_a_valider in questions_ouvertes:
+                    st.write(f"❓ **Question :** {q_a_valider['question']}")
+                    
+                    pts_config = str(q_a_valider.get("points_bonus") or "").strip()
+                    options_possibles = []
+                    
+                    # Détection et extraction automatique des options à mettre dans le selectbox
+                    if ":" in pts_config:
+                        segments = pts_config.split(";")
+                        for s in segments:
+                            if ":" in s:
+                                option_nom, _ = s.split(":")
+                                options_possibles.append(option_nom.strip())
+                    
+                    # Si le barème contient des options, on affiche la liste déroulante
+                    if options_possibles:
+                        choix_admin = st.selectbox(
+                            "Sélectionnez la réponse correcte :",
+                            ["-- Choisir le vainqueur --"] + options_possibles,
+                            key=f"val_sel_95_{q_a_valider['id']}"
+                        )
+                        
+                        # Désactivation du bouton tant qu'aucune option n'est sélectionnée
+                        bouton_desactive = (choix_admin == "-- Choisir le vainqueur --")
+                        
+                        if st.button("Valider ce résultat", key=f"btn_val_sel_95_{q_a_valider['id']}", disabled=bouton_desactive):
+                            try:
+                                # On passe la question en 'closed' et on valide la réponse en minuscules
+                                supabase.table("Questions_Bonus").update({
+                                    "reponse_correcte": choix_admin.strip().lower(),
+                                    "statut": "closed"
+                                }).eq("id", q_a_valider['id']).execute()
+                                
+                                st.success(f"🎉 Question clôturée ! Réponse '{choix_admin}' enregistrée.")
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Erreur lors de la validation : {e}")
+                    
+                    else:
+                        # Sécurité / Mode de secours : Si la question n'a pas de barème Option:Points
+                        st.warning("⚠️ Barème à point unique détecté. Saisie manuelle obligatoire :")
+                        choix_manuel = st.text_input("Réponse correcte :", key=f"val_txt_95_{q_a_valider['id']}")
+                        
+                        if st.button("Clôturer (Saisie manuelle)", key=f"btn_val_txt_95_{q_a_valider['id']}"):
+                            if choix_manuel.strip():
+                                supabase.table("Questions_Bonus").update({
+                                    "reponse_correcte": choix_manuel.strip().lower(),
+                                    "statut": "closed"
+                                }).eq("id", q_a_valider['id']).execute()
+                                st.success("🎉 Question clôturée avec succès !")
+                                st.rerun()
+                    
+                    st.markdown("---")
+            else:
+                st.info("Aucune question bonus en attente de validation.")
+                
+        except Exception as e:
+            st.error(f"Erreur lors du chargement du module de validation : {e}")
+            
     # 9.5 - TAB 5 : RE-SCRAPING MANUEL
     with tab5:
         st.subheader("🔄 Lanceur de Scraping Manuel")
