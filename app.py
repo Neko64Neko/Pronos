@@ -344,83 +344,161 @@ else:
 
     pts_parfait_cfg = pts_gagnant_cfg + pts_ecart_cfg
 
-    # =====================================================================
-    # 6 - CONTENU DE L'ONGLET 1 : CLASSEMENT GÉNÉRAL
+# =====================================================================
+    # 6 - CONTENU DE L'ONGLET 1 : CLASSEMENT GÉNÉRAL (LOGIQUE ET CLASSEMENT LIVE)
     # =====================================================================
     if st.session_state.onglet_actif == "📊":
         st.markdown(f"### 🏉 Bienvenue sur ton tableau de bord, **{st.session_state.pseudo}** !")
         
         try:
-            joueur_connecte = supabase.table("Joueurs").select("*").eq("id", st.session_state.user_id).single().execute().data
-            tous_les_joueurs = supabase.table("Joueurs").select("*").order("score", desc=True).execute().data
+            # 1. Récupération des données brutes
+            tous_les_joueurs = supabase.table("Joueurs").select("*").execute().data
+            pronostics_tous = supabase.table("Pronostics").select("*").execute().data
+            # CRUCIAL : On prend les matchs terminés (FT) ET en cours (LIVE)
+            matchs_comptabilises = supabase.table("Matchs").select("*").in_("statut", ["FT", "LIVE"]).execute().data
+            questions_bonus = supabase.table("Questions_Bonus").select("*").execute().data
+            reponses_bonus = supabase.table("Réponses_Questions").select("*").execute().data
+
+            # 2. Préparation des dictionnaires de correspondance pour optimiser le calcul
+            dict_matchs = {m['id']: m for m in matchs_comptabilises}
+            dict_reponses_bonus = {(r['user_id'], r['question_id']): r.get('reponse_joueur', '').strip().lower() for r in reponses_bonus}
+            dict_points_bonus = {q['id']: (q.get('points_bonus') or q.get('points') or 0, str(q.get('reponse_correcte') or '').strip().lower()) for q in questions_bonus}
+
+            # Structure temporaire pour recalculer les scores en direct
+            scores_calculateurs = {}
+            for j in tous_les_joueurs:
+                scores_calculateurs[j['id']] = {
+                    "id": j['id'],
+                    "pseudo": j['pseudo'],
+                    "score_live": 0,
+                    "vainqueurs": 0,
+                    "ecarts": 0,
+                    "bonus": 0
+                }
+
+            # 3. Calcul des points sur les matchs (FT + LIVE)
+            for p in pronostics_tous:
+                j_id = p['user_id']
+                m_id = p['match_id']
+                
+                if j_id not in scores_calculateurs or m_id not in dict_matchs:
+                    continue
+                    
+                match = dict_matchs[m_id]
+                sc_dom = match.get('score_dom')
+                sc_ext = match.get('score_ext')
+                
+                # Sécurité si un match LIVE vient de débuter sans score encore saisi
+                if sc_dom is None or sc_ext is None:
+                    continue
+                    
+                # Détermination du résultat à l'instant T
+                vrai_gagnant = "home" if sc_dom > sc_ext else ("away" if sc_dom < sc_ext else "draw")
+                vrai_ecart_points = abs(sc_dom - sc_ext)
+                
+                # Détermination de la tranche d'écart réelle
+                if vrai_ecart_points <= 6: vraie_tranche = "1-6"
+                elif vrai_ecart_points <= 10: vraie_tranche = "7-10"
+                elif vrai_ecart_points <= 15: vraie_tranche = "11-15"
+                elif vrai_ecart_points <= 20: vraie_tranche = "16-20"
+                elif vrai_ecart_points <= 30: vraie_tranche = "21-30"
+                elif vrai_ecart_points <= 40: vraie_tranche = "31-40"
+                elif vrai_ecart_points <= 50: vraie_tranche = "41-50"
+                else: vraie_tranche = "51+"
+
+                # Calcul des points selon les coefficients configurés
+                if p['gagnant_prevu'] == vrai_gagnant:
+                    points_ce_match = pts_gagnant_cfg
+                    scores_calculateurs[j_id]["vainqueurs"] += 1
+                    
+                    if p['ecart_prevu'] == vraie_tranche and vrai_gagnant != "draw":
+                        points_ce_match += pts_ecart_cfg
+                        scores_calculateurs[j_id]["ecarts"] += 1
+                    
+                    # Logique du prono osé (calculé dynamiquement parmi les pronos de ce match)
+                    pronos_ce_match = [pr for pr in pronostics_tous if pr['match_id'] == m_id]
+                    total_p_m = len(pronos_ce_match)
+                    mises_gagnant = sum(1 for pr in pronos_ce_match if pr['gagnant_prevu'] == vrai_gagnant)
+                    pct_m = (mises_gagnant / total_p_m * 100) if total_p_m > 0 else 0
+                    
+                    if pct_m <= seuil_ose_cfg:
+                        points_ce_match = float(points_ce_match * mult_ose_cfg)
+                        if p['user_id'] == st.session_state.user_id:
+                            # Pour incrémenter le compteur "Osés" du joueur connecté
+                            pass 
+
+                    # Ajout des points du match
+                    scores_calculateurs[j_id]["score_live"] += points_ce_match
+
+            # 4. Calcul des points Questions Bonus
+            for (j_id, q_id), rep_joueur in dict_reponses_bonus.items():
+                if j_id in scores_calculateurs and q_id in dict_points_bonus:
+                    pts_question, rep_officielle = dict_points_bonus[q_id]
+                    if rep_officielle and rep_joueur == rep_officielle:
+                        scores_calculateurs[j_id]["score_live"] += pts_question
+                        scores_calculateurs[j_id]["bonus"] += pts_question
+
+            # 5. Tri pour générer le classement dynamique
+            tous_les_joueurs_ordonnes = list(scores_calculateurs.values())
+            tous_les_joueurs_ordonnes.sort(key=lambda x: x["score_live"], reverse=True)
+
+            # Identification des stats spécifiques du joueur connecté pour ses bulles d'en-tête
+            stats_joueur_connecte = scores_calculateurs.get(st.session_state.user_id, {"score_live": 0, "vainqueurs": 0, "ecarts": 0})
             
-            rang_joueur = "-"
-            if tous_les_joueurs:
-                for idx, j in enumerate(tous_les_joueurs):
-                    if j['id'] == st.session_state.user_id:
-                        rang_joueur = idx + 1
-                        break
-            
-            pronos_joueur = supabase.table("Pronostics").select("*, Matchs(*)").eq("user_id", st.session_state.user_id).execute().data
-            stats_bons_gagnants, stats_parfaits, stats_oses = 0, 0, 0
-            
+            # Recalcul précis des matchs osés réussis uniquement pour l'affichage des compteurs du joueur connecté
+            stats_oses = 0
+            pronos_joueur = [p for p in pronostics_tous if p['user_id'] == st.session_state.user_id]
             for p in pronos_joueur:
-                match = p.get('Matchs')
-                if match and match.get('score_dom') is not None and match.get('score_ext') is not None:
-                    sc_dom, sc_ext = match['score_dom'], match['score_ext']
-                    vrai_gagnant = "home" if sc_dom > sc_ext else ("away" if sc_dom < sc_ext else "draw")
-                    vrai_ecart_points = abs(sc_dom - sc_ext)
-                    
-                    vraie_tranche = "1-6"
-                    if 7 <= vrai_ecart_points <= 10: vraie_tranche = "7-10"
-                    elif 11 <= vrai_ecart_points <= 15: vraie_tranche = "11-15"
-                    elif 16 <= vrai_ecart_points <= 20: vraie_tranche = "16-20"
-                    elif 21 <= vrai_ecart_points <= 30: vraie_tranche = "21-30"
-                    elif 31 <= vrai_ecart_points <= 40: vraie_tranche = "31-40"
-                    elif 41 <= vrai_ecart_points <= 50: vraie_tranche = "41-50"
-                    elif vrai_ecart_points >= 51: vraie_tranche = "51+"
-                    
-                    if p['gagnant_prevu'] == vrai_gagnant:
-                        stats_bons_gagnants += 1
-                        if p['ecart_prevu'] == vraie_tranche:
-                            stats_parfaits += 1
-                        
-                        tous_pronos_match = supabase.table("Pronostics").select("gagnant_prevu").eq("match_id", match['id']).execute().data
-                        if tous_pronos_match:
-                            total_m = len(tous_pronos_match)
-                            nb_bons_m = sum(1 for pm in tous_pronos_match if pm['gagnant_prevu'] == vrai_gagnant)
-                            pct_m = (nb_bons_m / total_m) * 100 if total_m > 0 else 0
-                            if pct_m <= seuil_ose_cfg:
+                m_id = p['match_id']
+                if m_id in dict_matchs:
+                    match = dict_matchs[m_id]
+                    sd, se = match.get('score_dom'), match.get('score_ext')
+                    if sd is not None and se is not None:
+                        vg = "home" if sd > se else ("away" if sd < se else "draw")
+                        if p['gagnant_prevu'] == vg:
+                            pronos_m = [pr for pr in pronostics_tous if pr['match_id'] == m_id]
+                            nb_bons = sum(1 for pm in pronos_m if pm['gagnant_prevu'] == vg)
+                            if (nb_bons / len(pronos_m) * 100) <= seuil_ose_cfg:
                                 stats_oses += 1
-                                
-        except Exception:
-            joueur_connecte = {"score": 0}
-            tous_les_joueurs = []
+
             rang_joueur = "-"
-            stats_bons_gagnants, stats_parfaits, stats_oses = 0, 0, 0
+            for idx, j in enumerate(tous_les_joueurs_ordonnes):
+                if j['id'] == st.session_state.user_id:
+                    rang_joueur = idx + 1
+                    break
+
+        except Exception as e:
+            st.error(f"Erreur de calcul du classement en direct : {e}")
+            tous_les_joueurs_ordonnes = []
+            rang_joueur = "-"
+            stats_joueur_connecte = {"score_live": 0, "vainqueurs": 0, "ecarts": 0}
+            stats_oses = 0
 
         suffixe = "er" if rang_joueur == 1 else "e"
+        score_affiche = stats_joueur_connecte["score_live"]
+        score_affiche = int(score_affiche) if isinstance(score_affiche, float) and score_affiche.is_integer() else score_affiche
         
+        # --- BLOC DES COMPTEURS VISUELS DE L'UTILISATEUR ---
         st.markdown(f"""
         <div style="background-color: #f0f4f8; border-radius: 16px; padding: 15px; border: 1px solid #d3e2f2; margin-bottom: 25px;">
             <div style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 10px;">
                 <div style="background-color: #ffffff; border-radius: 10px; padding: 8px; min-width: 90px; max-width: 110px; flex: 1; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;">
                     <span style="color: #627d98; font-size: 11px; font-weight: bold; display:block; margin-bottom:2px;">🏆 Rang</span>
                     <span style="color:#1e3a8a; font-size: 26px; font-weight: 900;">{rang_joueur}{suffixe}</span>
-                    <span style="display:block; font-size:10px; color:#627d98;">/{len(tous_les_joueurs)}</span>
+                    <span style="display:block; font-size:10px; color:#627d98;">/{len(tous_les_joueurs_ordonnes)}</span>
                 </div>
                 <div style="background-color: #ffffff; border-radius: 10px; padding: 8px; min-width: 90px; max-width: 110px; flex: 1; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;">
-                    <span style="color: #627d98; font-size: 11px; font-weight: bold; display:block; margin-bottom:2px;">🎯 Score</span>
-                    <span style="color:#1e3a8a; font-size: 26px; font-weight: 900;">{joueur_connecte.get('score', 0) if joueur_connecte else 0}</span>
+                    <span style="color: #627d98; font-size: 11px; font-weight: bold; display:block; margin-bottom:2px;">🎯 Score LIVE</span>
+                    <span style="color:#1e3a8a; font-size: 26px; font-weight: 900;">{score_affiche}</span>
                     <span style="display:block; font-size:10px; color:#627d98;">pts</span>
                 </div>
                 <div style="background-color: #ffffff; border-radius: 10px; padding: 8px; min-width: 100px; max-width: 120px; flex: 1; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;">
                     <span style="color: #43a047; font-size: 11px; font-weight: bold; display:block; margin-bottom:2px;">✅ Vainqueurs</span>
-                    <span style="color: #43a047; font-size: 32px; font-weight: 900;">{stats_bons_gagnants}</span>
+                    <span style="color: #43a047; font-size: 32px; font-weight: 900;">{stats_joueur_connecte["vainqueurs"]}</span>
                 </div>
                 <div style="background-color: #ffffff; border-radius: 10px; padding: 8px; min-width: 100px; max-width: 120px; flex: 1; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;">
                     <span style="color: #0a3613; font-size: 11px; font-weight: bold; display:block; margin-bottom:2px;">⭐ + Écart</span>
-                    <span style="color: #0a3613; font-size: 32px; font-weight: 900;">{stats_parfaits}</span>
+                    <span style="color: #0a3613; font-size: 32px; font-weight: 900;">{stats_joueur_connecte["ecarts"]}</span>
                 </div>
                 <div style="background-color: #ffffff; border-radius: 10px; padding: 8px; min-width: 100px; max-width: 120px; flex: 1; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;">
                     <span style="color: #b7791f; font-size: 11px; font-weight: bold; display:block; margin-bottom:2px;">🔥 Osés</span>
@@ -430,10 +508,11 @@ else:
         </div>
         """.replace("\n", ""), unsafe_allow_html=True)
 
-        st.subheader("📊 Classement Général de la Communauté")
-        if tous_les_joueurs:
+        # --- TABLEAU DU CLASSEMENT GÉNÉRAL GÉNÉRÉ EN DIRECT ---
+        st.subheader(" 🔴 Classement Général Virtuel (En Direct)")
+        if tous_les_joueurs_ordonnes:
             lignes_html = ""
-            for index, joueur in enumerate(tous_les_joueurs):
+            for index, joueur in enumerate(tous_les_joueurs_ordonnes):
                 rang = index + 1
                 prefixe_rang = "🥇 1er" if rang == 1 else ("🥈 2e" if rang == 2 else ("🥉 3e" if rang == 3 else f"{rang}e"))
                 
@@ -444,7 +523,10 @@ else:
                     style_ligne = "color: #2d3748;"
                     pseudo_affiche = joueur['pseudo']
                 
-                lignes_html += f'<tr style="{style_ligne} border-bottom: 1px solid #e2e8f0;"><td style="padding: 12px; text-align: left; color: inherit;">{prefixe_rang}</td><td style="padding: 12px; text-align: left; color: inherit;">{pseudo_affiche}</td><td style="padding: 12px; text-align: right; font-weight: bold; color: #000000;">{joueur["score"]} pts</td></tr>'
+                sc_j = joueur["score_live"]
+                sc_j_affiche = int(sc_j) if isinstance(sc_j, float) and sc_j.is_integer() else sc_j
+                
+                lignes_html += f'<tr style="{style_ligne} border-bottom: 1px solid #e2e8f0;"><td style="padding: 12px; text-align: left; color: inherit;">{prefixe_rang}</td><td style="padding: 12px; text-align: left; color: inherit;">{pseudo_affiche}</td><td style="padding: 12px; text-align: right; font-weight: bold; color: #000000;">{sc_j_affiche} pts</td></tr>'
             
             st.markdown(f"""
             <div style="background-color: #f8fafc; border-radius: 12px; padding: 15px; border: 1px solid #e2e8f0;">
@@ -453,7 +535,7 @@ else:
                         <tr style="border-bottom: 2px solid #cbd5e1; color: #64748b; font-size: 14px;">
                             <th style="padding: 10px; text-align: left; color: #64748b;">Position</th>
                             <th style="padding: 10px; text-align: left; color: #64748b;">Joueur</th>
-                            <th style="padding: 10px; text-align: right; color: #64748b;">Score</th>
+                            <th style="padding: 10px; text-align: right; color: #64748b;">Score LIVE</th>
                         </tr>
                     </thead>
                     <tbody>{lignes_html}</tbody>
