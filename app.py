@@ -6,6 +6,7 @@ from bs4 import BeautifulSoup
 import time
 import random
 import extra_streamlit_components as stx
+import pytz
 from streamlit_autorefresh import st_autorefresh
 
 # 1 - PARAMETRES ET CONNEXION
