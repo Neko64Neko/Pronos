@@ -1047,9 +1047,12 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
                     st.markdown("---")
 
 # =====================================================================
-        # 9.4 - CRÉATION DES QUESTIONS BONUS (AVEC CONFIGURATION DU BARÈME)
-        # =====================================================================
-        st.markdown("### 🎯 Gestion des Questions Bonus")
+    # 9.4 & 9.45 - TAB 4 : QUESTIONS BONUS (CRÉATION ET VALIDATION)
+    # =====================================================================
+    with tab4:
+        st.subheader("🎯 Gestion des Questions Bonus")
+        
+        # --- PARTIE 1 : CRÉATION (9.4) ---
         st.markdown("#### ➕ Ajouter une nouvelle Question Bonus")
 
         # Choix du type de barème à la création
@@ -1077,7 +1080,7 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
         # Champ pour l'intitulé de la question
         txt_question = st.text_input("Intitulé de la question bonus :", key="admin_txt_question_94")
 
-        if st.button("Créer la question bonus", key="admin_btn_creer_94"):
+        if st.button("Créer la question bonus", key="admin_btn_creer_94", use_container_width=True):
             if txt_question and points_stockes:
                 try:
                     # Enregistrement dans la table Questions_Bonus
@@ -1087,14 +1090,17 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
                         "statut": "open"
                     }).execute()
                     st.success("🎉 Question bonus créée avec succès !")
+                    time.sleep(1)
                     st.rerun()
                 except Exception as e:
                     st.error(f"Erreur lors de la création dans Supabase : {e}")
             else:
                 st.warning("⚠️ Veuillez remplir l'intitulé de la question et la configuration des points.")
-# =====================================================================
-        # 9.45 - VALIDATION ET SÉLECTION DES RÉSULTATS BONUS (LISTE DÉROULANTE)
-        # =====================================================================
+
+        # Séparateur visuel entre la création et la validation
+        st.markdown("<hr style='border: 1px dashed #cbd5e1; margin: 40px 0;'>", unsafe_allow_html=True)
+
+        # --- PARTIE 2 : VALIDATION / CLÔTURE (9.45) ---
         st.markdown("#### 🎯 Valider et Clôturer une Question Bonus")
         
         try:
@@ -1136,9 +1142,10 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
                                 }).eq("id", q_a_valider['id']).execute()
                                 
                                 st.success(f"🎉 Question clôturée ! Réponse '{choix_admin}' enregistrée.")
+                                time.sleep(1)
                                 st.rerun()
                             except Exception as e:
-                                st.error(f"Erreur lors de la validation : {e}")
+                                odds_err = st.error(f"Erreur lors de la validation : {e}")
                     
                     else:
                         # Sécurité / Mode de secours : Si la question n'a pas de barème Option:Points
@@ -1147,12 +1154,16 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
                         
                         if st.button("Clôturer (Saisie manuelle)", key=f"btn_val_txt_95_{q_a_valider['id']}"):
                             if choix_manuel.strip():
-                                supabase.table("Questions_Bonus").update({
-                                    "reponse_correcte": choix_manuel.strip().lower(),
-                                    "statut": "closed"
-                                }).eq("id", q_a_valider['id']).execute()
-                                st.success("🎉 Question clôturée avec succès !")
-                                st.rerun()
+                                try:
+                                    supabase.table("Questions_Bonus").update({
+                                        "reponse_correcte": choix_manuel.strip().lower(),
+                                        "statut": "closed"
+                                    }).eq("id", q_a_valider['id']).execute()
+                                    st.success("🎉 Question clôturée avec succès !")
+                                    time.sleep(1)
+                                    st.rerun()
+                                except Exception as e:
+                                    st.error(f"Erreur : {e}")
                     
                     st.markdown("---")
             else:
