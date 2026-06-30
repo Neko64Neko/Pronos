@@ -647,6 +647,9 @@ if st.session_state.onglet_actif == "🏉":
                                     # 2. On la convertit précisément dans le fuseau horaire de Paris
                                     tz_paris = pytz.timezone('Europe/Paris')
                                     dt_limite_q = dt_limite_utc.astimezone(tz_paris)
+                                    maintenant_compare = maintenant_paris
+                                    if maintenant_compare.tzinfo is None:
+                                        maintenant_compare = tz_paris.localize(maintenant_compare)
                                     
                                     # 3. Comparaison (les deux variables ont maintenant le même fuseau horaire)
                                     if maintenant_paris >= dt_limite_q:
