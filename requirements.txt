@@ -5,3 +5,4 @@ extra-streamlit-components
 streamlit-antd-components
 streamlit-option-menu
 requests
+pytz
