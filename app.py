@@ -1089,14 +1089,15 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
         st.title("⚙️ Panneau d'Administration")
         
         # Ajout de l'onglet Barème & Points en premier
-        tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+        tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
             "⚙️ Barème & Points",
             "➕ Ajouter Match", 
             "📝 Matchs Existants", 
             "🎯 Questions Bonus", 
             "🔄 Scraping", 
             "🚨 Danger",
-            "Suppression matchs"
+            "Suppression matchs",
+            "Gestion des joueurs"
         ])
     
     # 9.1 - TAB 1 : GESTION DES POINTS ET DU BARÈME
@@ -1425,3 +1426,43 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
                             st.error(f"Erreur : {e}")
         else:
             st.info("Aucun match trouvé en base de données.")
+
+# 9.8 - GESTION DES JOUEURS (SUPPRESSION SÉCURISÉE)
+    with tab8: # Assure-toi d'avoir bien défini cette tab
+        st.subheader("👤 Gestion des Joueurs")
+        st.warning("⚠️ Attention : Supprimer un joueur supprimera TOUTES ses données (Pronos, Réponses, etc.).")
+        
+        tous_les_joueurs = supabase.table("Joueurs").select("*").order("pseudo").execute().data
+        
+        if tous_les_joueurs:
+            # Préparation des données pour le tableau
+            joueurs_data = [{"ID": j['id'], "Pseudo": j['pseudo'], "Email": j.get('email', 'N/A')} for j in tous_les_joueurs]
+            st.table(joueurs_data)
+            
+            # Sélecteur pour choisir le joueur à supprimer
+            joueur_a_supprimer = st.selectbox(
+                "Sélectionnez le joueur à supprimer :",
+                options=[(j['id'], j['pseudo']) for j in tous_les_joueurs],
+                format_func=lambda x: x[1]
+            )
+            
+            if joueur_a_supprimer:
+                with st.popover("🗑️ Supprimer ce joueur"):
+                    st.error(f"Êtes-vous sûr de vouloir supprimer **{joueur_a_supprimer[1]}** ?")
+                    if st.button("Confirmer la suppression", key=f"del_joueur_{joueur_a_supprimer[0]}"):
+                        try:
+                            # 1. Nettoyage en cascade (ordre important)
+                            # On supprime d'abord les tables qui dépendent de l'ID joueur
+                            supabase.table("Pronostics").delete().eq("user_id", joueur_a_supprimer[0]).execute()
+                            supabase.table("Réponses_Questions").delete().eq("user_id", joueur_a_supprimer[0]).execute()
+                            
+                            # 2. Suppression du joueur lui-même
+                            supabase.table("Joueurs").delete().eq("id", joueur_a_supprimer[0]).execute()
+                            
+                            st.success(f"Joueur {joueur_a_supprimer[1]} et ses données supprimés avec succès.")
+                            time.sleep(1)
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Erreur lors de la suppression : {e}")
+        else:
+            st.info("Aucun joueur trouvé.")
