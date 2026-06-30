@@ -470,29 +470,39 @@ else:
 if st.session_state.onglet_actif == "🏉":
     st.title("🏉 Espace Pronostics")
     
-# --- 7.1 - LISTE DÉROULANTE JOUEUR (RÉSERVÉE ADMIN) ---
+# Initialisation de la sécurité mode admin si elle n'existe pas
+    if "mode_admin_pronos" not in st.session_state:
+        st.session_state.mode_admin_pronos = False
+
+    # --- 7.1 - GESTION DES DROITS ET DU TOGGLE (RÉSERVÉ ADMIN) ---
     liste_joueurs = supabase.table("Joueurs").select("*").order("pseudo").execute().data
     
     if liste_joueurs:
         noms_joueurs = [j['pseudo'] for j in liste_joueurs]
+        utilisateur_actuel = st.session_state.get("pseudo", "") # Correction ici : pseudo au lieu de username
         
-        # Correction : Utilisation de st.session_state.username (qui contient le pseudo de session)
-        utilisateur_actuel = st.session_state.get("username", "")
-        index_par_defaut = noms_joueurs.index(utilisateur_actuel) if utilisateur_actuel in noms_joueurs else 0
-        
+        # 1. Si l'utilisateur est admin, on lui affiche le bouton ON/OFF en haut de la page
         if st.session_state.is_admin:
-            nom_selectionne = st.selectbox(
-                "🧙‍♂️ Mode Admin : Pronostiquer pour le joueur :", 
-                options=noms_joueurs, 
-                index=index_par_defaut
+            st.session_state.mode_admin_pronos = st.toggle(
+                "🧙‍♂️ Activer le Mode Admin (permet de pronostiquer pour un autre joueur)", 
+                value=st.session_state.mode_admin_pronos
             )
+            
+            # 2. Si le mode admin est activé, on affiche la liste déroulante
+            if st.session_state.mode_admin_pronos:
+                index_par_defaut = noms_joueurs.index(utilisateur_actuel) if utilisateur_actuel in noms_joueurs else 0
+                nom_selectionne = st.selectbox(
+                    "🎯 Choisir le joueur pour qui vous allez pronostiquer :", 
+                    options=noms_joueurs, 
+                    index=index_par_defaut
+                )
+            else:
+                nom_selectionne = utilisateur_actuel
+                st.info(f"👤 Mode Personnel : Vous pronostiquez pour votre compte : **{nom_selectionne}**")
         else:
+            # Pour un joueur classique
             nom_selectionne = utilisateur_actuel
             st.info(f"👤 Connecté en tant que : **{nom_selectionne}**")
-            
-        # Récupération de l'ID de la cible choisie via la colonne 'pseudo'
-        joueur_cible = next(j for j in liste_joueurs if j['pseudo'] == nom_selectionne)
-        id_joueur_cible = joueur_cible['id']
         
         # --- 7.2 - ZONE DE JEU (QUESTIONS + MATCHS) ---
         with st.spinner("Chargement de la grille..."):
