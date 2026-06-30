@@ -838,31 +838,45 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
                 time.sleep(1)
                 st.rerun()
 
-    # 9.2 - TAB 2 : AJOUTER UN MATCH MANUEL
+# 9.2 - TAB 2 : AJOUTER UN MATCH MANUELLEMENT
     with tab2:
         st.subheader("➕ Ajouter un Match Manuellement")
-        with st.form("ajout_match_form"):
-            eq_dom = st.text_input("Équipe Domicile (ex: Toulouse)")
-            eq_ext = st.text_input("Équipe Extérieur (ex: Toulon)")
-            d_match = st.date_input("Date du match")
-            h_match = st.time_input("Heure du match")
+        with st.form("form_ajout_match", clear_on_submit=True):
+            eq_dom = st.text_input("Équipe Domicile :")
+            eq_ext = st.text_input("Équipe Extérieur :")
+            date_m = st.date_input("Date du match :", value=datetime.now().date())
+            heure_m = st.time_input("Heure du match :", value=datetime.now().time())
             
-            if st.form_submit_button("💾 Enregistrer le match"):
+            submit_match = st.form_submit_button("Créer le Match")
+            
+            if submit_match:
                 if eq_dom and eq_ext:
-                    dt_combine = datetime.combine(d_match, h_match).isoformat() + "Z"
                     try:
+                        # Fusion de la date et de l'heure
+                        dt_combinee = datetime.combine(date_m, heure_m)
+                        iso_date = dt_combinee.isoformat() + "Z"
+                        
+                        # CORRECTION : Génération d'un ID numérique unique aléatoire pour éviter le NOT NULL constraint
+                        id_unique_match = random.randint(100000, 999999)
+                        
+                        # Insertion avec l'ID généré
                         supabase.table("Matchs").insert({
-                            "equipe_dom": eq_dom,
-                            "equipe_ext": eq_ext,
-                            "date_match": dt_combine,
-                            "statut": "NS"
+                            "id": id_unique_match,
+                            "equipe_dom": eq_dom.strip(),
+                            "equipe_ext": eq_ext.strip(),
+                            "date_match": iso_date,
+                            "statut": "NS",
+                            "score_dom": None,
+                            "score_ext": None
                         }).execute()
-                        st.success(f"🎉 Match {eq_dom} vs {eq_ext} enregistré !")
+                        
+                        st.success(f"🎉 Match ajouté avec succès ! ID créé : {id_unique_match}")
                         time.sleep(1)
                         st.rerun()
-                    except Exception as e: st.error(f"Erreur : {e}")
-                else: st.warning("Veuillez remplir les équipes.")
-
+                    except Exception as e:
+                        st.error(f"Erreur lors de la création : {e}")
+                else:
+                    st.warning("⚠️ Veuillez remplir le nom des deux équipes.")
     # 9.3 - TAB 3 : GESTION DES MATCHS EXISTANTS
     with tab3:
         st.subheader("📝 Liste et scores des matchs")
