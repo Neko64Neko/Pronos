@@ -86,23 +86,29 @@ def verifier_et_importer_matchs():
             
     return matchs_traites
     
-#2.3 - SAUVEGARDE AUTO PRONO
+#2.3 - SAUVEGARDE AUTO PRONO (CORRIGÉE AVEC ID JOUEUR CIBLE DANS LA CLÉ)
 def sauvegarder_prono_auto(match_id, equipe_dom, equipe_ext, user_id_cible):
-    """Sauvegarde instantanément le pronostic dès qu'un élément change."""
-    vrai_nom_gagnant = st.session_state.get(f"w_{match_id}")
-    ecart = st.session_state.get(f"m_{match_id}")
+    """Sauvegarde instantanément le pronostic dès qu'un élément change, de manière ciblée par joueur."""
+    # Récupération des valeurs en utilisant la clé composite exacte contenant l'id du joueur cible
+    vrai_nom_gagnant = st.session_state.get(f"w_{match_id}_{user_id_cible}")
+    ecart = st.session_state.get(f"m_{match_id}_{user_id_cible}")
     
-    if vrai_nom_gagnant == "..." or ecart == "...":
+    # Si les informations ne sont pas encore toutes sélectionnées, on ne sauvegarde pas un état vide
+    if not vrai_nom_gagnant or vrai_nom_gagnant == "..." or not ecart or ecart == "...":
         return
 
     val_gagnant = "home" if vrai_nom_gagnant == equipe_dom else ("away" if vrai_nom_gagnant == equipe_ext else "draw")
-    prono_existant = supabase.table("Pronostics").select("id").eq("user_id", user_id_cible).eq("match_id", match_id).execute().data
-    
-    donnees_prono = {
-        "user_id": user_id_cible, "match_id": match_id, "gagnant_prevu": val_gagnant, "ecart_prevu": ecart
-    }
     
     try:
+        prono_existant = supabase.table("Pronostics").select("id").eq("user_id", user_id_cible).eq("match_id", match_id).execute().data
+        
+        donnees_prono = {
+            "user_id": user_id_cible, 
+            "match_id": match_id, 
+            "gagnant_prevu": val_gagnant, 
+            "ecart_prevu": ecart
+        }
+        
         if prono_existant:
             supabase.table("Pronostics").update(donnees_prono).eq("id", prono_existant[0]["id"]).execute()
         else:
@@ -530,7 +536,7 @@ if st.session_state.onglet_actif == "🏉":
                 except Exception as e:
                     st.error(f"Erreur lors du chargement des questions bonus : {e}")
                         
-                # 7.2.2 - SECTION MATCHS OUVERTS
+# 7.2.2 - SECTION MATCHS OUVERTS (CORRIGÉE AVEC SYNCHRONISATION DE L'ÉCART)
                 st.markdown("""<hr style="border: 1px solid #e2e8f0; margin: 30px 0 20px 0;">""", unsafe_allow_html=True)
                 st.subheader("🏉 Liste des Matchs")
 
@@ -575,13 +581,23 @@ if st.session_state.onglet_actif == "🏉":
                                 except Exception:
                                     pass
 
+                                # Récupération du pronostic existant pour le joueur actuellement ciblé
                                 prono_existant = supabase.table("Pronostics").select("*").eq("user_id", id_joueur_cible).eq("match_id", m['id']).execute().data
                                 choix_actuel = ""
+                                ecart_existant = "..."
+                                
                                 if prono_existant:
                                     g_prevu = prono_existant[0]['gagnant_prevu']
                                     if g_prevu == "home": choix_actuel = m['equipe_dom']
                                     elif g_prevu == "away": choix_actuel = m['equipe_ext']
                                     elif g_prevu == "draw": choix_actuel = "Match Nul"
+                                    
+                                    if prono_existant[0].get('ecart_prevu'):
+                                        ecart_existant = prono_existant[0]['ecart_prevu']
+                                
+                                # CRUCIAL : On force Streamlit à synchroniser ses états de session internes avec la base de données
+                                st.session_state[f"w_{m['id']}_{id_joueur_cible}"] = choix_actuel
+                                st.session_state[f"m_{m['id']}_{id_joueur_cible}"] = ecart_existant
 
                                 st.caption("Sélectionner le Vainqueur :")
                                 
@@ -622,21 +638,21 @@ if st.session_state.onglet_actif == "🏉":
                                 with col_a:
                                     type_a = "primary" if choix_actuel == m['equipe_dom'] else "secondary"
                                     if st.button(f"🏉 {m['equipe_dom']}", key=f"btn_dom_{m['id']}_{id_joueur_cible}", type=type_a, use_container_width=True, disabled=bouton_bloque):
-                                        st.session_state[f"w_{m['id']}"] = m['equipe_dom']
+                                        st.session_state[f"w_{m['id']}_{id_joueur_cible}"] = m['equipe_dom']
                                         sauvegarder_prono_auto(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
                                         st.rerun()
                                         
                                 with col_b:
                                     type_b = "primary" if choix_actuel == "Match Nul" else "secondary"
                                     if st.button("🤝 Nul", key=f"btn_nul_{m['id']}_{id_joueur_cible}", type=type_b, use_container_width=True, disabled=bouton_bloque):
-                                        st.session_state[f"w_{m['id']}"] = "Match Nul"
+                                        st.session_state[f"w_{m['id']}_{id_joueur_cible}"] = "Match Nul"
                                         sauvegarder_prono_auto(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
                                         st.rerun()
                                         
                                 with col_c:
                                     type_c = "primary" if choix_actuel == m['equipe_ext'] else "secondary"
                                     if st.button(f"🏉 {m['equipe_ext']}", key=f"btn_ext_{m['id']}_{id_joueur_cible}", type=type_c, use_container_width=True, disabled=bouton_bloque):
-                                        st.session_state[f"w_{m['id']}"] = m['equipe_ext']
+                                        st.session_state[f"w_{m['id']}_{id_joueur_cible}"] = m['equipe_ext']
                                         sauvegarder_prono_auto(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
                                         st.rerun()
 
@@ -644,12 +660,11 @@ if st.session_state.onglet_actif == "🏉":
 
                                 st.markdown("<br>", unsafe_allow_html=True)
                                 
-                                # CORRECTION : On s'assure de recalculer l'index basé sur prono_existant qui utilise id_joueur_cible
+                                # Calcul dynamique de l'index du selectbox
                                 index_ecart_defaut = 0
-                                if prono_existant and prono_existant[0].get('ecart_prevu') in TRANCHES_ECARTS:
-                                    index_ecart_defaut = TRANCHES_ECARTS.index(prono_existant[0]['ecart_prevu']) + 1
+                                if ecart_existant in TRANCHES_ECARTS:
+                                    index_ecart_defaut = TRANCHES_ECARTS.index(ecart_existant) + 1
                                 
-                                # Le composant va maintenant correctement afficher l'écart du joueur choisi
                                 st.selectbox(
                                     "Écart (pts)", 
                                     ["..."] + TRANCHES_ECARTS, 
