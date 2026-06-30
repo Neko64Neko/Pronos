@@ -536,7 +536,7 @@ if st.session_state.onglet_actif == "🏉":
                 except Exception as e:
                     st.error(f"Erreur lors du chargement des questions bonus : {e}")
                         
-# 7.2.2 - SECTION MATCHS OUVERTS (SÉCURITÉ DOUBLE VERROU TOGGLE ADMIN)
+# 7.2.2 - SECTION MATCHS OUVERTS (SÉCURITÉ DOUBLE TOGGLE ALIGNÉE)
                 st.markdown("""<hr style="border: 1px solid #e2e8f0; margin: 30px 0 20px 0;">""", unsafe_allow_html=True)
                 st.subheader("🏉 Liste des Matchs")
 
@@ -544,15 +544,22 @@ if st.session_state.onglet_actif == "🏉":
                     matchs_potentiels = supabase.table("Matchs").select("*").neq("statut", "FT").execute().data
                     matchs_visibles = []
                     
+                    # On définit si l'admin a TOUS ses voyants d'édition au vert (sidebar ET onglet prono)
+                    droits_admin_totalement_actifs = (
+                        st.session_state.is_admin 
+                        and st.session_state.get('mode_admin_actif', False) 
+                        and st.session_state.get('mode_admin_pronos', False)
+                    )
+                    
                     if matchs_potentiels:
                         for m in matchs_potentiels:
                             try:
                                 date_brute = m['date_match'].split("+")[0].split("Z")[0]
                                 dt_match = datetime.fromisoformat(date_brute)
-                                if maintenant_paris < dt_match or (st.session_state.is_admin and st.session_state.mode_admin_actif):
+                                if maintenant_paris < dt_match or droits_admin_totalement_actifs:
                                     matchs_visibles.append(m)
                             except Exception:
-                                if m['statut'] == "NS" or (st.session_state.is_admin and st.session_state.mode_admin_actif):
+                                if m['statut'] == "NS" or droits_admin_totalement_actifs:
                                     matchs_visibles.append(m)
 
                     if matchs_visibles:
@@ -571,8 +578,8 @@ if st.session_state.onglet_actif == "🏉":
                                     match_commence = maintenant_paris >= dt_obj
                                     
                                     if match_commence:
-                                        # ACCÈS INTERDIT SI LE TOGGLE EST SUR OFF (MÊME SI COMPTE ADMIN)
-                                        if st.session_state.is_admin and st.session_state.mode_admin_actif:
+                                        # LE VERROU S'APPLIQUE SI L'UN DES DEUX BOUTONS ADMIN EST SUR OFF
+                                        if droits_admin_totalement_actifs:
                                             st.markdown(f"<div style='text-align: center; color: #b7791f; font-size: 0.9em; font-weight: bold; margin-bottom: 10px;'>⚠️ Match commencé ({date_affiche}) - Autorisé (Admin)</div>", unsafe_allow_html=True)
                                         else:
                                             st.markdown(f"<div style='text-align: center; color: #dc2626; font-size: 0.9em; font-weight: bold; margin-bottom: 10px;'>🔒 Match commencé le {date_affiche}</div>", unsafe_allow_html=True)
@@ -649,7 +656,7 @@ if st.session_state.onglet_actif == "🏉":
                                         st.rerun()
                                         
                                 with col_c:
-                                    type_c = "primary" if choix_actuel == m['equipe_ext'] else "secondary"
+                                    type_c = "primary" if choix_actuel == m['ext'] if 'ext' in m else m['equipe_ext'] == m['equipe_ext'] else "secondary"
                                     if st.button(f"🏉 {m['equipe_ext']}", key=f"btn_ext_{m['id']}_{id_joueur_cible}", type=type_c, use_container_width=True, disabled=bouton_bloque):
                                         st.session_state[f"w_{m['id']}_{id_joueur_cible}"] = m['equipe_ext']
                                         sauvegarder_prono_auto(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
