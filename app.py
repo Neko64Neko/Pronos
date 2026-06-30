@@ -856,7 +856,7 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
                 time.sleep(1)
                 st.rerun()
 
-# 9.2 - TAB 2 : AJOUTER UN MATCH MANUELLEMENT (SAISIE SANS CONVERSION)
+# 9.2 - TAB 2 : AJOUTER UN MATCH MANUELLEMENT (COMPENSATION INVERSE AFFICHAGE)
     with tab2:
         st.subheader("➕ Ajouter un Match Manuellement")
         with st.form("form_ajout_match", clear_on_submit=True):
@@ -870,14 +870,17 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
             if submit_match:
                 if eq_dom and eq_ext:
                     try:
-                        # Fusion brute de la date et de l'heure sans fuseau horaire forcé
+                        # Fusion de la date et de l'heure saisies
                         dt_combinee = datetime.combine(date_m, heure_m)
-                        iso_date = dt_combinee.isoformat() # Pas de "Z" à la fin, reste en heure locale brute
+                        
+                        # CORRECTION : On AJOUTE 2 heures pour neutraliser le décalage de l'affichage
+                        dt_compensee = dt_combinee + timedelta(hours=2)
+                        iso_date = dt_compensee.isoformat()
                         
                         # Génération d'un ID numérique unique
                         id_unique_match = random.randint(100000, 999999)
                         
-                        # Insertion directe dans Supabase
+                        # Insertion dans Supabase
                         supabase.table("Matchs").insert({
                             "id": id_unique_match,
                             "equipe_dom": eq_dom.strip(),
@@ -888,14 +891,13 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
                             "score_ext": None
                         }).execute()
                         
-                        st.success(f"🎉 Match ajouté avec succès ! Il s'affichera pile à {heure_m.strftime('%H:%M')}")
+                        st.success(f"🎉 Match ajouté avec succès ! Programmé pour {heure_m.strftime('%H:%M')}.")
                         time.sleep(1)
                         st.rerun()
                     except Exception as e:
                         st.error(f"Erreur lors de la création : {e}")
                 else:
                     st.warning("⚠️ Veuillez remplir le nom des deux équipes.")
-
     
     # 9.3 - TAB 3 : GESTION DES MATCHS EXISTANTS
     with tab3:
