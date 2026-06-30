@@ -430,13 +430,43 @@ else:
                     # Ajout des points du match
                     scores_calculateurs[j_id]["score_live"] += points_ce_match
 
-            # 4. Calcul des points Questions Bonus
+# 4. Calcul des points Questions Bonus (Barème défini à la création)
             for (j_id, q_id), rep_joueur in dict_reponses_bonus.items():
                 if j_id in scores_calculateurs and q_id in dict_points_bonus:
-                    pts_question, rep_officielle = dict_points_bonus[q_id]
-                    if rep_officielle and rep_joueur == rep_officielle:
-                        scores_calculateurs[j_id]["score_live"] += pts_question
-                        scores_calculateurs[j_id]["bonus"] += pts_question
+                    pts_config, rep_officielle = dict_points_bonus[q_id]
+                    
+                    # On nettoie les entrées pour éviter les problèmes de casse/espaces
+                    rep_joueur_clean = str(rep_joueur).strip().lower() if rep_joueur else ""
+                    rep_officielle_clean = str(rep_officielle).strip().lower() if rep_officielle else ""
+                    
+                    if rep_officielle_clean and rep_joueur_clean == rep_officielle_clean:
+                        pts_attribues = 0
+                        pts_config_str = str(pts_config).strip().lower()
+                        
+                        # Cas 1 : Barème multiple détecté (présence de :)
+                        if ":" in pts_config_str:
+                            segments = pts_config_str.split(";")
+                            for s in segments:
+                                if ":" in s:
+                                    cle_rep, val_pts = s.split(":")
+                                    if rep_officielle_clean == cle_rep.strip().lower():
+                                        try:
+                                            pts_attribues = float(val_pts.strip())
+                                        except ValueError:
+                                            pts_attribues = 0
+                                        break
+                        
+                        # Cas 2 : C'est un nombre unique classique stocké sous forme de texte
+                        else:
+                            try:
+                                pts_attribues = float(pts_config_str)
+                            except ValueError:
+                                pts_attribues = 0
+
+                        # Incrémentation des scores
+                        if pts_attribues > 0:
+                            scores_calculateurs[j_id]["score_live"] += pts_attribues
+                            scores_calculateurs[j_id]["bonus"] += pts_attribues
 
             # 5. Tri pour générer le classement dynamique
             tous_les_joueurs_ordonnes = list(scores_calculateurs.values())
