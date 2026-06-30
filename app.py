@@ -1089,13 +1089,14 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
         st.title("⚙️ Panneau d'Administration")
         
         # Ajout de l'onglet Barème & Points en premier
-        tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+        tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
             "⚙️ Barème & Points",
             "➕ Ajouter Match", 
             "📝 Matchs Existants", 
             "🎯 Questions Bonus", 
             "🔄 Scraping", 
-            "🚨 Danger"
+            "🚨 Danger",
+            "Suppression matchs"
         ])
     
     # 9.1 - TAB 1 : GESTION DES POINTS ET DU BARÈME
@@ -1377,3 +1378,31 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
                 except Exception as e: 
                     st.error(f"Erreur : {e}")
                     st.error(f"Erreur : {e}")
+
+# 9.7 - NOUVELLE TAB : GESTION DES MATCHS
+    # Ajoutez ceci dans la liste de vos tabs ou créez une 'tab7' dédiée
+    with tab7: # Assurez-vous d'avoir défini tab7 dans vos tabs de la section 9
+        st.subheader("🗑️ Gestion des Matchs")
+        st.info("Utilisez cette section pour supprimer un match erroné ou en double.")
+        
+        # Récupération de tous les matchs
+        tous_matchs = supabase.table("Matchs").select("*").order("date_match").execute().data
+        
+        if tous_matchs:
+            for m in tous_matchs:
+                # Affichage simple : Équipes + Date
+                col_a, col_b = st.columns([0.8, 0.2])
+                col_a.write(f"🏉 {m['equipe_dom']} vs {m['equipe_ext']} ({m['date_match'][:10]})")
+                
+                # Bouton de suppression avec une clé unique
+                if col_b.button("🗑️", key=f"suppr_{m['id']}"):
+                    try:
+                        # Suppression dans Supabase
+                        supabase.table("Matchs").delete().eq("id", m['id']).execute()
+                        st.success(f"Match {m['equipe_dom']} vs {m['equipe_ext']} supprimé.")
+                        time.sleep(0.5)
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Erreur lors de la suppression : {e}")
+        else:
+            st.write("Aucun match trouvé en base.")
