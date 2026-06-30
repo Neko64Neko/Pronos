@@ -540,10 +540,10 @@ if st.session_state.onglet_actif == "🏉":
                             try:
                                 date_brute = m['date_match'].split("+")[0].split("Z")[0]
                                 dt_match = datetime.fromisoformat(date_brute)
-                                if maintenant_paris < dt_match or st.session_state.is_admin:
+                                if maintenant_paris < dt_match or st.session_state.mode_admin_actif:
                                     matchs_visibles.append(m)
                             except Exception:
-                                if m['statut'] == "NS" or st.session_state.is_admin:
+                                if m['statut'] == "NS" or st.session_state.mode_admin_actif:
                                     matchs_visibles.append(m)
 
                     if matchs_visibles:
@@ -562,7 +562,7 @@ if st.session_state.onglet_actif == "🏉":
                                     match_commence = maintenant_paris >= dt_obj
                                     
                                     if match_commence:
-                                        if st.session_state.is_admin:
+                                        if st.session_state.mode_admin_actif:
                                             st.markdown(f"<div style='text-align: center; color: #b7791f; font-size: 0.9em; font-weight: bold; margin-bottom: 10px;'>⚠️ Match commencé ({date_affiche}) - Autorisé (Admin)</div>", unsafe_allow_html=True)
                                         else:
                                             st.markdown(f"<div style='text-align: center; color: #dc2626; font-size: 0.9em; font-weight: bold; margin-bottom: 10px;'>🔒 Match commencé le {date_affiche}</div>", unsafe_allow_html=True)
