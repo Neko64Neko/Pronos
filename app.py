@@ -643,10 +643,13 @@ if st.session_state.onglet_actif == "🏉":
                                 st.markdown('</div>', unsafe_allow_html=True)
 
                                 st.markdown("<br>", unsafe_allow_html=True)
+                                
+                                # CORRECTION : On s'assure de recalculer l'index basé sur prono_existant qui utilise id_joueur_cible
                                 index_ecart_defaut = 0
-                                if prono_existant and prono_existant[0]['ecart_prevu'] in TRANCHES_ECARTS:
+                                if prono_existant and prono_existant[0].get('ecart_prevu') in TRANCHES_ECARTS:
                                     index_ecart_defaut = TRANCHES_ECARTS.index(prono_existant[0]['ecart_prevu']) + 1
                                 
+                                # Le composant va maintenant correctement afficher l'écart du joueur choisi
                                 st.selectbox(
                                     "Écart (pts)", 
                                     ["..."] + TRANCHES_ECARTS, 
