@@ -117,30 +117,24 @@ def sauvegarder_prono_auto(match_id, equipe_dom, equipe_ext, user_id_cible):
         st.error(f"Erreur sauvegarde automatique : {e}")
         
 #2.4 - Sauvegarde Bonus AUTO
-def sauvegarder_bonus_auto(question_id, user_id_cible):
-    """Sauvegarde automatique de la réponse à une question bonus."""
-    # Correction : On utilise les bons noms de variables passés en arguments (question_id et user_id_cible)
-    cle_state = f"q_{question_id}_{user_id_cible}"
-    if cle_state in st.session_state:
-        valeur = st.session_state[cle_state]
-        try:
-            # Vérification si une réponse existe déjà
-            rep_existante = supabase.table("Réponses_Questions").select("*").eq("user_id", user_id_cible).eq("question_id", question_id).execute().data
-            
-            if rep_existante:
-                # Mise à jour avec la colonne reponse_joueur
-                supabase.table("Réponses_Questions").update({
-                    "reponse_joueur": valeur
-                }).eq("id", rep_existante[0]['id']).execute()
-            else:
-                # Insertion avec la colonne reponse_joueur
-                supabase.table("Réponses_Questions").insert({
-                    "user_id": user_id_cible,
-                    "question_id": question_id,
-                    "reponse_joueur": valeur
-                }).execute()
-        except Exception as e:
-            st.error(f"Erreur lors de la sauvegarde de la question : {e}")
+def sauvegarder_bonus_auto(question_id, user_id, valeur_saisie=None):
+    """Enregistre automatiquement la réponse bonus d'un joueur."""
+    # Si la valeur n'est pas passée directement, on va la chercher dans le widget
+    if valeur_saisie is None:
+        key_widget = f"q_{question_id}_{user_id}"
+        valeur_saisie = st.session_state.get(key_widget, "")
+        
+    valeur_propre = str(valeur_saisie).strip()
+    
+    try:
+        rep_existante = supabase.table("Réponses_Questions").select("*").eq("user_id", user_id).eq("question_id", question_id).execute().data
+        
+        if rep_existante:
+            supabase.table("Réponses_Questions").update({"reponse_joueur": valeur_propre}).eq("id", rep_existante[0]['id']).execute()
+        else:
+            supabase.table("Réponses_Questions").insert({"user_id": user_id, "question_id": question_id, "reponse_joueur": valeur_propre}).execute()
+    except Exception as e:
+        st.error(f"Erreur lors de l'enregistrement automatique : {e}")
 # =====================================================================
 # 3 - INITIALISATION ET GESTION DE LA SESSION
 # =====================================================================
