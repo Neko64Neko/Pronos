@@ -503,7 +503,7 @@ if st.session_state.onglet_actif == "🏉":
         if joueur_cible:
             id_joueur_cible = joueur_cible['id']
             
-            # --- 7.2 - ZONE DE JEU (QUESTIONS + MATCHS) ---
+# --- 7.2 - ZONE DE JEU (QUESTIONS + MATCHS) ---
             with st.spinner("Chargement de la grille..."):
                 try:
                     # 7.2.1 - SECTION QUESTIONS BONUS
@@ -527,55 +527,54 @@ if st.session_state.onglet_actif == "🏉":
                             )
                     else:
                         st.caption("Aucune question bonus pour le moment.")
+                except Exception as e:
+                    st.error(f"Erreur lors du chargement des questions bonus : {e}")
                         
-# 7.2.2. SECTION MATCHS OUVERTS (VERSION TEMPORELLE + ACCÈS ADMIN FILTRÉ)
+                # 7.2.2 - SECTION MATCHS OUVERTS
                 st.markdown("""<hr style="border: 1px solid #e2e8f0; margin: 30px 0 20px 0;">""", unsafe_allow_html=True)
                 st.subheader("🏉 Liste des Matchs")
 
-                matchs_potentiels = supabase.table("Matchs").select("*").neq("statut", "FT").execute().data
-                matchs_visibles = []
-                
-                if matchs_potentiels:
-                    for m in matchs_potentiels:
-                        try:
-                            date_brute = m['date_match'].split("+")[0].split("Z")[0]
-                            dt_match = datetime.fromisoformat(date_brute)
-                            # CORRECTION: Utilise mode_admin_actif (le bouton toggle) au lieu de is_admin
-                            if maintenant_paris < dt_match or (st.session_state.is_admin and st.session_state.mode_admin_actif):
-                                matchs_visibles.append(m)
-                        except Exception:
-                            if m['statut'] == "NS" or (st.session_state.is_admin and st.session_state.mode_admin_actif):
-                                matchs_visibles.append(m)
-
-                if matchs_visibles:
-                    matchs_visibles = sorted(matchs_visibles, key=lambda x: x['date_match'])
+                try:
+                    matchs_potentiels = supabase.table("Matchs").select("*").neq("statut", "FT").execute().data
+                    matchs_visibles = []
                     
-                    for m in matchs_visibles:
-                        st.markdown("""<hr style="border: 1px solid #f1f5f9; margin: 20px 0;">""", unsafe_allow_html=True)
-                        
-                        with st.container():
-                            st.markdown(f'<div class="match-card">', unsafe_allow_html=True)
-                            st.markdown(f'<div class="match-title">{m["equipe_dom"]} vs {m["equipe_ext"]}</div>', unsafe_allow_html=True)
-                            
-                            bouton_bloque = False
+                    if matchs_potentiels:
+                        for m in matchs_potentiels:
                             try:
                                 date_brute = m['date_match'].split("+")[0].split("Z")[0]
-                                dt_obj = datetime.fromisoformat(date_brute)
-                                date_affiche = dt_obj.strftime("%d/%m/%Y à %H:%M")
-                                match_commence = maintenant_paris >= dt_obj
-                                
-                                if match_commence:
-                                    # CORRECTION: On vérifie que le toggle d'édition admin est bien activé pour laisser le droit
-                                    if st.session_state.is_admin and st.session_state.mode_admin_actif:
-                                        st.markdown(f"<div style='text-align: center; color: #b7791f; font-size: 0.9em; font-weight: bold; margin-bottom: 10px;'>⚠️ Match commencé ({date_affiche}) - Autorisé (Admin)</div>", unsafe_allow_html=True)
-                                    else:
-                                        st.markdown(f"<div style='text-align: center; color: #dc2626; font-size: 0.9em; font-weight: bold; margin-bottom: 10px;'>🔒 Match commencé le {date_affiche}</div>", unsafe_allow_html=True)
-                                        bouton_bloque = True
-                                else:
-                                    st.markdown(f"<div style='text-align: center; color: #64748b; font-size: 0.9em; margin-bottom: 10px;'>📅 Match prévu le {date_affiche}</div>", unsafe_allow_html=True)
+                                dt_match = datetime.fromisoformat(date_brute)
+                                if maintenant_paris < dt_match or (st.session_state.is_admin and st.session_state.mode_admin_actif):
+                                    matchs_visibles.append(m)
                             except Exception:
-                                pass
+                                if m['statut'] == "NS" or (st.session_state.is_admin and st.session_state.mode_admin_actif):
+                                    matchs_visibles.append(m)
+
+                    if matchs_visibles:
+                        matchs_visibles = sorted(matchs_visibles, key=lambda x: x['date_match'])
+                        
+                        for m in matchs_visibles:
+                            with st.container():
+                                st.markdown(f'<div class="match-card">', unsafe_allow_html=True)
+                                st.markdown(f'<div class="match-title">{m["equipe_dom"]} vs {m["equipe_ext"]}</div>', unsafe_allow_html=True)
                                 
+                                bouton_bloque = False
+                                try:
+                                    date_brute = m['date_match'].split("+")[0].split("Z")[0]
+                                    dt_obj = datetime.fromisoformat(date_brute)
+                                    date_affiche = dt_obj.strftime("%d/%m/%Y à %H:%M")
+                                    match_commence = maintenant_paris >= dt_obj
+                                    
+                                    if match_commence:
+                                        if st.session_state.is_admin and st.session_state.mode_admin_actif:
+                                            st.markdown(f"<div style='text-align: center; color: #b7791f; font-size: 0.9em; font-weight: bold; margin-bottom: 10px;'>⚠️ Match commencé ({date_affiche}) - Autorisé (Admin)</div>", unsafe_allow_html=True)
+                                        else:
+                                            st.markdown(f"<div style='text-align: center; color: #dc2626; font-size: 0.9em; font-weight: bold; margin-bottom: 10px;'>🔒 Match commencé le {date_affiche}</div>", unsafe_allow_html=True)
+                                            bouton_bloque = True
+                                    else:
+                                        st.markdown(f"<div style='text-align: center; color: #64748b; font-size: 0.9em; margin-bottom: 10px;'>📅 Match prévu le {date_affiche}</div>", unsafe_allow_html=True)
+                                except Exception:
+                                    pass
+
                                 prono_existant = supabase.table("Pronostics").select("*").eq("user_id", id_joueur_cible).eq("match_id", m['id']).execute().data
                                 choix_actuel = ""
                                 if prono_existant:
