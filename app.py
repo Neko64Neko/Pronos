@@ -228,7 +228,6 @@ else:
         icones_navigation.append("⚙️")
 
     # --- 5.2 - INJECTION DU STYLE CSS PARFAITEMENT CIBLÉ ---
-# 5.2 (Ajout au CSS existant) - DESIGN DES CARTES PRONOS
     st.markdown("""
     <style>
         .match-card {
@@ -256,12 +255,10 @@ else:
     </style>
     """, unsafe_allow_html=True)
 
-# --- 5.3 - CONFIGURATION DES ONGLETS DE NAVIGATION ---
-        # Initialisation de la variable si elle n'existe pas
+    # --- 5.3 - CONFIGURATION DES ONGLETS DE NAVIGATION ---
     if "mode_admin_actif" not in st.session_state:
-        st.session_state.mode_admin_actif = True  # Activé par défaut
+        st.session_state.mode_admin_actif = True
     
-    # Si l'utilisateur est admin, on lui affiche le bouton de contrôle
     if st.session_state.is_admin:
         st.sidebar.markdown("---")
         st.sidebar.subheader("🛠️ Options Développeur")
@@ -271,44 +268,21 @@ else:
             help="Désactivez cette option pour naviguer et tester l'application comme un joueur classique."
         )
     
-    # On définit les options et les labels associés
     if st.session_state.is_admin:
         options_menu = ["📊", "🏉", "📅", "⚙️"]
-        labels_menu = {
-            "📊": "📊 Général",
-            "🏉": "🏉 Pronos",
-            "📅": "📅 Scores",
-            "⚙️": "⚙️ Admin"
-        }
+        labels_menu = {"📊": "📊 Général", "🏉": "🏉 Pronos", "📅": "📅 Scores", "⚙️": "⚙️ Admin"}
     else:
         options_menu = ["📊", "🏉", "📅"]
-        labels_menu = {
-            "📊": "📊 Général",
-            "🏉": "🏉 Pronos",
-            "📅": "📅 Scores"
-        }
+        labels_menu = {"📊": "📊 Général", "🏉": "🏉 Pronos", "📅": "📅 Scores"}
 
-    # Style minimal pour donner un look de gros boutons d'application à la barre native
     st.markdown("""
         <style>
-            /* Force la barre de contrôle segmentée à occuper 100% de la largeur */
-            div[data-testid="stSegmentedControl"] {
-                width: 100% !important;
-                display: flex !important;
-            }
-            /* Égalise la taille de chaque segment (1/3 ou 1/4) */
-            div[data-testid="stSegmentedControl"] button {
-                flex: 1 !important;
-                min-width: 0 !important;
-                text-align: center !important;
-                padding: 12px 4px !important;
-                font-weight: bold !important;
-                font-size: 12px !important;
-            }
+            div[data-testid="stSegmentedControl"] { width: 100% !important; display: flex !important; }
+            div[data-testid="stSegmentedControl"] button { flex: 1 !important; min-width: 0 !important; text-align: center !important; padding: 12px 4px !important; font-weight: bold !important; font-size: 12px !important; }
         </style>
     """, unsafe_allow_html=True)
 
-    # 5.4 & 5.5 - RENDU ET LOGIQUE DE NAVIGATION (NATIVE ET ROBUSTE)
+    # 5.4 & 5.5 - RENDU ET LOGIQUE DE NAVIGATION
     choix_menu = st.segmented_control(
         "Navigation",
         options=options_menu,
@@ -318,7 +292,6 @@ else:
         key="barre_navigation_segmentee"
     )
 
-    # Intercepteur de changement de page
     if choix_menu and choix_menu != st.session_state.onglet_actif:
         st.session_state.onglet_actif = choix_menu
         st.rerun()
@@ -347,7 +320,7 @@ else:
     pts_parfait_cfg = pts_gagnant_cfg + pts_ecart_cfg
 
     # =====================================================================
-    # 6 -CONTENU DE L'ONGLET 1 : CLASSEMENT GÉNÉRAL
+    # 6 - CONTENU DE L'ONGLET 1 : CLASSEMENT GÉNÉRAL
     # =====================================================================
     if st.session_state.onglet_actif == "📊":
         st.markdown(f"### 🏉 Bienvenue sur ton tableau de bord, **{st.session_state.pseudo}** !")
