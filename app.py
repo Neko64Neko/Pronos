@@ -1177,17 +1177,22 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
         if st.button("Créer la question bonus", key="admin_btn_creer_94", use_container_width=True):
             if txt_question and points_stockes:
                 try:
-                    # Combinaison date + heure et compensation de +2h pour l'affichage (comme pour les matchs)
+                    # Combinaison date + heure brute choisie par l'admin
                     dt_limite_combinee = datetime.combine(date_limite_q, heure_limite_q)
-                    dt_limite_compensee = dt_limite_combinee + timedelta(hours=2)
-                    iso_date_limite = dt_limite_compensee.isoformat()
+                    
+                    # On indique à Python que cette heure est celle de Paris
+                    tz_paris = pytz.timezone('Europe/Paris')
+                    dt_limite_paris = tz_paris.localize(dt_limite_combinee)
+                    
+                    # On convertit en UTC pour Supabase (norme standard des bases de données)
+                    iso_date_limite = dt_limite_paris.astimezone(pytz.utc).isoformat()
 
-                    # Enregistrement dans la table Questions_Bonus (Utilisation de 'points' au lieu de 'points_bonus')
+                    # Enregistrement dans la table Questions_Bonus
                     supabase.table("Questions_Bonus").insert({
                         "question": txt_question,
-                        "points": points_stockes,  # Correction du nom de la colonne ici
+                        "points": points_stockes,
                         "statut": "open",
-                        "date_limite": iso_date_limite  # Enregistrement de la date limite
+                        "date_limite": iso_date_limite
                     }).execute()
                     st.success("🎉 Question bonus créée avec succès !")
                     time.sleep(1)
