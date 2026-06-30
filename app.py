@@ -898,8 +898,11 @@ elif st.session_state.onglet_actif == "📅":
     st.title("📅 Résultats & Matchs en Direct")
     
     with st.spinner("Mise à jour des scores..."):
-        st.subheader("🏉 Matchs Clos / En cours")
         try:
+            # 1. Récupération de la liste complète de TOUS les joueurs inscrits (triés par pseudo)
+            tous_les_joueurs = supabase.table("Joueurs").select("*").order("pseudo").execute().data
+            
+            # 2. Récupération des matchs clos ou en cours
             tous_matchs_bdd = supabase.table("Matchs").select("*").order("date_match", desc=True).execute().data
             matchs = []
             
@@ -915,7 +918,9 @@ elif st.session_state.onglet_actif == "📅":
                         if m['statut'] in ["FT", "LIVE"]:
                             matchs.append(m)
             
-            if matchs:
+            # --- SOUS-SECTION A : LES MATCHS ---
+            st.subheader("🏉 Matchs Clos / En cours")
+            if matchs and tous_les_joueurs:
                 for m in matchs:
                     label_statut = ""
                     if m['statut'] == 'LIVE':
@@ -939,31 +944,35 @@ elif st.session_state.onglet_actif == "📅":
                     else: vraie_tranche = "51+"
 
                     with st.expander(f"🏉 {m['equipe_dom']} {sc_dom} - {sc_ext} {m['equipe_ext']}{label_statut}"):
-                        pronos = supabase.table("Pronostics").select("*, Joueurs(pseudo)").eq("match_id", m['id']).execute().data
+                        # Récupération de tous les pronostics existants pour ce match précis
+                        pronos = supabase.table("Pronostics").select("*").eq("match_id", m['id']).execute().data
                         
-                        if pronos:
-                            total_pronos_match = len(pronos)
-                            mises_home = sum(1 for p in pronos if p['gagnant_prevu'] == "home")
-                            mises_away = sum(1 for p in pronos if p['gagnant_prevu'] == "away")
+                        # Création d'un dictionnaire indexé par user_id pour retrouver instantanément un prono
+                        dict_pronos = {p['user_id']: p for p in pronos} if pronos else {}
+                        
+                        total_pronos_match = len(pronos) if pronos else 0
+                        mises_home = sum(1 for p in pronos if p['gagnant_prevu'] == "home") if pronos else 0
+                        mises_away = sum(1 for p in pronos if p['gagnant_prevu'] == "away") if pronos else 0
+                        
+                        pct_home = (mises_home / total_pronos_match * 100) if total_pronos_match > 0 else 100
+                        pct_away = (mises_away / total_pronos_match * 100) if total_pronos_match > 0 else 100
+                        
+                        st.markdown("**Pronostics des joueurs :**")
+                        
+                        # Boucle sur TOUS les joueurs pour s'assurer que personne ne manque à l'appel
+                        for j in tous_les_joueurs:
+                            p = dict_pronos.get(j['id'])
                             
-                            pct_home = (mises_home / total_pronos_match * 100) if total_pronos_match > 0 else 100
-                            pct_away = (mises_away / total_pronos_match * 100) if total_pronos_match > 0 else 100
-                            
-                            st.markdown("**Pronostics des joueurs :**")
-                            for p in pronos:
-                                nom_joueur = p.get('Joueurs', {}).get('pseudo', 'Inconnu')
+                            if p:
                                 g_prevu = p['gagnant_prevu']
                                 ec_prevu = p['ecart_prevu']
-                                
                                 nom_gagnant_prevu = m['equipe_dom'] if g_prevu == "home" else (m['equipe_ext'] if g_prevu == "away" else "Match Nul")
                                 
                                 pts = 0
                                 badge_ose = ""
                                 en_attente = False
+                                color = "#dc2626"  # Rouge par défaut
                                 
-                                color = "#dc2626" # Rouge par défaut (Perdu)
-                                
-                                # Si le match n'a pas commencé et qu'aucun score n'est là
                                 if m['statut'] == 'NS' and m.get('score_dom') is None:
                                     en_attente = True
                                 else:
@@ -973,17 +982,15 @@ elif st.session_state.onglet_actif == "📅":
                                         
                                         if is_ecart_exact:
                                             base_match += pts_ecart_cfg
-                                            color = "#10b981" # Vert
+                                            color = "#10b981"  # Vert
                                         else:
-                                            color = "#2563eb" # Bleu
+                                            color = "#2563eb"  # Bleu
                                         
-                                        # Gestion du prono osé
                                         is_ose = (g_prevu == "home" and pct_home <= seuil_ose_cfg) or (g_prevu == "away" and pct_away <= seuil_ose_cfg)
-                                        
                                         if is_ose:
                                             pts = float(base_match * mult_ose_cfg)
                                             badge_ose = f" 🔥 **[OSÉ x{mult_ose_cfg}]**"
-                                            color = "#d97706" # Ambre
+                                            color = "#d97706"  # Ambre
                                         else:
                                             pts = float(base_match)
                                 
@@ -993,16 +1000,44 @@ elif st.session_state.onglet_actif == "📅":
                                 else:
                                     pts_affiche = int(pts) if isinstance(pts, float) and pts.is_integer() else pts
                                     accord_pts = "pt" if pts_affiche <= 1 else "pts"
-                                    
-                                    # Ajout de la mention (Virtuel) à côté des points si le match est en direct
                                     mention_live = " (Virtuel)" if m['statut'] == 'LIVE' else ""
                                     texte_points = f"{pts_affiche} {accord_pts}{mention_live}"
                                 
-                                st.markdown(f"- **{nom_joueur}** : {nom_gagnant_prevu} ({ec_prevu}){badge_ose} ➔ <span style='color:{color}; font-weight:bold;'>{texte_points}</span>", unsafe_allow_html=True)
-                        else:
-                            st.caption("Aucun pronostic enregistré pour ce match.")
+                                st.markdown(f"- **{j['pseudo']}** : {nom_gagnant_prevu} ({ec_prevu}){badge_ose} ➔ <span style='color:{color}; font-weight:bold;'>{texte_points}</span>", unsafe_allow_html=True)
+                            else:
+                                # Le joueur n'a aucun enregistrement de prono pour ce match
+                                st.markdown(f"- **{j['pseudo']}** : <span style='color: #94a3b8; font-style: italic;'>❌ Pas de prono</span>", unsafe_allow_html=True)
             else:
                 st.info("Aucun match terminé ou en cours pour le moment.")
+                
+            # --- SOUS-SECTION B : LES QUESTIONS BONUS ---
+            st.markdown("<hr style='border: 1px solid #e2e8f0; margin: 30px 0 20px 0;'>", unsafe_allow_html=True)
+            st.subheader("🎯 Suivi des Questions Bonus")
+            
+            questions_bonus = supabase.table("Questions_Bonus").select("*").execute().data
+            reponses_bonus = supabase.table("Réponses_Questions").select("*").execute().data
+            
+            if questions_bonus and tous_les_joueurs:
+                # Dictionnaire d'indexation {(user_id, question_id): reponse_texte}
+                dict_reponses = {(r['user_id'], r['question_id']): r.get('reponse_joueur') for r in reponses_bonus} if reponses_bonus else {}
+                
+                for q in questions_bonus:
+                    st.markdown(f"##### ❓ {q['question']}")
+                    if q.get('reponse_correcte'):
+                        st.markdown(f"🎯 *Réponse officielle : `{q['reponse_correcte']}`*")
+                    
+                    # Boucle sur TOUS les joueurs pour afficher leurs réponses à cette question
+                    for j in tous_les_joueurs:
+                        rep_joueur = dict_reponses.get((j['id'], q['id']))
+                        
+                        if rep_joueur and rep_joueur.strip() != "":
+                            st.markdown(f"👤 **{j['pseudo']}** : `{rep_joueur}`")
+                        else:
+                            st.markdown(f"👤 **{j['pseudo']}** : <span style='color: #94a3b8; font-style: italic;'>❌ Pas de prono</span>", unsafe_allow_html=True)
+                    st.markdown("<br>", unsafe_allow_html=True)
+            else:
+                st.info("Aucune question bonus enregistrée pour le moment.")
+                
         except Exception as e:
             st.error(f"Erreur lors du chargement des scores : {e}")
 # =====================================================================
