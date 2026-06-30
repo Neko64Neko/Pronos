@@ -26,7 +26,7 @@ cookie_manager = stx.CookieManager()
 def verifier_et_importer_matchs():
     """Version robuste : scanne L'Équipe et dynamiquement TheSportsDB selon la saison en cours."""
     matchs_traites = 0
-   url_scraping = "https://www.lequipe.fr/Rugby/Top-14/page-calendrier-resultats"
+    url_scraping = "https://www.lequipe.fr/Rugby/Top-14/page-calendrier-resultats"
 
     
     # 2.1 - Tentative via le scraping L'Équipe
