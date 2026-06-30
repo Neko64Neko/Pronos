@@ -775,16 +775,10 @@ if st.session_state.onglet_actif == "🏉":
         st.warning("⚠️ Aucun joueur trouvé dans la base.")
 
 # =====================================================================
-# 8 - CONTENU DE L'ONGLET 3 : RÉSULTATS & DIRECT (COULEURS ADAPTÉES)
+# 8 - CONTENU DE L'ONGLET 3 : RÉSULTATS & DIRECT (AVEC MATCHS LIVE)
 # =====================================================================
 elif st.session_state.onglet_actif == "📅":
     st.title("📅 Résultats & Matchs en Direct")
-    
-    # Récupération des valeurs du barème configurées par l'admin (ou valeurs par défaut)
-    coef_vainqueur = st.session_state.get("pts_vainqueur", 2)
-    coef_ecart = st.session_state.get("pts_ecart", 2)
-    pct_max_ose = st.session_state.get("pct_ose", 20)
-    multiplicateur_ose = st.session_state.get("mult_ose", 2.0)
     
     with st.spinner("Mise à jour des scores..."):
         st.subheader("🏉 Matchs Clos / En cours")
@@ -797,6 +791,7 @@ elif st.session_state.onglet_actif == "📅":
                     try:
                         date_brute = m['date_match'].split("+")[0].split("Z")[0]
                         dt_match = datetime.fromisoformat(date_brute)
+                        # On prend les matchs terminés (FT), en direct (LIVE) ou dont l'heure est passée
                         if m['statut'] in ["FT", "LIVE"] or maintenant_paris >= dt_match:
                             matchs.append(m)
                     except Exception:
@@ -807,8 +802,8 @@ elif st.session_state.onglet_actif == "📅":
                 for m in matchs:
                     label_statut = ""
                     if m['statut'] == 'LIVE':
-                        label_statut = " 🔴 EN DIRECT"
-                    elif m['statut'] == 'NS':
+                        label_statut = " 🔴 EN DIRECT (Virtuel)"
+                    elif m['statut'] == 'NS' and (m.get('score_dom') is None or m.get('score_ext') is None):
                         label_statut = " ⏳ EN COURS (En attente du score)"
                     
                     sc_dom = m.get('score_dom') if m.get('score_dom') is not None else 0
@@ -849,41 +844,42 @@ elif st.session_state.onglet_actif == "📅":
                                 badge_ose = ""
                                 en_attente = False
                                 
-                                # Détermination de la couleur par défaut (rouge si perdant)
-                                color = "#dc2626" 
+                                color = "#dc2626" # Rouge par défaut (Perdu)
                                 
-                                if m['statut'] == 'NS' and sc_dom == 0 and sc_ext == 0:
+                                # Si le match n'a pas commencé et qu'aucun score n'est là
+                                if m['statut'] == 'NS' and m.get('score_dom') is None:
                                     en_attente = True
                                 else:
                                     if g_prevu == vrai_gagnant_brut:
-                                        base_match = coef_vainqueur
+                                        base_match = pts_gagnant_cfg
                                         is_ecart_exact = (ec_prevu == vraie_tranche and g_prevu != "draw")
                                         
-                                        # Gestion de la couleur de base (Bleu si vainqueur simple, Vert si score/écart exact)
                                         if is_ecart_exact:
-                                            base_match += coef_ecart
+                                            base_match += pts_ecart_cfg
                                             color = "#10b981" # Vert
                                         else:
                                             color = "#2563eb" # Bleu
                                         
-                                        # Vérification si c'est un prono osé
-                                        is_ose = (g_prevu == "home" and pct_home <= pct_max_ose) or (g_prevu == "away" and pct_away <= pct_max_ose)
+                                        # Gestion du prono osé
+                                        is_ose = (g_prevu == "home" and pct_home <= seuil_ose_cfg) or (g_prevu == "away" and pct_away <= seuil_ose_cfg)
                                         
                                         if is_ose:
-                                            pts = float(base_match * multiplicateur_ose)
-                                            badge_ose = f" 🔥 **[OSÉ x{multiplicateur_ose}]**"
-                                            color = "#d97706" # Doré / Ambre pour tout prono osé réussi
+                                            pts = float(base_match * mult_ose_cfg)
+                                            badge_ose = f" 🔥 **[OSÉ x{mult_ose_cfg}]**"
+                                            color = "#d97706" # Ambre
                                         else:
                                             pts = float(base_match)
                                 
-                                # Formatage final de l'affichage textuel
                                 if en_attente:
                                     color = "orange"
                                     texte_points = "⏳ En attente"
                                 else:
-                                    pts_affiche = int(pts) if pts.is_integer() else pts
+                                    pts_affiche = int(pts) if isinstance(pts, float) and pts.is_integer() else pts
                                     accord_pts = "pt" if pts_affiche <= 1 else "pts"
-                                    texte_points = f"{pts_affiche} {accord_pts}"
+                                    
+                                    # Ajout de la mention (Virtuel) à côté des points si le match est en direct
+                                    mention_live = " (Virtuel)" if m['statut'] == 'LIVE' else ""
+                                    texte_points = f"{pts_affiche} {accord_pts}{mention_live}"
                                 
                                 st.markdown(f"- **{nom_joueur}** : {nom_gagnant_prevu} ({ec_prevu}){badge_ose} ➔ <span style='color:{color}; font-weight:bold;'>{texte_points}</span>", unsafe_allow_html=True)
                         else:
