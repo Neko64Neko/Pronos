@@ -1153,34 +1153,39 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
 # 9.2 - TAB 2 : AJOUTER UN MATCH MANUELLEMENT (COMPENSATION INVERSE AFFICHAGE)
     with tab2:
         st.subheader("➕ Ajouter un nouveau match")
-        col1, col2 = st.columns(2)
-        with col1:
-            date_saisie = st.date_input("Date du match")
-        with col2:
-            heure_saisie = st.time_input("Heure du match")
-        
-        if st.button("Valider la création du match"):
-            try:
-                # 1. Création de l'objet datetime combiné (heure locale de Paris)
-                naive_dt = datetime.combine(date_saisie, heure_saisie)
-                
-                # 2. Localisation en heure de Paris
-                paris_tz = pytz.timezone("Europe/Paris")
-                local_dt = paris_tz.localize(naive_dt)
-                
-                # 3. Conversion en UTC pour Supabase
-                utc_dt = local_dt.astimezone(pytz.UTC)
-                
-                # 4. Insertion en base
-                supabase.table("Matchs").insert({
-                    "date": utc_dt.isoformat(),
-                    # ... ajoute ici tes autres champs (ex: equipe_dom, equipe_ext) ...
-                }).execute()
-                
-                st.success("Match créé avec succès (heure corrigée) !")
-                st.rerun()
-            except Exception as e:
-                st.error(f"Erreur lors de l'ajout : {e}")
+
+# 1. Saisie des infos
+col1, col2 = st.columns(2)
+with col1:
+    equipe_dom = st.text_input("Équipe domicile")
+    date_saisie = st.date_input("Date du match")
+with col2:
+    equipe_ext = st.text_input("Équipe extérieur")
+    heure_saisie = st.time_input("Heure du match")
+
+# 2. Validation et insertion avec correction du fuseau horaire
+if st.button("Valider la création du match"):
+    if equipe_dom and equipe_ext:
+        try:
+            # Conversion de l'heure en UTC (Correction du décalage de 2h)
+            naive_dt = datetime.combine(date_saisie, heure_saisie)
+            paris_tz = pytz.timezone("Europe/Paris")
+            local_dt = paris_tz.localize(naive_dt)
+            utc_dt = local_dt.astimezone(pytz.UTC)
+            
+            # Insertion dans la base
+            supabase.table("Matchs").insert({
+                "equipe_domicile": equipe_dom,
+                "equipe_exterieure": equipe_ext,
+                "date": utc_dt.isoformat()
+            }).execute()
+            
+            st.success(f"Match {equipe_dom} vs {equipe_ext} créé !")
+            st.rerun()
+        except Exception as e:
+            st.error(f"Erreur : {e}")
+    else:
+        st.warning("Merci de remplir les noms des équipes.")
     
     # 9.3 - TAB 3 : GESTION DES MATCHS EXISTANTS
     with tab3:
