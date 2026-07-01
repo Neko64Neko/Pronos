@@ -206,20 +206,20 @@ if st.session_state.user_id is None:
         if st.button("Connexion"):
             try:
                 try:
-    # On force le nettoyage des saisies
-    email_clean = email.strip().lower()
-    password_clean = password.strip()
-    
-    st.write(f"DEBUG: Tentative pour {email_clean}") # Tu verras ce qui est envoyé à l'écran
-    
-    res = supabase.auth.sign_in_with_password({
-        "email": email_clean, 
-        "password": password_clean
-    })
-    st.success("Connexion réussie !")
-    st.rerun()
-except Exception as e:
-    st.error(f"Erreur Supabase: {e}")
+                    # On force le nettoyage des saisies
+                    email_clean = email.strip().lower()
+                    password_clean = password.strip()
+                    
+                    st.write(f"DEBUG: Tentative pour {email_clean}") # Tu verras ce qui est envoyé à l'écran
+                    
+                    res = supabase.auth.sign_in_with_password({
+                        "email": email_clean, 
+                        "password": password_clean
+                    })
+                    st.success("Connexion réussie !")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Erreur Supabase: {e}")
                 if user:
                     # On sauvegarde le token pour la prochaine fois
                     cookie_manager.set("sb-auth-token", user.session.access_token, expires_at=...)
