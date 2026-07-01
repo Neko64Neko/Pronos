@@ -29,9 +29,6 @@ if session:
     st.session_state.user = session.user
 else:
 
-# Chargement initial
-if not supabase.auth.get_session():
-    load_session()
 
 # 1.4 - Sécurité Admin (Masquer l'interface aux non-admins)
 def is_admin():
