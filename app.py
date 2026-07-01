@@ -201,6 +201,9 @@ if st.session_state.user_id is None:
         if st.button("Connexion"):
             try:
                 res = supabase.auth.sign_in_with_password({"email": mail, "password": mdp})
+                if user:
+                    # On sauvegarde le token pour la prochaine fois
+                    cookie_manager.set("sb-auth-token", user.session.access_token, expires_at=...)
                 profil = supabase.table("Joueurs").select("*").eq("id", res.user.id).single().execute()
                 
                 st.session_state.user_id = res.user.id
