@@ -14,7 +14,6 @@ import streamlit.components.v1 as components
 
 # 1.1 - CONFIGURATION DE LA PAGE
 st.set_page_config(page_title="Pronos Top 14", page_icon="🏉", layout="centered")
-st.write("DEBUG - Params dans l'URL :", st.query_params)
 
 # 1.2 - CONNEXION À SUPABASE
 supabase = create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
