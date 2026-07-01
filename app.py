@@ -18,27 +18,16 @@ st.set_page_config(page_title="Pronos Top 14", page_icon="🏉", layout="centere
 # 1.2 - CONNEXION À SUPABASE
 supabase = create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
 
-# 1.3 - Gestionnaire de cookies & Session
-cookie_manager = stx.CookieManager()
+# 1.3 - SUPPRIMER TOUT LE CODE COOKIEMANAGER
+# On laisse Supabase gérer la session nativement via le localStorage du navigateur
+if "user" not in st.session_state:
+    st.session_state.user = None
 
-# Fonction pour charger la session depuis le cookie
-def load_session():
-    cookies = cookie_manager.get_all()
-    # On cherche le token Supabase (ex: sb-....-auth-token)
-    for key, value in cookies.items():
-        if "auth-token" in key:
-            try:
-                # Supabase attend un dictionnaire, pas juste une chaîne
-                import json
-                session_data = json.loads(value)
-                supabase.auth.set_session(
-                    access_token=session_data.get("access_token"),
-                    refresh_token=session_data.get("refresh_token")
-                )
-                return True
-            except:
-                pass
-    return False
+# Vérification de session native Supabase
+session = supabase.auth.get_session()
+if session:
+    st.session_state.user = session.user
+else:
 
 # Chargement initial
 if not supabase.auth.get_session():
