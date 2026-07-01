@@ -12,28 +12,6 @@ from streamlit_autorefresh import st_autorefresh
 # 1 - PARAMETRES ET CONNEXION
 import streamlit.components.v1 as components
 
-# 1.0 - GESTION DU MOT DE PASSE (Tout en haut, avant TOUT)
-# On récupère les paramètres de l'URL
-query_params = st.query_params
-
-# Supabase utilise souvent un hash (#), on vérifie les deux cas
-# Si le token est dans l'URL, on l'affiche immédiatement
-if "access_token" in query_params or any("#" in str(k) for k in query_params.keys()):
-    st.title("🔒 Réinitialisation")
-    st.write("Veuillez définir votre nouveau mot de passe ci-dessous :")
-    new_password = st.text_input("Nouveau mot de passe", type="password")
-    
-    if st.button("Valider"):
-        # Supabase gère automatiquement la session via le token présent dans le navigateur
-        try:
-            # On tente la mise à jour
-            supabase.auth.update_user({"password": new_password})
-            st.success("Mot de passe mis à jour ! Tu peux maintenant te connecter.")
-            st.stop()
-        except Exception as e:
-            st.error(f"Erreur : {e}")
-    st.stop() # Arrête le chargement du reste de l'app
-
 # 1.1 - CONFIGURATION DE LA PAGE
 st.set_page_config(page_title="Pronos Top 14", page_icon="🏉", layout="centered")
 st.write("DEBUG - Params dans l'URL :", st.query_params)
