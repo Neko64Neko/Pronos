@@ -19,6 +19,19 @@ supabase = create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
 # 1.3 - Gestionnaire de cookies
 cookie_manager = stx.CookieManager()
 
+# 1.4 - GESTION DU MOT DE PASSE OUBLIÉ
+params = st.query_params # Pour récupérer les paramètres de l'URL
+if "access_token" in params:
+    st.info("Réinitialisation de votre mot de passe...")
+    # Ici, tu affiches un formulaire simple pour saisir le nouveau mot de passe
+    new_password = st.text_input("Nouveau mot de passe", type="password")
+    if st.button("Valider"):
+        try:
+            supabase.auth.update_user({"password": new_password})
+            st.success("Mot de passe mis à jour !")
+        except Exception as e:
+            st.error(f"Erreur : {e}")
+
 # =====================================================================
 # 2 - SYSTEME DE SCRAPING GRATUIT ET AUTOMATIQUE
 # =====================================================================
