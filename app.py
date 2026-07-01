@@ -19,6 +19,12 @@ st.set_page_config(page_title="Pronos Top 14", page_icon="🏉", layout="centere
 supabase = create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
 
 # 1.3 - GESTION DES COOKIES (Stockage simple de l'ID)
+if "user_id" not in st.session_state:
+    st.session_state.user_id = None
+if "is_admin" not in st.session_state:
+    st.session_state.is_admin = False
+if "pseudo" not in st.session_state:
+    st.session_state.pseudo = None
 cookie_manager = stx.CookieManager()
 
 # A. Tentative de reconnexion automatique via le cookie ID
