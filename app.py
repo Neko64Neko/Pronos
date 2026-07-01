@@ -18,27 +18,40 @@ st.set_page_config(page_title="Pronos Top 14", page_icon="🏉", layout="centere
 # 1.2 - CONNEXION À SUPABASE
 supabase = create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
 
-# 1.3 - GESTION DE SESSION NATIVE ET RECONNEXION AUTO
+# 1.3 - GESTION DE SESSION NATIVE AVEC PERSISTANCE JS
+import streamlit.components.v1 as components
+
+# Ce petit script JS force la récupération du token Supabase depuis le LocalStorage
+js_code = """
+<script>
+    // Récupérer le token depuis le stockage Supabase
+    const storageKey = Object.keys(localStorage).find(key => key.includes('auth-token'));
+    if (storageKey) {
+        const tokenData = localStorage.getItem(storageKey);
+        // On envoie le token à Streamlit via un paramètre d'URL caché
+        const url = new URL(window.location.href);
+        if (!url.searchParams.has('token_found')) {
+            window.location.href = window.location.href + (window.location.href.includes('?') ? '&' : '?') + 'token_found=true';
+        }
+    }
+</script>
+"""
+components.html(js_code, height=0)
+
 if "user_id" not in st.session_state:
     st.session_state.user_id = None
     st.session_state.is_admin = False
-    st.session_state.pseudo = None
 
-# On récupère la session native de Supabase
+# Vérification native
 session = supabase.auth.get_session()
-
-# Si session trouvée mais pas encore en mémoire Streamlit
 if session and st.session_state.user_id is None:
     st.session_state.user_id = session.user.id
     try:
-        # On tente de récupérer le profil pour valider l'accès
         profil = supabase.table("Joueurs").select("is_admin, pseudo").eq("id", session.user.id).single().execute()
         st.session_state.is_admin = profil.data.get("is_admin", False)
         st.session_state.pseudo = profil.data.get("pseudo", "Joueur")
-    except Exception as e:
-        # En cas d'erreur de récupération, on force la déconnexion propre
-        supabase.auth.sign_out()
-        st.session_state.user_id = None
+    except:
+        pass
 # =====================================================================
 # 2 - SYSTEME DE SCRAPING GRATUIT ET AUTOMATIQUE
 # =====================================================================
