@@ -16,6 +16,7 @@ import streamlit.components.v1 as components
 st.set_page_config(page_title="Pronos Top 14", page_icon="🏉", layout="centered")
 
 # 1.2 - CONNEXION À SUPABASE
+st.write(f"DEBUG: Email envoyé '{email.strip().lower()}'")
 supabase = create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
 
 # 1.3 - Gestionnaire de cookies
