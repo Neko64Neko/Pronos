@@ -1152,43 +1152,34 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
 
 # 9.2 - TAB 2 : AJOUTER UN MATCH MANUELLEMENT (COMPENSATION INVERSE AFFICHAGE)
     with tab2:
-        st.subheader("➕ Ajouter un nouveau match")
+        if st.session_state.is_admin:
+    st.subheader("➕ Ajouter un match")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        equipe_dom = st.text_input("Équipe Domicile")
+        date_saisie = st.date_input("Date du match")
+    with col2:
+        equipe_ext = st.text_input("Équipe Extérieure")
+        heure_saisie = st.time_input("Heure du match")
 
-# 1. Saisie des infos
-col1, col2 = st.columns(2)
-with col1:
-    equipe_dom = st.text_input("Équipe domicile")
-    equipe_ext = st.text_input("Équipe extérieur")
-with col2:
-    date_saisie = st.date_input("Date du match")
-    heure_saisie = st.time_input("Heure du match")
-
-# 2. Validation et insertion avec correction du fuseau horaire
-if st.button("Valider la création du match"):
-    if equipe_dom and equipe_ext:
+    if st.button("Valider la création"):
         try:
-            # 1. Conversion horaire (toujours présente)
+            # Conversion : on combine la date et l'heure, 
+            # on localise en Paris, puis on passe en UTC pour Supabase
             naive_dt = datetime.combine(date_saisie, heure_saisie)
             paris_tz = pytz.timezone("Europe/Paris")
             local_dt = paris_tz.localize(naive_dt)
             utc_dt = local_dt.astimezone(pytz.UTC)
-            
-            # 2. Récupérer le dernier ID pour éviter le conflit (Solution temporaire robuste)
-            # On cherche le max ID actuel et on ajoute 1
-            last_match = supabase.table("Matchs").select("id").order("id", desc=True).limit(1).execute()
-            new_id = 1
-            if last_match.data:
-                new_id = last_match.data[0]['id'] + 1
-            
-            # 3. Insertion avec l'ID calculé
+
+            # Insertion
             supabase.table("Matchs").insert({
-                "id": new_id, 
                 "equipe_dom": equipe_dom,
                 "equipe_ext": equipe_ext,
                 "date_match": utc_dt.isoformat()
             }).execute()
             
-            st.success(f"Match créé (ID: {new_id}) !")
+            st.success("Match enregistré !")
             st.rerun()
         except Exception as e:
             st.error(f"Erreur : {e}")
