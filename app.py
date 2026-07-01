@@ -10,25 +10,36 @@ import pytz
 from streamlit_autorefresh import st_autorefresh
 
 # 1 - PARAMETRES ET CONNEXION
-# 1.0 - GESTION DU MOT DE PASSE OUBLIÉ (À placer tout en haut)
+import streamlit.components.v1 as components
+
+# 1.0 - GESTION DU MOT DE PASSE OUBLIÉ (Récupération du hash #)
+# Ce petit script JS transforme le # en ? pour que Streamlit puisse le lire
+components.html("""
+    <script>
+        if (window.location.hash) {
+            window.location.search = window.location.hash.substring(1);
+        }
+    </script>
+""", height=0)
+
 params = st.query_params
 
+# On vérifie si access_token est maintenant présent (grâce au script JS ci-dessus)
 if "access_token" in params:
     st.title("🔒 Réinitialisation du mot de passe")
     new_password = st.text_input("Nouveau mot de passe", type="password")
     
     if st.button("Valider le nouveau mot de passe"):
         try:
-            # Supabase utilise le token présent dans la session Auth
-            # pour identifier l'utilisateur qui réinitialise
-            response = supabase.auth.update_user({"password": new_password})
-            st.success("Mot de passe mis à jour avec succès ! Tu peux te reconnecter.")
-            # Optionnel : effacer les paramètres de l'URL après succès
+            # On force la session avec le token récupéré dans l'URL
+            supabase.auth.set_session(access_token=params["access_token"], refresh_token=params.get("refresh_token"))
+            # Puis on met à jour
+            supabase.auth.update_user({"password": new_password})
+            st.success("Mot de passe mis à jour ! Tu peux te reconnecter.")
             st.query_params.clear() 
         except Exception as e:
             st.error(f"Erreur : {e}")
     
-    # On arrête l'exécution de la suite du script pour afficher uniquement ce bloc
     st.stop()
 
 # 1.1 - CONFIGURATION DE LA PAGE
