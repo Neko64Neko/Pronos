@@ -1177,7 +1177,7 @@ if st.button("Valider la création du match"):
             supabase.table("Matchs").insert({
                 "equipe_domicile": equipe_dom,
                 "equipe_exterieure": equipe_ext,
-                "date": utc_dt.isoformat()
+                "date_match": utc_dt.isoformat()
             }).execute()
             
             st.success(f"Match {equipe_dom} vs {equipe_ext} créé !")
