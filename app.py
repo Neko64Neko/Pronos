@@ -18,22 +18,27 @@ st.set_page_config(page_title="Pronos Top 14", page_icon="🏉", layout="centere
 # 1.2 - CONNEXION À SUPABASE
 supabase = create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
 
-# 1.3 - GESTION DE SESSION NATIVE
+# 1.3 - GESTION DE SESSION NATIVE ET RECONNEXION AUTO
 if "user_id" not in st.session_state:
     st.session_state.user_id = None
     st.session_state.is_admin = False
+    st.session_state.pseudo = None
 
-# Vérification automatique de la session avec Supabase
+# On récupère la session native de Supabase
 session = supabase.auth.get_session()
-if session:
+
+# Si session trouvée mais pas encore en mémoire Streamlit
+if session and st.session_state.user_id is None:
     st.session_state.user_id = session.user.id
     try:
-        # On récupère le profil une seule fois
+        # On tente de récupérer le profil pour valider l'accès
         profil = supabase.table("Joueurs").select("is_admin, pseudo").eq("id", session.user.id).single().execute()
         st.session_state.is_admin = profil.data.get("is_admin", False)
         st.session_state.pseudo = profil.data.get("pseudo", "Joueur")
-    except:
-        pass
+    except Exception as e:
+        # En cas d'erreur de récupération, on force la déconnexion propre
+        supabase.auth.sign_out()
+        st.session_state.user_id = None
 # =====================================================================
 # 2 - SYSTEME DE SCRAPING GRATUIT ET AUTOMATIQUE
 # =====================================================================
