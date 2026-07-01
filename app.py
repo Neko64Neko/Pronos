@@ -1167,20 +1167,28 @@ with col2:
 if st.button("Valider la création du match"):
     if equipe_dom and equipe_ext:
         try:
-            # Conversion de l'heure en UTC (Correction du décalage de 2h)
+            # 1. Conversion horaire (toujours présente)
             naive_dt = datetime.combine(date_saisie, heure_saisie)
             paris_tz = pytz.timezone("Europe/Paris")
             local_dt = paris_tz.localize(naive_dt)
             utc_dt = local_dt.astimezone(pytz.UTC)
             
-            # Insertion dans la base
+            # 2. Récupérer le dernier ID pour éviter le conflit (Solution temporaire robuste)
+            # On cherche le max ID actuel et on ajoute 1
+            last_match = supabase.table("Matchs").select("id").order("id", desc=True).limit(1).execute()
+            new_id = 1
+            if last_match.data:
+                new_id = last_match.data[0]['id'] + 1
+            
+            # 3. Insertion avec l'ID calculé
             supabase.table("Matchs").insert({
-                "equipe_dom": equipe_dom,
-                "equipe_ext": equipe_ext,
+                "id": new_id, 
+                "equipe_domicile": equipe_dom,
+                "equipe_exterieure": equipe_ext,
                 "date_match": utc_dt.isoformat()
             }).execute()
             
-            st.success(f"Match {equipe_dom} vs {equipe_ext} créé !")
+            st.success(f"Match créé (ID: {new_id}) !")
             st.rerun()
         except Exception as e:
             st.error(f"Erreur : {e}")
