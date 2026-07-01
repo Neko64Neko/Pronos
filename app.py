@@ -47,9 +47,13 @@ if not st.session_state.get("user_id"):
         except:
             pass
 if st.button("Réinitialiser ma session mobile"):
-    cookie_manager.delete("top14_user_id")
-    st.session_state.user_id = None
-    st.rerun()
+    try:
+        cookie_manager.delete("top14_user_id")
+        st.session_state.user_id = None
+        st.success("Session supprimée. Recharge la page manuellement.")
+        # NE PAS FAIRE ST.RERUN() ICI, Laisse le message s'afficher
+    except Exception as e:
+        st.error(f"Erreur fatale : {e}")
     
 # =====================================================================
 # 2 - SYSTEME DE SCRAPING GRATUIT ET AUTOMATIQUE
