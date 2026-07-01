@@ -1,3 +1,5 @@
+st.write("DEBUG - Params dans l'URL :", st.query_params)
+
 import streamlit as st
 from supabase import create_client
 from datetime import datetime, timedelta
