@@ -172,23 +172,6 @@ try:
 except Exception:
     pass
 
-# 3.2 Tentative de reconnexion via COOKIE - VERSION CORRIGÉE
-#if st.session_state.user_id is None:
- #   saved_user_id = cookie_manager.get(cookie="top14_user_id")
-  #  if saved_user_id:
-   #     try:
-    #        # On récupère le profil
-     #       profil = supabase.table("Joueurs").select("*").eq("id", saved_user_id).single().execute()
-      #      if profil.data:
-       #         st.session_state.user_id = saved_user_id
-        #        st.session_state.is_admin = profil.data["is_admin"]
-         #       st.session_state.pseudo = profil.data["pseudo"]
-          #      # IMPORTANT : On rafraîchit la durée de vie du cookie à chaque visite
-           #     cookie_manager.set("top14_user_id", saved_user_id, max_age=2592000)
-            #    st.rerun()
-        #except Exception as e:
-         #   # Si erreur, on nettoie le cookie corrompu
-          #  cookie_manager.delete("top14_user_id")
 
 # =====================================================================
 # 4 - ÉCRAN DE CONNEXION / INSCRIPTION
