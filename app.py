@@ -46,7 +46,11 @@ if not st.session_state.get("user_id"):
                 st.rerun() # Rafraîchit pour masquer le formulaire de login
         except:
             pass
-
+if st.button("Réinitialiser ma session mobile"):
+    cookie_manager.delete("top14_user_id")
+    st.session_state.user_id = None
+    st.rerun()
+    
 # =====================================================================
 # 2 - SYSTEME DE SCRAPING GRATUIT ET AUTOMATIQUE
 # =====================================================================
