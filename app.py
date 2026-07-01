@@ -33,7 +33,19 @@ if cookies:
                 supabase.auth.set_session(value)
             except:
                 pass
-
+# 1.4 - Forcer la session si le cookie est trouvé
+if not st.session_state.get("user_id"):
+    cookie_id = cookie_manager.get(cookie="top14_user_id")
+    if cookie_id:
+        # On tente de récupérer le profil pour valider la session
+        try:
+            profil = supabase.table("Joueurs").select("*").eq("id", cookie_id).single().execute()
+            if profil.data:
+                st.session_state.user_id = cookie_id
+                st.session_state.is_admin = profil.data.get("is_admin", False)
+                st.rerun() # Rafraîchit pour masquer le formulaire de login
+        except:
+            pass
 
 # =====================================================================
 # 2 - SYSTEME DE SCRAPING GRATUIT ET AUTOMATIQUE
