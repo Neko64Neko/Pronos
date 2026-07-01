@@ -18,21 +18,21 @@ st.set_page_config(page_title="Pronos Top 14", page_icon="🏉", layout="centere
 # 1.2 - CONNEXION À SUPABASE
 supabase = create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
 
-# 1.3 - Gestionnaire de cookies
+# 1.3 - Gestionnaire de cookies et Session
 cookie_manager = stx.CookieManager()
-# --- AJOUTER CE BLOC POUR LA CONNEXION AUTOMATIQUE ---
-# On cherche le token dans les cookies
 cookies = cookie_manager.get_all()
-if cookies:
-    # Le nom du cookie Supabase commence souvent par 'sb-'
-    # On parcourt les cookies pour trouver celui de session
-    for key, value in cookies.items():
-        if key.startswith("sb-") and "auth-token" in key:
-            try:
-                # Si on trouve un token, on force la session Supabase
-                supabase.auth.set_session(value)
-            except:
-                pass
+
+if "sb-auth-token" in cookies:
+    try:
+        # On décode le cookie qui est au format JSON
+        session_data = json.loads(cookies["sb-auth-token"])
+        supabase.auth.set_session(
+            access_token=session_data.get("access_token"),
+            refresh_token=session_data.get("refresh_token")
+        )
+    except Exception:
+        # Si le cookie est corrompu, on nettoie
+        cookie_manager.delete("sb-auth-token")
 # 1.4 - FORCAGE DE SESSION (Sans dépendre des cookies)
 # Si on est sur mobile et que ça bloque, on force l'utilisateur à se reconnecter manuellement
 if st.session_state.get("user_id") is None:
