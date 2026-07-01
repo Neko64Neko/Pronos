@@ -18,40 +18,23 @@ st.set_page_config(page_title="Pronos Top 14", page_icon="🏉", layout="centere
 # 1.2 - CONNEXION À SUPABASE
 supabase = create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
 
-# 1.3 - GESTION DE SESSION NATIVE AVEC PERSISTANCE JS
-import streamlit.components.v1 as components
+# 1.3 - GESTION DES COOKIES (Stockage simple de l'ID)
+cookie_manager = stx.CookieManager()
 
-# Ce petit script JS force la récupération du token Supabase depuis le LocalStorage
-js_code = """
-<script>
-    // Récupérer le token depuis le stockage Supabase
-    const storageKey = Object.keys(localStorage).find(key => key.includes('auth-token'));
-    if (storageKey) {
-        const tokenData = localStorage.getItem(storageKey);
-        // On envoie le token à Streamlit via un paramètre d'URL caché
-        const url = new URL(window.location.href);
-        if (!url.searchParams.has('token_found')) {
-            window.location.href = window.location.href + (window.location.href.includes('?') ? '&' : '?') + 'token_found=true';
-        }
-    }
-</script>
-"""
-components.html(js_code, height=0)
-
-if "user_id" not in st.session_state:
-    st.session_state.user_id = None
-    st.session_state.is_admin = False
-
-# Vérification native
-session = supabase.auth.get_session()
-if session and st.session_state.user_id is None:
-    st.session_state.user_id = session.user.id
-    try:
-        profil = supabase.table("Joueurs").select("is_admin, pseudo").eq("id", session.user.id).single().execute()
-        st.session_state.is_admin = profil.data.get("is_admin", False)
-        st.session_state.pseudo = profil.data.get("pseudo", "Joueur")
-    except:
-        pass
+# A. Tentative de reconnexion automatique via le cookie ID
+if st.session_state.user_id is None:
+    saved_user_id = cookie_manager.get(cookie="top14_user_id")
+    if saved_user_id:
+        # On vérifie si cet ID est toujours valide en base
+        try:
+            profil = supabase.table("Joueurs").select("is_admin, pseudo").eq("id", saved_user_id).single().execute()
+            if profil.data:
+                st.session_state.user_id = saved_user_id
+                st.session_state.is_admin = profil.data.get("is_admin", False)
+                st.session_state.pseudo = profil.data.get("pseudo", "Joueur")
+                # Pas besoin de set_session, on gère l'auth manuellement avec cet ID
+        except:
+            cookie_manager.delete("top14_user_id")
 # =====================================================================
 # 2 - SYSTEME DE SCRAPING GRATUIT ET AUTOMATIQUE
 # =====================================================================
@@ -202,25 +185,24 @@ if st.session_state.user_id is None:
         email = st.text_input("Email", key="login_email")
         mdp = st.text_input("Mot de passe", type="password", key="login_pass")
         
-        if st.button("Connexion"):
+        if st.button("Se connecter"):
             try:
-                # Nettoyage des saisies
-                email_clean = email.strip().lower()
-                password_clean = mdp.strip()
-                
-                # Connexion native
+                # 1. Tentative de connexion
                 res = supabase.auth.sign_in_with_password({
-                    "email": email_clean, 
-                    "password": password_clean
+                    "email": email.strip().lower(), 
+                    "password": mdp.strip()
                 })
                 
-                # Récupération du profil
+                # 2. Récupération du profil
                 profil = supabase.table("Joueurs").select("is_admin, pseudo").eq("id", res.user.id).single().execute()
                 
-                # Sauvegarde en session
+                # 3. Sauvegarde de la session en mémoire
                 st.session_state.user_id = res.user.id
                 st.session_state.is_admin = profil.data.get("is_admin", False)
                 st.session_state.pseudo = profil.data.get("pseudo", "Joueur")
+                
+                # 4. Sauvegarde de l'ID dans le cookie (Reconnexion automatique)
+                cookie_manager.set("top14_user_id", res.user.id, max_age=30*24*3600)
                 
                 st.success(f"Ravi de vous revoir {st.session_state.pseudo} !")
                 time.sleep(0.5)
@@ -228,7 +210,6 @@ if st.session_state.user_id is None:
                 
             except Exception as e:
                 st.error("Identifiants incorrects.")
-            except Exception: st.error("Identifiants incorrects.")
 
     with onglet_connexion[1]:
         new_mail = st.text_input("Email", key="reg_email")
