@@ -1451,58 +1451,59 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
             st.info("Aucun match trouvé en base de données.")
 
 # 9.8 - GESTION DES JOUEURS (SUPPRESSION SÉCURISÉE)
-st.subheader("⚙️ Maintenance des joueurs")
-
-# On crée deux onglets pour structurer l'interface
-m_tab1, m_tab2 = st.tabs(["🗑️ Supprimer un joueur", "🔑 Réinitialiser mot de passe"])
-
-# 1. Sous-onglet Suppression
-with m_tab1:
-    tous_les_joueurs = supabase.table("Joueurs").select("id, pseudo").execute().data
-    if tous_les_joueurs:
-        joueur_a_supprimer = st.selectbox(
-            "Choisir un joueur à supprimer :",
-            options=[(j['id'], j['pseudo']) for j in tous_les_joueurs],
-            format_func=lambda x: x[1],
-            key="select_suppr"
-        )
+    with tab8:
+        st.subheader("⚙️ Maintenance des joueurs")
         
-        if joueur_a_supprimer:
-            with st.popover("🗑️ Supprimer ce joueur"):
-                st.error(f"Êtes-vous sûr de vouloir supprimer définitivement **{joueur_a_supprimer[1]}** ?")
-                if st.button("Confirmer la suppression", key="btn_confirm_suppr"):
+        # On crée deux onglets pour structurer l'interface
+        m_tab1, m_tab2 = st.tabs(["🗑️ Supprimer un joueur", "🔑 Réinitialiser mot de passe"])
+        
+        # 1. Sous-onglet Suppression
+        with m_tab1:
+            tous_les_joueurs = supabase.table("Joueurs").select("id, pseudo").execute().data
+            if tous_les_joueurs:
+                joueur_a_supprimer = st.selectbox(
+                    "Choisir un joueur à supprimer :",
+                    options=[(j['id'], j['pseudo']) for j in tous_les_joueurs],
+                    format_func=lambda x: x[1],
+                    key="select_suppr"
+                )
+                
+                if joueur_a_supprimer:
+                    with st.popover("🗑️ Supprimer ce joueur"):
+                        st.error(f"Êtes-vous sûr de vouloir supprimer définitivement **{joueur_a_supprimer[1]}** ?")
+                        if st.button("Confirmer la suppression", key="btn_confirm_suppr"):
+                            try:
+                                # Nettoyage en cascade
+                                supabase.table("Pronostics").delete().eq("user_id", joueur_a_supprimer[0]).execute()
+                                supabase.table("Réponses_Questions").delete().eq("user_id", joueur_a_supprimer[0]).execute()
+                                # Suppression du joueur
+                                supabase.table("Joueurs").delete().eq("id", joueur_a_supprimer[0]).execute()
+                                
+                                st.success(f"Joueur {joueur_a_supprimer[1]} supprimé.")
+                                time.sleep(1)
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Erreur : {e}")
+            else:
+                st.info("Aucun joueur trouvé.")
+        
+        # 2. Sous-onglet Réinitialisation
+        with m_tab2:
+            if tous_les_joueurs:
+                joueur_choisi_pseudo = st.selectbox(
+                    "Choisir le joueur à réinitialiser :",
+                    options=[j['pseudo'] for j in tous_les_joueurs],
+                    key="select_reinit"
+                )
+                id_choisi = next(j['id'] for j in tous_les_joueurs if j['pseudo'] == joueur_choisi_pseudo)
+                
+                nouveau_mdp = st.text_input("Nouveau mot de passe temporaire", type="password", key="new_pass_input")
+                
+                if st.button("Appliquer le nouveau mot de passe", key="btn_reinit"):
                     try:
-                        # Nettoyage en cascade
-                        supabase.table("Pronostics").delete().eq("user_id", joueur_a_supprimer[0]).execute()
-                        supabase.table("Réponses_Questions").delete().eq("user_id", joueur_a_supprimer[0]).execute()
-                        # Suppression du joueur
-                        supabase.table("Joueurs").delete().eq("id", joueur_a_supprimer[0]).execute()
-                        
-                        st.success(f"Joueur {joueur_a_supprimer[1]} supprimé.")
-                        time.sleep(1)
-                        st.rerun()
+                        # Utilisation du client Admin avec la clé Service Role
+                        admin_client = create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_SERVICE_ROLE_KEY"])
+                        admin_client.auth.admin.update_user_by_id(id_choisi, {"password": nouveau_mdp})
+                        st.success(f"Mot de passe mis à jour pour {joueur_choisi_pseudo} !")
                     except Exception as e:
                         st.error(f"Erreur : {e}")
-    else:
-        st.info("Aucun joueur trouvé.")
-
-# 2. Sous-onglet Réinitialisation
-with m_tab2:
-    if tous_les_joueurs:
-        joueur_choisi_pseudo = st.selectbox(
-            "Choisir le joueur à réinitialiser :",
-            options=[j['pseudo'] for j in tous_les_joueurs],
-            key="select_reinit"
-        )
-        id_choisi = next(j['id'] for j in tous_les_joueurs if j['pseudo'] == joueur_choisi_pseudo)
-        
-        nouveau_mdp = st.text_input("Nouveau mot de passe temporaire", type="password", key="new_pass_input")
-        
-        if st.button("Appliquer le nouveau mot de passe", key="btn_reinit"):
-            try:
-                # Utilisation du client Admin avec la clé Service Role
-                admin_client = create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_SERVICE_ROLE_KEY"])
-                admin_client.auth.admin.update_user_by_id(id_choisi, {"password": nouveau_mdp})
-                st.success(f"Mot de passe mis à jour pour {joueur_choisi_pseudo} !")
-            except Exception as e:
-                st.error(f"Erreur : {e}")
