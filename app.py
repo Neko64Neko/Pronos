@@ -18,25 +18,22 @@ st.set_page_config(page_title="Pronos Top 14", page_icon="🏉", layout="centere
 # 1.2 - CONNEXION À SUPABASE
 supabase = create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
 
-# --- 1.3 GESTION DE SESSION NATIVE SUPABASE ---
-# On utilise la gestion native de Supabase (localStorage)
-# Cela évite les bugs de cookies sur mobile
+# 1.3 - GESTION DE SESSION NATIVE
 if "user_id" not in st.session_state:
     st.session_state.user_id = None
     st.session_state.is_admin = False
 
-# Vérification automatique de la session existante
+# Vérification automatique de la session avec Supabase
 session = supabase.auth.get_session()
-if session and st.session_state.user_id is None:
+if session:
     st.session_state.user_id = session.user.id
-    # On récupère le statut admin depuis la table
     try:
+        # On récupère le profil une seule fois
         profil = supabase.table("Joueurs").select("is_admin, pseudo").eq("id", session.user.id).single().execute()
         st.session_state.is_admin = profil.data.get("is_admin", False)
         st.session_state.pseudo = profil.data.get("pseudo", "Joueur")
     except:
         pass
-    
 # =====================================================================
 # 2 - SYSTEME DE SCRAPING GRATUIT ET AUTOMATIQUE
 # =====================================================================
@@ -201,38 +198,35 @@ if st.session_state.user_id is None:
     onglet_connexion = st.tabs(["Se connecter", "S'inscrire", "Mot de passe oublié"])
     
     with onglet_connexion[0]:
-        mail = st.text_input("Email", key="login_email")
+        email = st.text_input("Email", key="login_email")
         mdp = st.text_input("Mot de passe", type="password", key="login_pass")
+        
         if st.button("Connexion"):
             try:
-                try:
-                    # On force le nettoyage des saisies
-                    email_clean = email.strip().lower()
-                    password_clean = password.strip()
-                    
-                    st.write(f"DEBUG: Tentative pour {email_clean}") # Tu verras ce qui est envoyé à l'écran
-                    
-                    res = supabase.auth.sign_in_with_password({
-                        "email": email_clean, 
-                        "password": password_clean
-                    })
-                    st.success("Connexion réussie !")
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"Erreur Supabase: {e}")
-                if user:
-                    # On sauvegarde le token pour la prochaine fois
-                    cookie_manager.set("sb-auth-token", user.session.access_token, expires_at=...)
-                profil = supabase.table("Joueurs").select("*").eq("id", res.user.id).single().execute()
+                # Nettoyage des saisies
+                email_clean = email.strip().lower()
+                password_clean = mdp.strip()
                 
+                # Connexion native
+                res = supabase.auth.sign_in_with_password({
+                    "email": email_clean, 
+                    "password": password_clean
+                })
+                
+                # Récupération du profil
+                profil = supabase.table("Joueurs").select("is_admin, pseudo").eq("id", res.user.id).single().execute()
+                
+                # Sauvegarde en session
                 st.session_state.user_id = res.user.id
-                st.session_state.is_admin = profil.data["is_admin"]
-                st.session_state.pseudo = profil.data["pseudo"]
+                st.session_state.is_admin = profil.data.get("is_admin", False)
+                st.session_state.pseudo = profil.data.get("pseudo", "Joueur")
                 
-                cookie_manager.set("top14_user_id", res.user.id, max_age=2592000)
                 st.success(f"Ravi de vous revoir {st.session_state.pseudo} !")
                 time.sleep(0.5)
                 st.rerun()
+                
+            except Exception as e:
+                st.error("Identifiants incorrects.")
             except Exception: st.error("Identifiants incorrects.")
 
     with onglet_connexion[1]:
