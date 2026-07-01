@@ -21,6 +21,19 @@ supabase = create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
 
 # 1.3 - Gestionnaire de cookies
 cookie_manager = stx.CookieManager()
+# --- AJOUTER CE BLOC POUR LA CONNEXION AUTOMATIQUE ---
+# On cherche le token dans les cookies
+cookies = cookie_manager.get_all()
+if cookies:
+    # Le nom du cookie Supabase commence souvent par 'sb-'
+    # On parcourt les cookies pour trouver celui de session
+    for key, value in cookies.items():
+        if key.startswith("sb-") and "auth-token" in key:
+            try:
+                # Si on trouve un token, on force la session Supabase
+                supabase.auth.set_session(value)
+            except:
+                pass
 
 
 # =====================================================================
