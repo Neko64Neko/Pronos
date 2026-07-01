@@ -33,19 +33,12 @@ if cookies:
                 supabase.auth.set_session(value)
             except:
                 pass
-# 1.4 - Forcer la session si le cookie est trouvé
-if not st.session_state.get("user_id"):
-    cookie_id = cookie_manager.get(cookie="top14_user_id")
-    if cookie_id:
-        # On tente de récupérer le profil pour valider la session
-        try:
-            profil = supabase.table("Joueurs").select("*").eq("id", cookie_id).single().execute()
-            if profil.data:
-                st.session_state.user_id = cookie_id
-                st.session_state.is_admin = profil.data.get("is_admin", False)
-                st.rerun() # Rafraîchit pour masquer le formulaire de login
-        except:
-            pass
+# 1.4 - FORCAGE DE SESSION (Sans dépendre des cookies)
+# Si on est sur mobile et que ça bloque, on force l'utilisateur à se reconnecter manuellement
+if st.session_state.get("user_id") is None:
+    st.warning("⚠️ Session non détectée. Veuillez vous reconnecter manuellement.")
+    # On affiche le formulaire de login immédiatement ici
+    # SANS essayer de lire les cookies en arrière-plan
 if st.button("Réinitialiser ma session mobile"):
     try:
         cookie_manager.delete("top14_user_id")
