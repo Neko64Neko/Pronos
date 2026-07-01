@@ -1158,9 +1158,9 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
 col1, col2 = st.columns(2)
 with col1:
     equipe_dom = st.text_input("Équipe domicile")
-    date_saisie = st.date_input("Date du match")
-with col2:
     equipe_ext = st.text_input("Équipe extérieur")
+with col2:
+    date_saisie = st.date_input("Date du match")
     heure_saisie = st.time_input("Heure du match")
 
 # 2. Validation et insertion avec correction du fuseau horaire
