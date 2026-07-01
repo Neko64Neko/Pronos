@@ -1183,8 +1183,8 @@ if st.button("Valider la création du match"):
             # 3. Insertion avec l'ID calculé
             supabase.table("Matchs").insert({
                 "id": new_id, 
-                "equipe_domicile": equipe_dom,
-                "equipe_exterieure": equipe_ext,
+                "equipe_dom": equipe_dom,
+                "equipe_ext": equipe_ext,
                 "date_match": utc_dt.isoformat()
             }).execute()
             
