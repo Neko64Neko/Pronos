@@ -1152,46 +1152,35 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
 
 # 9.2 - TAB 2 : AJOUTER UN MATCH MANUELLEMENT (COMPENSATION INVERSE AFFICHAGE)
     with tab2:
-        st.subheader("➕ Ajouter un Match Manuellement")
-        with st.form("form_ajout_match", clear_on_submit=True):
-            eq_dom = st.text_input("Équipe Domicile :")
-            eq_ext = st.text_input("Équipe Extérieur :")
-            date_m = st.date_input("Date du match :", value=datetime.now().date())
-            heure_m = st.time_input("Heure du match :", value=datetime.now().time())
-            
-            submit_match = st.form_submit_button("Créer le Match")
-            
-            if submit_match:
-                if eq_dom and eq_ext:
-                    try:
-                        # Fusion de la date et de l'heure saisies
-                        dt_combinee = datetime.combine(date_m, heure_m)
-                        
-                        # CORRECTION : On AJOUTE 2 heures pour neutraliser le décalage de l'affichage
-                        dt_compensee = dt_combinee + timedelta(hours=2)
-                        iso_date = dt_compensee.isoformat()
-                        
-                        # Génération d'un ID numérique unique
-                        id_unique_match = random.randint(100000, 999999)
-                        
-                        # Insertion dans Supabase
-                        supabase.table("Matchs").insert({
-                            "id": id_unique_match,
-                            "equipe_dom": eq_dom.strip(),
-                            "equipe_ext": eq_ext.strip(),
-                            "date_match": iso_date,
-                            "statut": "NS",
-                            "score_dom": None,
-                            "score_ext": None
-                        }).execute()
-                        
-                        st.success(f"🎉 Match ajouté avec succès ! Programmé pour {heure_m.strftime('%H:%M')}.")
-                        time.sleep(1)
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"Erreur lors de la création : {e}")
-                else:
-                    st.warning("⚠️ Veuillez remplir le nom des deux équipes.")
+        st.subheader("➕ Ajouter un nouveau match")
+        col1, col2 = st.columns(2)
+        with col1:
+            date_saisie = st.date_input("Date du match")
+        with col2:
+            heure_saisie = st.time_input("Heure du match")
+        
+        if st.button("Valider la création du match"):
+            try:
+                # 1. Création de l'objet datetime combiné (heure locale de Paris)
+                naive_dt = datetime.combine(date_saisie, heure_saisie)
+                
+                # 2. Localisation en heure de Paris
+                paris_tz = pytz.timezone("Europe/Paris")
+                local_dt = paris_tz.localize(naive_dt)
+                
+                # 3. Conversion en UTC pour Supabase
+                utc_dt = local_dt.astimezone(pytz.UTC)
+                
+                # 4. Insertion en base
+                supabase.table("Matchs").insert({
+                    "date": utc_dt.isoformat(),
+                    # ... ajoute ici tes autres champs (ex: equipe_dom, equipe_ext) ...
+                }).execute()
+                
+                st.success("Match créé avec succès (heure corrigée) !")
+                st.rerun()
+            except Exception as e:
+                st.error(f"Erreur lors de l'ajout : {e}")
     
     # 9.3 - TAB 3 : GESTION DES MATCHS EXISTANTS
     with tab3:
