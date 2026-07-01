@@ -1150,41 +1150,51 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
                 time.sleep(1)
                 st.rerun()
 
-# 9.2 - TAB 2 : AJOUTER UN MATCH MANUELLEMENT (COMPENSATION INVERSE AFFICHAGE)
-    with tab2:
-        if st.session_state.is_admin:
-            st.subheader("➕ Ajouter un match")
-            
-            col1, col2 = st.columns(2)
-            with col1:
-                equipe_dom = st.text_input("Équipe Domicile")
-                date_saisie = st.date_input("Date du match")
-            with col2:
-                equipe_ext = st.text_input("Équipe Extérieure")
-                heure_saisie = st.time_input("Heure du match")
+# 9.2 - TAB 2 : AJOUTER UN MATCH MANUELLEMENT
+with tab2:
+    if st.session_state.is_admin:
+        st.subheader("➕ Ajouter un match")
         
-            if st.button("Valider la création"):
+        col1, col2 = st.columns(2)
+        with col1:
+            equipe_dom = st.text_input("Équipe Domicile", key="dom")
+            date_saisie = st.date_input("Date du match", key="date")
+        with col2:
+            equipe_ext = st.text_input("Équipe Extérieure", key="ext")
+            heure_saisie = st.time_input("Heure du match", key="heure")
+        
+        if st.button("Valider la création"):
+            if equipe_dom and equipe_ext:
                 try:
-                    # Conversion : on combine la date et l'heure, 
-                    # on localise en Paris, puis on passe en UTC pour Supabase
+                    # 1. Calcul de l'ID (Incrément manuel pour éviter les erreurs de séquence)
+                    response_last = supabase.table("Matchs").select("id").order("id", desc=True).limit(1).execute()
+                    new_id = 1
+                    if response_last.data:
+                        new_id = int(response_last.data[0]['id']) + 1
+                    
+                    # 2. Conversion horaire (Paris -> UTC)
                     naive_dt = datetime.combine(date_saisie, heure_saisie)
                     paris_tz = pytz.timezone("Europe/Paris")
                     local_dt = paris_tz.localize(naive_dt)
                     utc_dt = local_dt.astimezone(pytz.UTC)
-        
-                    # Insertion
+                    
+                    # 3. Insertion
                     supabase.table("Matchs").insert({
+                        "id": new_id,
                         "equipe_dom": equipe_dom,
                         "equipe_ext": equipe_ext,
                         "date_match": utc_dt.isoformat()
                     }).execute()
                     
-                    st.success("Match enregistré !")
+                    st.success(f"Match {equipe_dom} vs {equipe_ext} créé (ID: {new_id}) !")
+                    time.sleep(1)
                     st.rerun()
                 except Exception as e:
-                    st.error(f"Erreur : {e}")
+                    st.error(f"Erreur lors de l'ajout : {e}")
+            else:
+                st.warning("Merci de remplir les noms des équipes.")
     else:
-        st.warning("Merci de remplir les noms des équipes.")
+        st.error("Accès réservé aux administrateurs.")
     
     # 9.3 - TAB 3 : GESTION DES MATCHS EXISTANTS
     with tab3:
