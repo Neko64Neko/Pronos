@@ -18,26 +18,24 @@ st.set_page_config(page_title="Pronos Top 14", page_icon="🏉", layout="centere
 # 1.2 - CONNEXION À SUPABASE
 supabase = create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
 
-# 1.3 - SUPPRIMER TOUT LE CODE COOKIEMANAGER
-# On laisse Supabase gérer la session nativement via le localStorage du navigateur
-if "user" not in st.session_state:
-    st.session_state.user = None
+# --- 1.3 GESTION DE SESSION NATIVE SUPABASE ---
+# On utilise la gestion native de Supabase (localStorage)
+# Cela évite les bugs de cookies sur mobile
+if "user_id" not in st.session_state:
+    st.session_state.user_id = None
+    st.session_state.is_admin = False
 
-# Vérification de session native Supabase
+# Vérification automatique de la session existante
 session = supabase.auth.get_session()
-if session:
-    st.session_state.user = session.user
-else:
-
-
-# 1.4 - Sécurité Admin (Masquer l'interface aux non-admins)
-def is_admin():
-    user = supabase.auth.get_user()
-    if user and user.user:
-        # On vérifie dans la table Joueurs si ce user est admin
-        profil = supabase.table("Joueurs").select("is_admin").eq("id", user.user.id).single().execute()
-        return profil.data.get("is_admin", False)
-    return False
+if session and st.session_state.user_id is None:
+    st.session_state.user_id = session.user.id
+    # On récupère le statut admin depuis la table
+    try:
+        profil = supabase.table("Joueurs").select("is_admin, pseudo").eq("id", session.user.id).single().execute()
+        st.session_state.is_admin = profil.data.get("is_admin", False)
+        st.session_state.pseudo = profil.data.get("pseudo", "Joueur")
+    except:
+        pass
     
 # =====================================================================
 # 2 - SYSTEME DE SCRAPING GRATUIT ET AUTOMATIQUE
