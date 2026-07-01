@@ -10,6 +10,27 @@ import pytz
 from streamlit_autorefresh import st_autorefresh
 
 # 1 - PARAMETRES ET CONNEXION
+# 1.0 - GESTION DU MOT DE PASSE OUBLIÉ (À placer tout en haut)
+params = st.query_params
+
+if "access_token" in params:
+    st.title("🔒 Réinitialisation du mot de passe")
+    new_password = st.text_input("Nouveau mot de passe", type="password")
+    
+    if st.button("Valider le nouveau mot de passe"):
+        try:
+            # Supabase utilise le token présent dans la session Auth
+            # pour identifier l'utilisateur qui réinitialise
+            response = supabase.auth.update_user({"password": new_password})
+            st.success("Mot de passe mis à jour avec succès ! Tu peux te reconnecter.")
+            # Optionnel : effacer les paramètres de l'URL après succès
+            st.query_params.clear() 
+        except Exception as e:
+            st.error(f"Erreur : {e}")
+    
+    # On arrête l'exécution de la suite du script pour afficher uniquement ce bloc
+    st.stop()
+
 # 1.1 - CONFIGURATION DE LA PAGE
 st.set_page_config(page_title="Pronos Top 14", page_icon="🏉", layout="centered")
 
@@ -19,18 +40,6 @@ supabase = create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
 # 1.3 - Gestionnaire de cookies
 cookie_manager = stx.CookieManager()
 
-# 1.4 - GESTION DU MOT DE PASSE OUBLIÉ
-params = st.query_params # Pour récupérer les paramètres de l'URL
-if "access_token" in params:
-    st.info("Réinitialisation de votre mot de passe...")
-    # Ici, tu affiches un formulaire simple pour saisir le nouveau mot de passe
-    new_password = st.text_input("Nouveau mot de passe", type="password")
-    if st.button("Valider"):
-        try:
-            supabase.auth.update_user({"password": new_password})
-            st.success("Mot de passe mis à jour !")
-        except Exception as e:
-            st.error(f"Erreur : {e}")
 
 # =====================================================================
 # 2 - SYSTEME DE SCRAPING GRATUIT ET AUTOMATIQUE
