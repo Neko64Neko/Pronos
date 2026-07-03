@@ -1172,11 +1172,14 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
                     "seuil_pourcentage_ose": pct_o,
                     "multiplicateur_ose": mult_o
                 }
-                supabase.table("Configuration").upsert(data_bareme).execute()
-                
-                st.success("🎉 Barème mis à jour et sauvegardé en base de données !")
-                time.sleep(1)
-                st.rerun()
+# --- Bloc de debug ---
+                try:
+                    supabase.table("Configuration").upsert(data_bareme).execute()
+                    st.success("Barème mis à jour !")
+                    st.rerun()
+                except Exception as e:
+                    # Ceci affichera le détail technique du rejet par Supabase
+                    st.error(f"Détail de l'erreur Supabase : {e}")
 
     # 9.2 - TAB 2 : AJOUTER UN MATCH MANUELLEMENT
     with tab2:
