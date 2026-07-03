@@ -1157,29 +1157,26 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
                 mult_o = st.number_input("Multiplicateur du prono osé", min_value=1.0, max_value=10.0, value=float(st.session_state.mult_ose), step=0.5)
             
             if st.form_submit_button("💾 Sauvegarder le barème"):
-                # 1. Mise à jour de la mémoire locale
-                st.session_state.pts_vainqueur = pts_v
-                st.session_state.pts_ecart = pts_e
-                st.session_state.pct_ose = pct_o
-                st.session_state.mult_ose = mult_o
-                
-                # 2. Persistance dans Supabase
-                # On utilise 'upsert' pour mettre à jour la ligne existante
+                # Remplace les noms de clés par ceux qui sont réellement dans ta base
                 data_bareme = {
-                    "id": 1, # Assure-toi que c'est bien l'ID de ta ligne de configuration
-                    "pts_gagnant": pts_v,
-                    "pts_ecart": pts_e,
-                    "seuil_pourcentage_ose": pct_o,
-                    "multiplicateur_ose": mult_o
+                    "id": 1,
+                    "pts_vainqueur": int(pts_v),
+                    "pts_ecart": int(pts_e),
+                    "seuil_pourcentage_ose": int(pct_o), # J'ai mis le nom attendu par Supabase
+                    "mult_ose": int(mult_o)
                 }
-# --- Bloc de debug ---
+                
                 try:
                     supabase.table("Configuration").upsert(data_bareme).execute()
-                    st.success("Barème mis à jour !")
+                    st.session_state.pts_vainqueur = pts_v
+                    st.session_state.pts_ecart = pts_e
+                    st.session_state.pct_ose = pct_o
+                    st.session_state.mult_ose = mult_o
+                    st.success("🎉 Barème mis à jour et sauvegardé en base de données !")
+                    time.sleep(1)
                     st.rerun()
                 except Exception as e:
-                    # Ceci affichera le détail technique du rejet par Supabase
-                    st.error(f"Détail de l'erreur Supabase : {e}")
+                    st.error(f"Erreur de sauvegarde : {e}")
 
     # 9.2 - TAB 2 : AJOUTER UN MATCH MANUELLEMENT
     with tab2:
