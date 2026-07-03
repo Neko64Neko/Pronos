@@ -1167,10 +1167,10 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
                 # On utilise 'upsert' pour mettre à jour la ligne existante
                 data_bareme = {
                     "id": 1, # Assure-toi que c'est bien l'ID de ta ligne de configuration
-                    "pts_vainqueur": pts_v,
+                    "pts_gagnant": pts_v,
                     "pts_ecart": pts_e,
-                    "pct_ose": pct_o,
-                    "mult_ose": mult_o
+                    "seuil_pourcentage_ose": pct_o,
+                    "multiplicateur_ose": mult_o
                 }
                 supabase.table("Configuration").upsert(data_bareme).execute()
                 
