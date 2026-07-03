@@ -1158,9 +1158,10 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
             col1, col2 = st.columns(2)
             with col1:
                 equipe_dom = st.text_input("Équipe Domicile", key="dom")
-                date_saisie = st.date_input("Date du match", key="date")
-            with col2:
                 equipe_ext = st.text_input("Équipe Extérieure", key="ext")
+            with col2:
+
+                date_saisie = st.date_input("Date du match", key="date")
                 heure_saisie = st.time_input("Heure du match", key="heure")
             
             if st.button("Valider la création"):
