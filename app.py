@@ -362,21 +362,19 @@ else:
     st.markdown("---")
 
 # --- 5.7 - CHARGEMENT DU BARÈME ET DE LA CONFIGURATION ---
-    # On initialise avec des valeurs par défaut au cas où
-    pts_gagnant_cfg, pts_ecart_cfg, seuil_ose_cfg, mult_ose_cfg = 3, 2, 20, 2
-    
     try:
         response = supabase.table("Configuration").select("*").eq("id", "default_config").single().execute()
         if response.data:
             conf = response.data
-            pts_gagnant_cfg = conf.get("pts_gagnant", 3)
-            pts_ecart_cfg = conf.get("pts_ecart", 2)
-            seuil_ose_cfg = conf.get("seuil_poursentage_ose", 20)
-            mult_ose_cfg = conf.get("multiplicateur_ose", 2)
+            # On écrase le session_state avec ce qui vient de la base
+            st.session_state.pts_vainqueur = conf.get("pts_gagnant", 3)
+            st.session_state.pts_ecart = conf.get("pts_ecart", 2)
+            st.session_state.pct_ose = conf.get("seuil_poursentage_ose", 20)
+            st.session_state.mult_ose = conf.get("multiplicateur_ose", 2)
+            
+            st.sidebar.success("Configuration chargée depuis Supabase") # Petit feedback visuel
     except Exception as e:
-        st.warning(f"Note : Impossible de charger la config depuis Supabase ({e}). Utilisation des valeurs par défaut.")
-
-    pts_parfait_cfg = pts_gagnant_cfg + pts_ecart_cfg
+        st.error(f"Erreur de chargement : {e}")
 
 # =====================================================================
     # 6 - CONTENU DE L'ONGLET 1 : CLASSEMENT GÉNÉRAL (LOGIQUE ET CLASSEMENT LIVE)
