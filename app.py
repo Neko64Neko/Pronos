@@ -1157,11 +1157,24 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
                 mult_o = st.number_input("Multiplicateur du prono osé", min_value=1.0, max_value=10.0, value=float(st.session_state.mult_ose), step=0.5)
             
             if st.form_submit_button("💾 Sauvegarder le barème"):
+                # 1. Mise à jour de la mémoire locale
                 st.session_state.pts_vainqueur = pts_v
                 st.session_state.pts_ecart = pts_e
                 st.session_state.pct_ose = pct_o
                 st.session_state.mult_ose = mult_o
-                st.success("🎉 Barème mis à jour avec succès pour cette session !")
+                
+                # 2. Persistance dans Supabase
+                # On utilise 'upsert' pour mettre à jour la ligne existante
+                data_bareme = {
+                    "id": 1, # Assure-toi que c'est bien l'ID de ta ligne de configuration
+                    "pts_vainqueur": pts_v,
+                    "pts_ecart": pts_e,
+                    "pct_ose": pct_o,
+                    "mult_ose": mult_o
+                }
+                supabase.table("Configuration").upsert(data_bareme).execute()
+                
+                st.success("🎉 Barème mis à jour et sauvegardé en base de données !")
                 time.sleep(1)
                 st.rerun()
 
