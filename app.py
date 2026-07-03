@@ -1163,7 +1163,7 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
                     "pts_vainqueur": int(pts_v),
                     "pts_ecart": int(pts_e),
                     "seuil_pourcentage_ose": int(pct_o), # J'ai mis le nom attendu par Supabase
-                    "mult_ose": int(mult_o)
+                    "multiplicateur_ose": int(mult_o)
                 }
                 
                 try:
