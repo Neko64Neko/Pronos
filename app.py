@@ -1163,11 +1163,11 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
             
             if st.form_submit_button("💾 Sauvegarder le barème"):
                 data_bareme = {
-                    "id": "default_config", # DOIT CORRESPONDRE À LA LECTURE
+                    "id": "default_config",
                     "pts_gagnant": int(pts_v),
                     "pts_ecart": int(pts_e),
                     "seuil_poursentage_ose": int(pct_o),
-                    "multiplicateur_ose": float(mult_o)
+                    "multiplicateur_ose": int(mult_o) # Remplace float() par int() ici
                 }
                 
                 try:
