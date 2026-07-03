@@ -361,15 +361,20 @@ else:
             
     st.markdown("---")
 
-    # --- 5.7 - CHARGEMENT DU BARÈME ET DE LA CONFIGURATION ---
+# --- 5.7 - CHARGEMENT DU BARÈME ET DE LA CONFIGURATION ---
+    # On initialise avec des valeurs par défaut au cas où
+    pts_gagnant_cfg, pts_ecart_cfg, seuil_ose_cfg, mult_ose_cfg = 3, 2, 20, 2
+    
     try:
-        conf = supabase.table("Configuration").select("*").eq("id", "default_config").single().execute().data
-        pts_gagnant_cfg = conf.get("pts_gagnant", 3) if conf else 3
-        pts_ecart_cfg = conf.get("pts_ecart", 2) if conf else 2
-        seuil_ose_cfg = conf.get("seuil_poursentage_ose", 20) if conf else 20
-        mult_ose_cfg = conf.get("multiplicateur_ose", 2) if conf else 2
-    except Exception:
-        pts_gagnant_cfg, pts_ecart_cfg, seuil_ose_cfg, mult_ose_cfg = 3, 2, 20, 2
+        response = supabase.table("Configuration").select("*").eq("id", "default_config").single().execute()
+        if response.data:
+            conf = response.data
+            pts_gagnant_cfg = conf.get("pts_gagnant", 3)
+            pts_ecart_cfg = conf.get("pts_ecart", 2)
+            seuil_ose_cfg = conf.get("seuil_poursentage_ose", 20)
+            mult_ose_cfg = conf.get("multiplicateur_ose", 2)
+    except Exception as e:
+        st.warning(f"Note : Impossible de charger la config depuis Supabase ({e}). Utilisation des valeurs par défaut.")
 
     pts_parfait_cfg = pts_gagnant_cfg + pts_ecart_cfg
 
@@ -1157,26 +1162,20 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
                 mult_o = st.number_input("Multiplicateur du prono osé", min_value=1.0, max_value=10.0, value=float(st.session_state.mult_ose), step=0.5)
             
             if st.form_submit_button("💾 Sauvegarder le barème"):
-                # Remplace les noms de clés par ceux qui sont réellement dans ta base
                 data_bareme = {
-                    "id": 1,
+                    "id": "default_config", # DOIT CORRESPONDRE À LA LECTURE
                     "pts_gagnant": int(pts_v),
                     "pts_ecart": int(pts_e),
-                    "seuil_poursentage_ose": int(pct_o), # J'ai mis le nom attendu par Supabase
-                    "multiplicateur_ose": int(mult_o)
+                    "seuil_poursentage_ose": int(pct_o),
+                    "multiplicateur_ose": float(mult_o)
                 }
                 
                 try:
                     supabase.table("Configuration").upsert(data_bareme).execute()
-                    st.session_state.pts_vainqueur = pts_v
-                    st.session_state.pts_ecart = pts_e
-                    st.session_state.pct_ose = pct_o
-                    st.session_state.mult_ose = mult_o
-                    st.success("🎉 Barème mis à jour et sauvegardé en base de données !")
-                    time.sleep(1)
+                    st.success("🎉 Barème sauvegardé !")
                     st.rerun()
                 except Exception as e:
-                    st.error(f"Erreur de sauvegarde : {e}")
+                    st.error(f"Erreur : {e}")
 
     # 9.2 - TAB 2 : AJOUTER UN MATCH MANUELLEMENT
     with tab2:
