@@ -1167,12 +1167,23 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
                     "pts_gagnant": int(pts_v),
                     "pts_ecart": int(pts_e),
                     "seuil_poursentage_ose": int(pct_o),
-                    "multiplicateur_ose": int(mult_o) # Remplace float() par int() ici
+                    "multiplicateur_ose": int(mult_o) 
                 }
                 
                 try:
-                    supabase.table("Configuration").upsert(data_bareme).execute()
+                    # L'argument on_conflict est crucial ici pour les clés primaires
+                    supabase.table("Configuration").upsert(
+                        data_bareme, 
+                        on_conflict="id" 
+                    ).execute()
+                    
+                    st.session_state.pts_vainqueur = pts_v
+                    st.session_state.pts_ecart = pts_e
+                    st.session_state.pct_ose = pct_o
+                    st.session_state.mult_ose = mult_o
+                    
                     st.success("🎉 Barème sauvegardé !")
+                    time.sleep(1)
                     st.rerun()
                 except Exception as e:
                     st.error(f"Erreur : {e}")
