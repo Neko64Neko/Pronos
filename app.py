@@ -12,6 +12,18 @@ from streamlit_autorefresh import st_autorefresh
 # 1 - PARAMETRES ET CONNEXION
 import streamlit.components.v1 as components
 
+#1.0 - CONVERSION DES DATES
+def formater_date_paris(date_iso_str):
+    """Convertit une date UTC (Supabase) en heure locale de Paris pour l'affichage."""
+    try:
+        # Nettoyage si présence de 'Z'
+        date_clean = date_iso_str.split("+")[0].split("Z")[0]
+        dt_utc = datetime.fromisoformat(date_clean).replace(tzinfo=pytz.UTC)
+        paris_tz = pytz.timezone("Europe/Paris")
+        return dt_utc.astimezone(paris_tz).strftime("%d/%m/%Y à %H:%M")
+    except:
+        return date_iso_str
+
 # 1.1 - CONFIGURATION DE LA PAGE
 st.set_page_config(page_title="Pronos Top 14", page_icon="🏉", layout="centered")
 
@@ -678,7 +690,7 @@ if st.session_state.onglet_actif == "🏉":
                                         if droits_admin_totalement_actifs:
                                             st.markdown(f"<div style='color: #b7791f; font-size: 0.85em; font-weight: bold;'>⚠️ Temps écoulé ({dt_limite_q.strftime('%d/%m/%Y à %H:%M')}) - Saisie Admin Autorisée</div>", unsafe_allow_html=True)
                                         else:
-                                            st.markdown(f"<div style='color: #dc2626; font-size: 0.85em; font-weight: bold;'>🔒 Réponses fermées depuis le {dt_limite_q.strftime('%d/%m/%Y à %H:%M')}</div>", unsafe_allow_html=True)
+                                            st.markdown(f"<div style='color: #dc2626; font-size: 0.85em; font-weight: bold;'>🔒 Réponses fermées depuis le {formater_date_paris(date_limite_str)}</div>", unsafe_allow_html=True)
                                             question_bloquee = True
                                     else:
                                         st.markdown(f"<div style='color: #64748b; font-size: 0.85em;'>⏳ Limite : {dt_limite_q.strftime('%d/%m/%Y à %H:%M')}</div>", unsafe_allow_html=True)
@@ -797,7 +809,7 @@ if st.session_state.onglet_actif == "🏉":
                                 try:
                                     date_brute = m['date_match'].split("+")[0].split("Z")[0]
                                     dt_obj = datetime.fromisoformat(date_brute)
-                                    date_affiche = dt_obj.strftime("%d/%m/%Y à %H:%M")
+                                    date_affiche = formater_date_paris(m['date_match'])
                                     match_commence = maintenant_paris >= dt_obj
                                     
                                     if match_commence:
@@ -950,6 +962,9 @@ elif st.session_state.onglet_actif == "📅":
                     elif m['statut'] == 'NS' and (m.get('score_dom') is None or m.get('score_ext') is None):
                         label_statut = " ⏳ EN COURS (En attente du score)"
                     
+                    # Utilisation de la fonction formatrice pour l'affichage de la date
+                    date_affichee = formater_date_paris(m['date_match'])
+                    
                     sc_dom = m.get('score_dom') if m.get('score_dom') is not None else 0
                     sc_ext = m.get('score_ext') if m.get('score_ext') is not None else 0
                     
@@ -964,7 +979,7 @@ elif st.session_state.onglet_actif == "📅":
                     elif diff <= 40: vraie_tranche = "31-40"
                     elif diff <= 50: vraie_tranche = "41-50"
                     else: vraie_tranche = "51+"
-
+                        
                     with st.expander(f"🏉 {m['equipe_dom']} {sc_dom} - {sc_ext} {m['equipe_ext']}{label_statut}"):
                         # Récupération de tous les pronostics existants pour ce match précis
                         pronos = supabase.table("Pronostics").select("*").eq("match_id", m['id']).execute().data
