@@ -1162,7 +1162,7 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
                     "id": 1,
                     "pts_gagnant": int(pts_v),
                     "pts_ecart": int(pts_e),
-                    "seuil_pourcentage_ose": int(pct_o), # J'ai mis le nom attendu par Supabase
+                    "seuil_poursentage_ose": int(pct_o), # J'ai mis le nom attendu par Supabase
                     "multiplicateur_ose": int(mult_o)
                 }
                 
