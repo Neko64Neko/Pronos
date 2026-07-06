@@ -951,18 +951,18 @@ elif st.session_state.onglet_actif == "📅":
     st.title("📅 Résultats & Matchs en Direct")
 
     # --- RÉCUPÉRATION DYNAMIQUE DE LA CONFIGURATION SUPABASE ---
-            try:
-                config_supabase = supabase.table("Configuration").select("*").execute().data[0]
-                pts_gagnant_cfg = config_supabase.get('pts_gagnant', 2)
-                pts_ecart_cfg = config_supabase.get('pts_ecart', 3)
-                seuil_ose_cfg = config_supabase.get('seuil_poursentage_ose', 0.2)
-                mult_ose_cfg = config_supabase.get('multiplicateur_ose', 2)
-            except Exception as e:
-                # Valeurs de secours au cas où la table est vide ou inaccessible
-                pts_gagnant_cfg = 2
-                pts_ecart_cfg = 3
-                seuil_ose_cfg = 0.2
-                mult_ose_cfg = 2
+    try:
+        config_supabase = supabase.table("Configuration").select("*").execute().data[0]
+        pts_gagnant_cfg = config_supabase.get('pts_gagnant', 2)
+        pts_ecart_cfg = config_supabase.get('pts_ecart', 3)
+        seuil_ose_cfg = config_supabase.get('seuil_poursentage_ose', 0.2)
+        mult_ose_cfg = config_supabase.get('multiplicateur_ose', 2)
+    except Exception as e:
+        # Valeurs de secours au cas où la table est vide ou inaccessible
+        pts_gagnant_cfg = 2
+        pts_ecart_cfg = 3
+        seuil_ose_cfg = 0.2
+        mult_ose_cfg = 2
     
     with st.spinner("Mise à jour des scores..."):
         try:
