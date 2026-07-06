@@ -122,22 +122,19 @@ def verifier_et_importer_matchs():
             
     return matchs_traites
     
-#2.3 - SAUVEGARDE AUTO PRONO (CORRIGÉE)
+#2.3 - SAUVEGARDE AUTO PRONO (VERSION SILENCIEUSE)
 def sauvegarder_prono_auto(match_id, equipe_dom, equipe_ext, user_id_cible):
-    """Sauvegarde instantanément le pronostic dès qu'un élément change, même partiellement."""
+    """Sauvegarde instantanément le pronostic en arrière-plan avec une notification discrète."""
     vrai_nom_gagnant = st.session_state.get(f"w_{match_id}_{user_id_cible}")
     ecart = st.session_state.get(f"m_{match_id}_{user_id_cible}")
     
-    # CORRECTION : On annule uniquement si l'utilisateur n'a absolument RIEN sélectionné
     if (not vrai_nom_gagnant or vrai_nom_gagnant == "...") and (not ecart or ecart == "..."):
         return
 
-    # Traitement du vainqueur (s'il a été sélectionné)
     val_gagnant = None
     if vrai_nom_gagnant and vrai_nom_gagnant != "...":
         val_gagnant = "home" if vrai_nom_gagnant == equipe_dom else ("away" if vrai_nom_gagnant == equipe_ext else "draw")
         
-    # Traitement de l'écart (s'il a été sélectionné)
     val_ecart = None
     if ecart and ecart != "...":
         val_ecart = ecart
@@ -156,6 +153,10 @@ def sauvegarder_prono_auto(match_id, equipe_dom, equipe_ext, user_id_cible):
             supabase.table("Pronostics").update(donnees_prono).eq("id", prono_existant[0]["id"]).execute()
         else:
             supabase.table("Pronostics").insert(donnees_prono).execute()
+            
+        # ✨ LA NOUVEAUTÉ : Un petit toast discret en bas à droite de l'écran
+        st.toast("Pronostic enregistré ! 🏉", icon="✅")
+
     except Exception as e:
         st.error(f"Erreur sauvegarde automatique : {e}")
         
