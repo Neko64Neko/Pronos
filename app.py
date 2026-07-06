@@ -983,7 +983,9 @@ elif st.session_state.onglet_actif == "📅":
                     elif diff <= 50: vraie_tranche = "41-50"
                     else: vraie_tranche = "51+"
                         
-                    with st.expander(f"🏉 {m['equipe_dom']} {sc_dom} - {sc_ext} {m['equipe_ext']}{label_statut}"):
+                    with st.expander(f"🏉 {m['equipe_dom']} {sc_dom} - {sc_ext} {m['equipe_ext']} | {date_affichee}{label_statut}"):
+                        # Optionnel : ré-afficher la date proprement dans le détail si tu veux
+                        st.caption(f"📅 Match joué le : {date_affichee}")
                         # Récupération de tous les pronostics existants pour ce match précis
                         pronos = supabase.table("Pronostics").select("*").eq("match_id", m['id']).execute().data
                         
