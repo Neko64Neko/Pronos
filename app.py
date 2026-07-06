@@ -952,7 +952,7 @@ elif st.session_state.onglet_actif == "📅":
                         dt_match_paris = dt_match_utc.astimezone(paris_tz)
                         
                         # Comparaison avec maintenant_paris (qui doit être généré avec tzinfo)
-                        if m['statut'] in ["FT", "LIVE"] or maintenant_paris >= dt_match_paris:
+                        if m['statut'] in ["FT", "LIVE"] or maintenant_paris.replace(tzinfo=None) >= dt_match_paris.replace(tzinfo=None):
                             matchs.append(m)
                     except Exception:
                         if m['statut'] in ["FT", "LIVE"]:
