@@ -122,19 +122,26 @@ def verifier_et_importer_matchs():
             
     return matchs_traites
     
-#2.3 - SAUVEGARDE AUTO PRONO (CORRIGÉE AVEC ID JOUEUR CIBLE DANS LA CLÉ)
+#2.3 - SAUVEGARDE AUTO PRONO (CORRIGÉE)
 def sauvegarder_prono_auto(match_id, equipe_dom, equipe_ext, user_id_cible):
-    """Sauvegarde instantanément le pronostic dès qu'un élément change, de manière ciblée par joueur."""
-    # Récupération des valeurs en utilisant la clé composite exacte contenant l'id du joueur cible
+    """Sauvegarde instantanément le pronostic dès qu'un élément change, même partiellement."""
     vrai_nom_gagnant = st.session_state.get(f"w_{match_id}_{user_id_cible}")
     ecart = st.session_state.get(f"m_{match_id}_{user_id_cible}")
     
-    # Si les informations ne sont pas encore toutes sélectionnées, on ne sauvegarde pas un état vide
-    if not vrai_nom_gagnant or vrai_nom_gagnant == "..." or not ecart or ecart == "...":
+    # CORRECTION : On annule uniquement si l'utilisateur n'a absolument RIEN sélectionné
+    if (not vrai_nom_gagnant or vrai_nom_gagnant == "...") and (not ecart or ecart == "..."):
         return
 
-    val_gagnant = "home" if vrai_nom_gagnant == equipe_dom else ("away" if vrai_nom_gagnant == equipe_ext else "draw")
-    
+    # Traitement du vainqueur (s'il a été sélectionné)
+    val_gagnant = None
+    if vrai_nom_gagnant and vrai_nom_gagnant != "...":
+        val_gagnant = "home" if vrai_nom_gagnant == equipe_dom else ("away" if vrai_nom_gagnant == equipe_ext else "draw")
+        
+    # Traitement de l'écart (s'il a été sélectionné)
+    val_ecart = None
+    if ecart and ecart != "...":
+        val_ecart = ecart
+        
     try:
         prono_existant = supabase.table("Pronostics").select("id").eq("user_id", user_id_cible).eq("match_id", match_id).execute().data
         
@@ -142,7 +149,7 @@ def sauvegarder_prono_auto(match_id, equipe_dom, equipe_ext, user_id_cible):
             "user_id": user_id_cible, 
             "match_id": match_id, 
             "gagnant_prevu": val_gagnant, 
-            "ecart_prevu": ecart
+            "ecart_prevu": val_ecart
         }
         
         if prono_existant:
