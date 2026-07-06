@@ -1018,7 +1018,10 @@ elif st.session_state.onglet_actif == "📅":
                         
                         st.markdown("**Pronostics des joueurs :**")
                         
-                        # Boucle sur TOUS les joueurs pour s'assurer que personne ne manque à l'appel
+# Initialisation des lignes du tableau HTML
+                        lignes_table_html = ""
+                        
+                        # Boucle sur TOUS les joueurs pour construire les lignes du tableau
                         for j in tous_les_joueurs:
                             p = dict_pronos.get(j['id'])
                             
@@ -1030,10 +1033,15 @@ elif st.session_state.onglet_actif == "📅":
                                 pts = 0
                                 badge_ose = ""
                                 en_attente = False
-                                color = "#dc2626"  # Rouge par défaut
+                                color_bg = "#fee2e2"    # Rouge clair par défaut (Erreur)
+                                color_txt = "#991b1b"
+                                texte_badge_resultat = "❌ Faux"
                                 
                                 if m['statut'] == 'NS' and m.get('score_dom') is None:
                                     en_attente = True
+                                    color_bg = "#ffedd5" # Orange clair (En attente)
+                                    color_txt = "#9a3412"
+                                    texte_badge_resultat = "⏳ En attente"
                                 else:
                                     if g_prevu == vrai_gagnant_brut:
                                         base_match = pts_gagnant_cfg
@@ -1041,33 +1049,80 @@ elif st.session_state.onglet_actif == "📅":
                                         
                                         if is_ecart_exact:
                                             base_match += pts_ecart_cfg
-                                            color = "#10b981"  # Vert
+                                            color_bg = "#d1fae5"  # Vert clair (Écart parfait)
+                                            color_txt = "#065f46"
+                                            texte_badge_resultat = "🎯 Écart parfait"
                                         else:
-                                            color = "#2563eb"  # Bleu
+                                            color_bg = "#dbeafe"  # Bleu clair (Bon vainqueur)
+                                            color_txt = "#1e40af"
+                                            texte_badge_resultat = "✅ Vainqueur ok"
                                         
                                         is_ose = (g_prevu == "home" and pct_home <= seuil_ose_cfg) or (g_prevu == "away" and pct_away <= seuil_ose_cfg)
                                         if is_ose:
                                             pts = float(base_match * mult_ose_cfg)
-                                            badge_ose = f" 🔥 **[OSÉ x{mult_ose_cfg}]**"
-                                            color = "#d97706"  # Ambre
+                                            badge_ose = " 🔥"
+                                            # NOUVEAUTÉ : Style Doré / Or pour le prono osé réussi
+                                            color_bg = "#fde047"  # Doré éclatant
+                                            color_txt = "#713f12"  # Or foncé / Marron pour un super contraste
+                                            texte_badge_resultat += " [OSÉ]"
                                         else:
                                             pts = float(base_match)
                                 
                                 if en_attente:
-                                    color = "orange"
-                                    texte_points = "⏳ En attente"
+                                    texte_points = "-"
                                 else:
                                     pts_affiche = int(pts) if isinstance(pts, float) and pts.is_integer() else pts
-                                    accord_pts = "pt" if pts_affiche <= 1 else "pts"
-                                    mention_live = " (Virtuel)" if m['statut'] == 'LIVE' else ""
-                                    texte_points = f"{pts_affiche} {accord_pts}{mention_live}"
+                                    texte_points = f"+{pts_affiche} pts"
                                 
-                                st.markdown(f"- **{j['pseudo']}** : {nom_gagnant_prevu} ({ec_prevu}){badge_ose} ➔ <span style='color:{color}; font-weight:bold;'>{texte_points}</span>", unsafe_allow_html=True)
+                                # Style pour mettre en valeur le joueur connecté
+                                style_ligne_joueur = "font-weight: bold; background-color: #f1f5f9;" if j['id'] == st.session_state.user_id else ""
+                                pseudo_final = f"{j['pseudo']} (Toi)" if j['id'] == st.session_state.user_id else j['pseudo']
+
+                                # Ajout de la ligne au tableau HTML
+                                lignes_table_html += f"""
+                                <tr style="{style_ligne_joueur} border-bottom: 1px solid #e2e8f0;">
+                                    <td style="padding: 10px; font-size: 13px;">{pseudo_final}</td>
+                                    <td style="padding: 10px; font-size: 13px;"><b>{nom_gagnant_prevu}</b> <span style="font-size:11px; color:#64748b;">({ec_prevu} pts)</span>{badge_ose}</td>
+                                    <td style="padding: 10px; text-align: center;">
+                                        <span style="background-color: {color_bg}; color: {color_txt}; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; display: inline-block;">
+                                            {texte_badge_resultat}
+                                        </span>
+                                    </td>
+                                    <td style="padding: 10px; text-align: right; font-weight: bold; color: {color_txt if not en_attente else '#64748b'}; font-size: 13px;">{texte_points}</td>
+                                </tr>
+                                """
                             else:
-                                # Le joueur n'a aucun enregistrement de prono pour ce match
-                                st.markdown(f"- **{j['pseudo']}** : <span style='color: #94a3b8; font-style: italic;'>❌ Pas de prono</span>", unsafe_allow_html=True)
-            else:
-                st.info("Aucun match terminé ou en cours pour le moment.")
+                                # Le joueur n'a aucun prono
+                                style_ligne_joueur = "font-weight: bold; background-color: #f1f5f9;" if j['id'] == st.session_state.user_id else ""
+                                pseudo_final = f"{j['pseudo']} (Toi)" if j['id'] == st.session_state.user_id else j['pseudo']
+                                
+                                lignes_table_html += f"""
+                                <tr style="{style_ligne_joueur} border-bottom: 1px solid #e2e8f0; color: #94a3b8;">
+                                    <td style="padding: 10px; font-size: 13px;">{pseudo_final}</td>
+                                    <td style="padding: 10px; font-size: 13px; font-style: italic;">Aucun pronostic</td>
+                                    <td style="padding: 10px; text-align: center;"><span style="background-color: #f1f5f9; color: #64748b; padding: 3px 8px; border-radius: 12px; font-size: 11px;">❌ Absent</span></td>
+                                    <td style="padding: 10px; text-align: right; font-size: 13px;">0 pt</td>
+                                </tr>
+                                """
+
+                        # Rendu final du tableau HTML propre et responsive
+                        st.markdown(f"""
+                        <div style="overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 8px; background-color: #ffffff; margin-top: 5px;">
+                            <table style="width: 100%; border-collapse: collapse; font-family: sans-serif; text-align: left;">
+                                <thead style="background-color: #f8fafc; border-bottom: 2px solid #e2e8f0;">
+                                    <tr>
+                                        <th style="padding: 8px 10px; font-size: 12px; color: #64748b;">Joueur</th>
+                                        <th style="padding: 8px 10px; font-size: 12px; color: #64748b;">Prono (Écart)</th>
+                                        <th style="padding: 8px 10px; font-size: 12px; color: #64748b; text-align: center;">Statut</th>
+                                        <th style="padding: 8px 10px; font-size: 12px; color: #64748b; text-align: right;">Points</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {lignes_table_html}
+                                </tbody>
+                            </table>
+                        </div>
+                        """.replace("\n", ""), unsafe_allow_html=True)
                 
             # --- SOUS-SECTION B : LES QUESTIONS BONUS ---
             st.markdown("<hr style='border: 1px solid #e2e8f0; margin: 30px 0 20px 0;'>", unsafe_allow_html=True)
