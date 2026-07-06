@@ -774,7 +774,7 @@ if st.session_state.onglet_actif == "🏉":
                 except Exception as e:
                     st.error(f"Erreur lors du chargement des questions bonus : {e}")
                         
-                # 7.2.2 - SECTION MATCHS OUVERTS
+# 7.2.2 - SECTION MATCHS OUVERTS
                 st.markdown("""<hr style="border: 1px solid #e2e8f0; margin: 30px 0 20px 0;">""", unsafe_allow_html=True)
                 st.subheader("🏉 Liste des Matchs")
 
@@ -782,19 +782,25 @@ if st.session_state.onglet_actif == "🏉":
                     matchs_potentiels = supabase.table("Matchs").select("*").neq("statut", "FT").execute().data
                     matchs_visibles = []
                     
-                    # On définit si l'admin a TOUS ses voyants d'édition au vert (sidebar ET onglet prono)
                     droits_admin_totalement_actifs = (
                         st.session_state.is_admin 
                         and st.session_state.get('mode_admin_actif', False) 
                         and st.session_state.get('mode_admin_pronos', False)
                     )
                     
+                    # Définition du fuseau horaire
+                    paris_tz = pytz.timezone("Europe/Paris")
+                    
                     if matchs_potentiels:
                         for m in matchs_potentiels:
                             try:
-                                date_brute = m['date_match'].split("+")[0].split("Z")[0]
-                                dt_match = datetime.fromisoformat(date_brute)
-                                if maintenant_paris < dt_match or droits_admin_totalement_actifs:
+                                # CORRECTION : Conversion propre de la date Supabase en heure de Paris
+                                date_clean = m['date_match'].replace("Z", "+00:00")
+                                dt_match_utc = datetime.fromisoformat(date_clean)
+                                dt_match_paris = dt_match_utc.astimezone(paris_tz)
+                                
+                                # Comparaison avec maintenant_paris (en rendant les deux dates naïves)
+                                if maintenant_paris.replace(tzinfo=None) < dt_match_paris.replace(tzinfo=None) or droits_admin_totalement_actifs:
                                     matchs_visibles.append(m)
                             except Exception:
                                 if m['statut'] == "NS" or droits_admin_totalement_actifs:
@@ -810,10 +816,13 @@ if st.session_state.onglet_actif == "🏉":
                                 
                                 bouton_bloque = False
                                 try:
-                                    date_brute = m['date_match'].split("+")[0].split("Z")[0]
-                                    dt_obj = datetime.fromisoformat(date_brute)
+                                    # CORRECTION : On réutilise la même logique de conversion ici pour l'affichage du statut
+                                    date_clean = m['date_match'].replace("Z", "+00:00")
+                                    dt_match_utc = datetime.fromisoformat(date_clean)
+                                    dt_match_paris = dt_match_utc.astimezone(paris_tz)
+                                    
                                     date_affiche = formater_date_paris(m['date_match'])
-                                    match_commence = maintenant_paris >= dt_obj
+                                    match_commence = maintenant_paris.replace(tzinfo=None) >= dt_match_paris.replace(tzinfo=None)
                                     
                                     if match_commence:
                                         if droits_admin_totalement_actifs:
