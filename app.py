@@ -917,7 +917,7 @@ if st.session_state.onglet_actif == "🏉":
                                     </style>
                                 """, unsafe_allow_html=True)
                                 
-st.markdown('<div class="zone-matchs">', unsafe_allow_html=True)
+                                st.markdown('<div class="zone-matchs">', unsafe_allow_html=True)
                                 col_a, col_b, col_c = st.columns(3)
                                 
                                 with col_a:
