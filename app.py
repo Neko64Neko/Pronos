@@ -1063,9 +1063,9 @@ elif st.session_state.onglet_actif == "📅":
                                         
                                         if is_ecart_exact:
                                             base_match += pts_ecart_cfg
-                                            color_bg = "#d1fae5"  # Vert clair (Écart parfait)
+                                            color_bg = "#d1fae5"  # Vert clair (Bon écart)
                                             color_txt = "#065f46"
-                                            texte_badge_resultat = "🎯 Écart parfait"
+                                            texte_badge_resultat = "🎯 Bon écart"
                                         else:
                                             color_bg = "#dbeafe"  # Bleu clair (Bon vainqueur)
                                             color_txt = "#1e40af"
