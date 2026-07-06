@@ -870,7 +870,6 @@ if st.session_state.onglet_actif == "🏉":
                                         ecart_existant = prono_existant[0]['ecart_prevu']
                                 
                                 st.session_state[f"w_{m['id']}_{id_joueur_cible}"] = choix_actuel
-                                st.session_state[f"m_{m['id']}_{id_joueur_cible}"] = 
 
                                 # --- GESTION DE L'ÉTAT LOCAL SANS DOUBLE RECHARGEMENT ---
                                 key_w = f"w_{m['id']}_{id_joueur_cible}"
