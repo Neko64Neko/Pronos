@@ -12,15 +12,15 @@ from streamlit_autorefresh import st_autorefresh
 # 1 - PARAMETRES ET CONNEXION
 import streamlit.components.v1 as components
 
-#1.0 - CONVERSION DES DATES
+# 1.0 - CONVERSION DES DATES
 def formater_date_paris(date_iso_str):
     """Convertit une date UTC (Supabase) en heure locale de Paris pour l'affichage."""
     try:
-        # Nettoyage si présence de 'Z'
-        date_clean = date_iso_str.split("+")[0].split("Z")[0]
-        dt_utc = datetime.fromisoformat(date_clean).replace(tzinfo=pytz.UTC)
+        # On remplace 'Z' par '+00:00' pour que fromisoformat le comprenne comme UTC
+        date_clean = date_iso_str.replace("Z", "+00:00")
+        dt_utc = datetime.fromisoformat(date_clean)
         paris_tz = pytz.timezone("Europe/Paris")
-        return dt_utc.astimezone(paris_tz).strftime("%d/%m/%Y à %H:%M")
+        return dt_utc.astimezone(paris_tz).strftime("%d/%m à %H:%M")
     except:
         return date_iso_str
 
@@ -936,20 +936,23 @@ elif st.session_state.onglet_actif == "📅":
     
     with st.spinner("Mise à jour des scores..."):
         try:
-            # 1. Récupération de la liste complète de TOUS les joueurs inscrits (triés par pseudo)
             tous_les_joueurs = supabase.table("Joueurs").select("*").order("pseudo").execute().data
-            
-            # 2. Récupération des matchs clos ou en cours
             tous_matchs_bdd = supabase.table("Matchs").select("*").order("date_match", desc=True).execute().data
             matchs = []
+            
+            # Définition du fuseau horaire pour la comparaison
+            paris_tz = pytz.timezone("Europe/Paris")
             
             if tous_matchs_bdd:
                 for m in tous_matchs_bdd:
                     try:
-                        date_brute = m['date_match'].split("+")[0].split("Z")[0]
-                        dt_match = datetime.fromisoformat(date_brute)
-                        # On prend les matchs terminés (FT), en direct (LIVE) ou dont l'heure est passée
-                        if m['statut'] in ["FT", "LIVE"] or maintenant_paris >= dt_match:
+                        # Conversion propre pour comparaison
+                        date_clean = m['date_match'].replace("Z", "+00:00")
+                        dt_match_utc = datetime.fromisoformat(date_clean)
+                        dt_match_paris = dt_match_utc.astimezone(paris_tz)
+                        
+                        # Comparaison avec maintenant_paris (qui doit être généré avec tzinfo)
+                        if m['statut'] in ["FT", "LIVE"] or maintenant_paris >= dt_match_paris:
                             matchs.append(m)
                     except Exception:
                         if m['statut'] in ["FT", "LIVE"]:
