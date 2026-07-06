@@ -870,7 +870,19 @@ if st.session_state.onglet_actif == "🏉":
                                         ecart_existant = prono_existant[0]['ecart_prevu']
                                 
                                 st.session_state[f"w_{m['id']}_{id_joueur_cible}"] = choix_actuel
-                                st.session_state[f"m_{m['id']}_{id_joueur_cible}"] = ecart_existant
+                                st.session_state[f"m_{m['id']}_{id_joueur_cible}"] = 
+
+                                # --- GESTION DE L'ÉTAT LOCAL SANS DOUBLE RECHARGEMENT ---
+                                key_w = f"w_{m['id']}_{id_joueur_cible}"
+                                if key_w not in st.session_state:
+                                    st.session_state[key_w] = choix_actuel
+                                else:
+                                    choix_actuel = st.session_state[key_w]
+
+                                # Fonction déclenchée AVANT le rendu pour appliquer le changement de couleur instantanément
+                                def cb_clic_gagnant(match_id, equipe_choisie, eq_dom, eq_ext, u_id):
+                                    st.session_state[f"w_{match_id}_{u_id}"] = equipe_choisie
+                                    sauvegarder_prono_auto(match_id, eq_dom, eq_ext, u_id)
 
                                 st.caption("Sélectionner le Vainqueur :")
                                 
@@ -905,29 +917,44 @@ if st.session_state.onglet_actif == "🏉":
                                     </style>
                                 """, unsafe_allow_html=True)
                                 
-                                st.markdown('<div class="zone-matchs">', unsafe_allow_html=True)
+st.markdown('<div class="zone-matchs">', unsafe_allow_html=True)
                                 col_a, col_b, col_c = st.columns(3)
                                 
                                 with col_a:
                                     type_a = "primary" if choix_actuel == m['equipe_dom'] else "secondary"
-                                    if st.button(f"🏉 {m['equipe_dom']}", key=f"btn_dom_{m['id']}_{id_joueur_cible}", type=type_a, use_container_width=True, disabled=bouton_bloque):
-                                        st.session_state[f"w_{m['id']}_{id_joueur_cible}"] = m['equipe_dom']
-                                        sauvegarder_prono_auto(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
-                                        st.rerun()
+                                    st.button(
+                                        f"🏉 {m['equipe_dom']}", 
+                                        key=f"btn_dom_{m['id']}_{id_joueur_cible}", 
+                                        type=type_a, 
+                                        use_container_width=True, 
+                                        disabled=bouton_bloque,
+                                        on_click=cb_clic_gagnant,
+                                        args=(m['id'], m['equipe_dom'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
+                                    )
                                         
                                 with col_b:
                                     type_b = "primary" if choix_actuel == "Match Nul" else "secondary"
-                                    if st.button("🤝 Nul", key=f"btn_nul_{m['id']}_{id_joueur_cible}", type=type_b, use_container_width=True, disabled=bouton_bloque):
-                                        st.session_state[f"w_{m['id']}_{id_joueur_cible}"] = "Match Nul"
-                                        sauvegarder_prono_auto(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
-                                        st.rerun()
+                                    st.button(
+                                        "🤝 Nul", 
+                                        key=f"btn_nul_{m['id']}_{id_joueur_cible}", 
+                                        type=type_b, 
+                                        use_container_width=True, 
+                                        disabled=bouton_bloque,
+                                        on_click=cb_clic_gagnant,
+                                        args=(m['id'], "Match Nul", m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
+                                    )
                                         
                                 with col_c:
                                     type_c = "primary" if choix_actuel == m['equipe_ext'] else "secondary"
-                                    if st.button(f"🏉 {m['equipe_ext']}", key=f"btn_ext_{m['id']}_{id_joueur_cible}", type=type_c, use_container_width=True, disabled=bouton_bloque):
-                                        st.session_state[f"w_{m['id']}_{id_joueur_cible}"] = m['equipe_ext']
-                                        sauvegarder_prono_auto(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
-                                        st.rerun()
+                                    st.button(
+                                        f"🏉 {m['equipe_ext']}", 
+                                        key=f"btn_ext_{m['id']}_{id_joueur_cible}", 
+                                        type=type_c, 
+                                        use_container_width=True, 
+                                        disabled=bouton_bloque,
+                                        on_click=cb_clic_gagnant,
+                                        args=(m['id'], m['equipe_ext'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
+                                    )
 
                                 st.markdown('</div>', unsafe_allow_html=True)
                                 st.markdown("<br>", unsafe_allow_html=True)
