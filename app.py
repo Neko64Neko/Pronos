@@ -80,7 +80,9 @@ def verifier_et_importer_matchs():
                     sc_dom, sc_ext = map(int, score_txt.split("-")) if "-" in score_txt else (None, None)
                     if "En cours" in bloc.text or "Direct" in bloc.text: statut = "LIVE"
                     
-                    match_id = abs(hash(f"{eq_dom}_{eq_ext}")) % 10000000
+                    import hashlib
+                    match_string = f"{eq_dom}_{eq_ext}".encode('utf-8')
+                    match_id = int(hashlib.md5(match_string).hexdigest(), 16) % 10000000
                     supabase.table("Matchs").upsert({
                         "id": match_id, "equipe_dom": eq_dom, "equipe_ext": eq_ext,
                         "date_match": (datetime.utcnow() + timedelta(days=2)).isoformat(),
