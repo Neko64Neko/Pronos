@@ -394,10 +394,10 @@ else:
         # --- RÉCUPÉRATION DYNAMIQUE DE LA CONFIGURATION SUPABASE ---
         try:
             config_supabase = supabase.table("Configuration").select("*").execute().data[0]
-            pts_gagnant_cfg = config_supabase.get('pts_gagnant', 2)
-            pts_ecart_cfg = config_supabase.get('pts_ecart', 3)
-            seuil_ose_cfg = config_supabase.get('seuil_poursentage_ose', 3)
-            mult_ose_cfg = config_supabase.get('multiplicateur_ose', 2)
+            pts_gagnant_cfg = float(config_supabase.get('pts_gagnant', 2))
+            pts_ecart_cfg = float(config_supabase.get('pts_ecart', 3))
+            seuil_ose_cfg = int(config_supabase.get('seuil_poursentage_ose', 1)) # Force l'entier ici (1 par défaut)
+            mult_ose_cfg = float(config_supabase.get('multiplicateur_ose', 2))
         except Exception as e:
             # Valeurs de secours au cas où la table est vide ou inaccessible
             pts_gagnant_cfg = 2
