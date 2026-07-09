@@ -461,35 +461,34 @@ else:
                 elif vrai_ecart_points <= 50: vraie_tranche = "41-50"
                 else: vraie_tranche = "51+"
 
-                # --- NOUVELLE LOGIQUE DES PRONOS OSÉS (LIMITE BRUTE X) ---
+# --- LOGIQUE DES PRONOS OSÉS (Vainqueur = Gardien du bonus) ---
                 pronos_ce_match = [pr for pr in pronostics_tous if pr['match_id'] == m_id]
                 
-                # 1. Combien ont trouvé le bon vainqueur ?
+                # Combien ont trouvé le bon vainqueur ?
                 mises_gagnant = sum(1 for pr in pronos_ce_match if pr['gagnant_prevu'] == vrai_gagnant)
-                
-                # 2. Combien ont fait le prono parfait (Vainqueur + Écart) ?
-                mises_parfaites = sum(
-                    1 for pr in pronos_ce_match 
-                    if pr['gagnant_prevu'] == vrai_gagnant and (pr['ecart_prevu'] == vraie_tranche or vrai_gagnant == "draw")
-                )
                 
                 points_ce_match = 0.0
                 
-                # Si le joueur a le bon vainqueur
+                # 1. Le joueur doit d'avoir le bon vainqueur
                 if p['gagnant_prevu'] == vrai_gagnant:
-                    pts_v = float(pts_gagnant_cfg)
-                    # BONUS VAINQUEUR OSÉ : si le nombre de gagnants est inférieur à ta limite X
-                    if mises_gagnant <= seuil_ose_cfg:
-                        pts_v = pts_v * mult_ose_cfg
-                    points_ce_match += pts_v
                     
-                    # Si le joueur a AUSSI le bon écart (et que ce n'est pas un match nul)
-                    if p['ecart_prevu'] == vraie_tranche and vrai_gagnant != "draw":
-                        pts_e = float(pts_ecart_cfg)
-                        # BONUS ÉCART OSÉ : si le nombre de pronos parfaits est inférieur à ta limite X
-                        if mises_parfaites <= seuil_ose_cfg:
-                            pts_e = pts_e * mult_ose_cfg
-                        points_ce_match += pts_e
+                    # CAS A : Le vainqueur est OSÉ (Moins de X personnes l'ont trouvé)
+                    if mises_gagnant < seuil_ose_cfg:
+                        # Multiplicateur sur le vainqueur
+                        points_ce_match += float(pts_gagnant_cfg) * mult_ose_cfg
+                        
+                        # Si en plus il a le bon écart -> Multiplicateur AUSSI sur l'écart
+                        if p['ecart_prevu'] == vraie_tranche and vrai_gagnant != "draw":
+                            points_ce_match += float(pts_ecart_cfg) * mult_ose_cfg
+                            
+                    # CAS B : Le vainqueur est un FAVORI (X personnes ou plus l'ont trouvé)
+                    else:
+                        # Points normaux pour le vainqueur
+                        points_ce_match += float(pts_gagnant_cfg)
+                        
+                        # Points normaux pour l'écart (pas de bonus car le vainqueur était trop facile)
+                        if p['ecart_prevu'] == vraie_tranche and vrai_gagnant != "draw":
+                            points_ce_match += float(pts_ecart_cfg)
 
                     # Ajout des points du match
                     scores_calculateurs[j_id]["score_live"] += points_ce_match
