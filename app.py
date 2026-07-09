@@ -468,22 +468,22 @@ else:
                 mises_gagnant = sum(1 for pr in pronos_ce_match if pr['gagnant_prevu'] == vrai_gagnant)
                 
                 points_ce_match = 0.0
+                # Conversion du seuil en entier pour comparaison directe
+                seuil_int = int(seuil_ose_cfg)
                 
                 # 1. Le joueur doit avoir le bon vainqueur
                 if p['gagnant_prevu'] == vrai_gagnant:
-                    scores_calculateurs[j_id]["vainqueurs"] += 1  # 🌟 Alimente le badge vert du classement
                     
-                    # CAS A : Le vainqueur est OSÉ (Moins de X personnes l'ont trouvé)
-                    if mises_gagnant < seuil_ose_cfg:
+                    # CAS A : Le vainqueur est OSÉ (Nombre de personnes <= seuil)
+                    if mises_gagnant <= seuil_int:
                         # Multiplicateur sur le vainqueur
                         points_ce_match += float(pts_gagnant_cfg) * mult_ose_cfg
                         
                         # Si en plus il a le bon écart -> Multiplicateur AUSSI sur l'écart
                         if p['ecart_prevu'] == vraie_tranche and vrai_gagnant != "draw":
                             points_ce_match += float(pts_ecart_cfg) * mult_ose_cfg
-                            scores_calculateurs[j_id]["ecarts"] += 1  # 🌟 Alimente le badge étoile du classement
                             
-                    # CAS B : Le vainqueur est un FAVORI (X personnes ou plus l'ont trouvé)
+                    # CAS B : Le vainqueur est un FAVORI (Nombre de personnes > seuil)
                     else:
                         # Points normaux pour le vainqueur
                         points_ce_match += float(pts_gagnant_cfg)
@@ -491,7 +491,6 @@ else:
                         # Points normaux pour l'écart
                         if p['ecart_prevu'] == vraie_tranche and vrai_gagnant != "draw":
                             points_ce_match += float(pts_ecart_cfg)
-                            scores_calculateurs[j_id]["ecarts"] += 1  # 🌟 Alimente le badge étoile du classement
 
                     # Ajout des points du match
                     scores_calculateurs[j_id]["score_live"] += points_ce_match
