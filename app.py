@@ -467,28 +467,30 @@ else:
                 # Combien ont trouvé le bon vainqueur ?
                 mises_gagnant = sum(1 for pr in pronos_ce_match if pr['gagnant_prevu'] == vrai_gagnant)
                 
+                # --- DEBUG TEMPORAIRE (Affiche les valeurs pour 1 match afin de vérifier) ---
+                # Si vous voyez ceci, vous saurez exactement pourquoi ça bloque
+                if m_id == pronostics_tous[0]['match_id']:
+                    st.sidebar.write(f"Debug Bonus - Mises gagnants: {mises_gagnant}, Seuil config: {seuil_ose_cfg}")
+
                 points_ce_match = 0.0
-                # On force le seuil en entier pour une comparaison robuste
-                seuil_int = int(seuil_ose_cfg)
                 
                 # 1. Le joueur doit avoir le bon vainqueur
                 if p['gagnant_prevu'] == vrai_gagnant:
                     
                     # CAS A : Le vainqueur est OSÉ (Nombre de personnes <= seuil)
-                    if mises_gagnant <= seuil_int:
+                    # On force le int() ici pour être certain de la comparaison
+                    if mises_gagnant <= int(float(seuil_ose_cfg)):
+                        
                         # Multiplicateur sur le vainqueur
-                        points_ce_match += float(pts_gagnant_cfg) * mult_ose_cfg
+                        points_ce_match += float(pts_gagnant_cfg) * float(mult_ose_cfg)
                         
                         # Si en plus il a le bon écart -> Multiplicateur AUSSI sur l'écart
                         if p['ecart_prevu'] == vraie_tranche and vrai_gagnant != "draw":
-                            points_ce_match += float(pts_ecart_cfg) * mult_ose_cfg
+                            points_ce_match += float(pts_ecart_cfg) * float(mult_ose_cfg)
                             
-                    # CAS B : Le vainqueur est un FAVORI (Nombre de personnes > seuil)
+                    # CAS B : Le vainqueur est un FAVORI
                     else:
-                        # Points normaux pour le vainqueur
                         points_ce_match += float(pts_gagnant_cfg)
-                        
-                        # Points normaux pour l'écart
                         if p['ecart_prevu'] == vraie_tranche and vrai_gagnant != "draw":
                             points_ce_match += float(pts_ecart_cfg)
 
