@@ -396,7 +396,7 @@ else:
             config_supabase = supabase.table("Configuration").select("*").execute().data[0]
             pts_gagnant_cfg = config_supabase.get('pts_gagnant', 2)
             pts_ecart_cfg = config_supabase.get('pts_ecart', 3)
-            seuil_ose_cfg = config_supabase.get('seuil_poursentage_ose', 0.2)
+            seuil_ose_cfg = config_supabase.get('seuil_poursentage_ose', 3)
             mult_ose_cfg = config_supabase.get('multiplicateur_ose', 2)
         except Exception as e:
             # Valeurs de secours au cas où la table est vide ou inaccessible
@@ -469,8 +469,9 @@ else:
                 
                 points_ce_match = 0.0
                 
-                # 1. Le joueur doit d'avoir le bon vainqueur
+                # 1. Le joueur doit avoir le bon vainqueur
                 if p['gagnant_prevu'] == vrai_gagnant:
+                    scores_calculateurs[j_id]["vainqueurs"] += 1  # 🌟 Alimente le badge vert du classement
                     
                     # CAS A : Le vainqueur est OSÉ (Moins de X personnes l'ont trouvé)
                     if mises_gagnant < seuil_ose_cfg:
@@ -480,15 +481,17 @@ else:
                         # Si en plus il a le bon écart -> Multiplicateur AUSSI sur l'écart
                         if p['ecart_prevu'] == vraie_tranche and vrai_gagnant != "draw":
                             points_ce_match += float(pts_ecart_cfg) * mult_ose_cfg
+                            scores_calculateurs[j_id]["ecarts"] += 1  # 🌟 Alimente le badge étoile du classement
                             
                     # CAS B : Le vainqueur est un FAVORI (X personnes ou plus l'ont trouvé)
                     else:
                         # Points normaux pour le vainqueur
                         points_ce_match += float(pts_gagnant_cfg)
                         
-                        # Points normaux pour l'écart (pas de bonus car le vainqueur était trop facile)
+                        # Points normaux pour l'écart
                         if p['ecart_prevu'] == vraie_tranche and vrai_gagnant != "draw":
                             points_ce_match += float(pts_ecart_cfg)
+                            scores_calculateurs[j_id]["ecarts"] += 1  # 🌟 Alimente le badge étoile du classement
 
                     # Ajout des points du match
                     scores_calculateurs[j_id]["score_live"] += points_ce_match
