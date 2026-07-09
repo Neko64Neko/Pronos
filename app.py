@@ -1318,7 +1318,7 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
                     min_value=1, 
                     value=int(st.session_state.pct_ose), 
                     step=1, 
-                    help="Le bonus s'active uniquement si le nombre de joueurs ayant trouvé le bon vainqueur est STRICTEMENT INFÉRIEUR à ce nombre X."
+                    help="Le bonus s'active uniquement si le nombre de joueurs ayant trouvé le bon vainqueur est INFÉRIEUR OU EGAL à ce nombre X."
                 )
                 mult_o = st.number_input("Multiplicateur du prono osé", min_value=1.0, max_value=10.0, value=float(st.session_state.mult_ose), step=0.5)
             
