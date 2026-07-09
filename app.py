@@ -391,19 +391,19 @@ else:
     # =====================================================================
     if st.session_state.onglet_actif == "📊":
         st.markdown(f"### 🏉 Bienvenue sur ton tableau de bord, **{st.session_state.pseudo}** !")
-        # --- RÉCUPÉRATION DYNAMIQUE DE LA CONFIGURATION SUPABASE ---
+# --- RÉCUPÉRATION DYNAMIQUE DE LA CONFIGURATION SUPABASE ---
         try:
-            config_supabase = supabase.table("Configuration").select("*").execute().data[0]
-            pts_gagnant_cfg = float(config_supabase.get('pts_gagnant', 2))
-            pts_ecart_cfg = float(config_supabase.get('pts_ecart', 3))
-            seuil_ose_cfg = int(config_supabase.get('seuil_poursentage_ose', 1)) # Force l'entier ici (1 par défaut)
-            mult_ose_cfg = float(config_supabase.get('multiplicateur_ose', 2))
+            # On utilise de préférence les valeurs déjà nettoyées et chargées dans le session_state au point 5.7
+            pts_gagnant_cfg = float(st.session_state.get("pts_vainqueur", 2))
+            pts_ecart_cfg = float(st.session_state.get("pts_ecart", 3))
+            seuil_ose_cfg = int(st.session_state.get("pct_ose", 1)) # C'est un entier (ex: 1)
+            mult_ose_cfg = float(st.session_state.get("mult_ose", 2))
         except Exception as e:
-            # Valeurs de secours au cas où la table est vide ou inaccessible
-            pts_gagnant_cfg = 2
-            pts_ecart_cfg = 3
-            seuil_ose_cfg = 3
-            mult_ose_cfg = 2
+            # Sécurité si le session_state n'était pas encore initialisé
+            pts_gagnant_cfg = 2.0
+            pts_ecart_cfg = 3.0
+            seuil_ose_cfg = 1
+            mult_ose_cfg = 2.0
         
         try:
             # 1. Récupération des données brutes
