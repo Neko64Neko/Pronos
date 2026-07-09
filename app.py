@@ -467,7 +467,7 @@ else:
                 # Combien ont trouvé le bon vainqueur ?
                 mises_gagnant = sum(1 for pr in pronos_ce_match if pr['gagnant_prevu'] == vrai_gagnant)
                 
-            #    points_ce_match = 0.0
+                points_ce_match = 0.0
                 
                 # 1. Le joueur doit avoir le bon vainqueur
                 if p['gagnant_prevu'] == vrai_gagnant:
