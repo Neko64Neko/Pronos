@@ -467,11 +467,13 @@ else:
                 # Combien ont trouvé le bon vainqueur ?
                 mises_gagnant = sum(1 for pr in pronos_ce_match if pr['gagnant_prevu'] == vrai_gagnant)
                 
-                # --- DEBUG TEMPORAIRE (Affiche les valeurs pour 1 match afin de vérifier) ---
-                # Si vous voyez ceci, vous saurez exactement pourquoi ça bloque
-                if m_id == pronostics_tous[0]['match_id']:
-                    st.sidebar.write(f"Debug Bonus - Mises gagnants: {mises_gagnant}, Seuil config: {seuil_ose_cfg}")
-
+                # --- DEBUG TEMPORAIRE POUR ANALYSE ---
+                if m_id == pronostics_tous[0]['match_id']: # Ou un ID de match spécifique
+                    st.sidebar.write(f"--- DEBUG MATCH {m_id} ---")
+                    st.sidebar.write(f"Joueurs ayant pronostiqué : {len(pronos_ce_match)}")
+                    st.sidebar.write(f"Mises gagnantes trouvées : {mises_gagnant}")
+                    st.sidebar.write(f"Seuil configuré (limite) : {seuil_ose_cfg}")
+                    st.sidebar.write(f"Condition (Mises <= Seuil) : {mises_gagnant <= int(float(seuil_ose_cfg))}")
                 points_ce_match = 0.0
                 
                 # 1. Le joueur doit avoir le bon vainqueur
