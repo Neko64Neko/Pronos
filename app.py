@@ -1295,7 +1295,7 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
             "Gestion des joueurs"
         ])
     
-    # 9.1 - TAB 1 : GESTION DES POINTS ET DU BARÈME
+# 9.1 - TAB 1 : GESTION DES POINTS ET DU BARÈME
     with tab1:
         st.subheader("📊 Configuration du Barème de Points")
         st.info("Ajuste les coefficients ci-dessous. Ils seront appliqués lors du calcul des résultats.")
@@ -1303,7 +1303,7 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
         # Initialisation des valeurs par défaut dans le session_state si elles n'existent pas
         if "pts_vainqueur" not in st.session_state: st.session_state.pts_vainqueur = 2
         if "pts_ecart" not in st.session_state: st.session_state.pts_ecart = 2
-        if "pct_ose" not in st.session_state: st.session_state.pct_ose = 20
+        if "pct_ose" not in st.session_state: st.session_state.pct_ose = 3  # Valeur par défaut modifiée à 3 joueurs au lieu de 20%
         if "mult_ose" not in st.session_state: st.session_state.mult_ose = 2.0
         
         with st.form("form_bareme_points"):
@@ -1312,7 +1312,14 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
                 pts_v = st.number_input("Points Vainqueur trouvé", min_value=0, value=int(st.session_state.pts_vainqueur), step=1)
                 pts_e = st.number_input("Points Écart parfait (Bonus)", min_value=0, value=int(st.session_state.pts_ecart), step=1)
             with col_b2:
-                pct_o = st.number_input("% max de déclenchement prono osé", min_value=1, max_value=100, value=int(st.session_state.pct_ose), step=1, help="Si moins de X% des joueurs ont misé sur cette équipe, le prono devient 'osé'")
+                # CHANGEMENT ICI : On remplace le texte, on enlève max_value=100 et on ajuste l'aide (help)
+                seuil_o = st.number_input(
+                    "Nombre max de gagnants pour prono osé (X)", 
+                    min_value=1, 
+                    value=int(st.session_state.pct_ose), 
+                    step=1, 
+                    help="Le bonus s'active uniquement si le nombre de joueurs ayant trouvé le bon vainqueur est STRICTEMENT INFÉRIEUR à ce nombre X."
+                )
                 mult_o = st.number_input("Multiplicateur du prono osé", min_value=1.0, max_value=10.0, value=float(st.session_state.mult_ose), step=0.5)
             
             if st.form_submit_button("💾 Sauvegarder le barème"):
@@ -1320,7 +1327,7 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
                     "id": "default_config",
                     "pts_gagnant": int(pts_v),
                     "pts_ecart": int(pts_e),
-                    "seuil_poursentage_ose": int(pct_o),
+                    "seuil_poursentage_ose": int(seuil_o),  # On garde la clé Supabase actuelle pour éviter de casser la table
                     "multiplicateur_ose": int(mult_o) 
                 }
                 
@@ -1333,10 +1340,10 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
                     
                     st.session_state.pts_vainqueur = pts_v
                     st.session_state.pts_ecart = pts_e
-                    st.session_state.pct_ose = pct_o
+                    st.session_state.pct_ose = seuil_o  # On stocke le nombre de joueurs dans le state
                     st.session_state.mult_ose = mult_o
                     
-                    st.success("🎉 Barème sauvegardé !")
+                    st.success(f"🎉 Barème sauvegardé ! Le seuil est désormais fixé à moins de {seuil_o} joueur(s) gagnant(s).")
                     time.sleep(1)
                     st.rerun()
                 except Exception as e:
