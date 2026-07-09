@@ -468,7 +468,7 @@ else:
                 mises_gagnant = sum(1 for pr in pronos_ce_match if pr['gagnant_prevu'] == vrai_gagnant)
                 
                 points_ce_match = 0.0
-                # Conversion du seuil en entier pour comparaison directe
+                # On force le seuil en entier pour une comparaison robuste
                 seuil_int = int(seuil_ose_cfg)
                 
                 # 1. Le joueur doit avoir le bon vainqueur
