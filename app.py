@@ -1145,10 +1145,12 @@ elif st.session_state.onglet_actif == "📅":
                                             color_txt = "#1e40af"
                                             texte_badge_resultat = "✅ Vainqueur ok"
                                         
-                                        is_ose = (g_prevu == "home" and pct_home <= seuil_ose_cfg) or (g_prevu == "away" and pct_away <= seuil_ose_cfg)
+                                        is_ose = (g_prevu == "home" and mises_home <= int(float(seuil_ose_cfg))) or \
+                                                 (g_prevu == "away" and mises_away <= int(float(seuil_ose_cfg)))
+                                        
                                         if is_ose:
                                             pts = float(base_match * mult_ose_cfg)
-                                            badge_ose = " 🔥"
+                                            badge_ose = " 🔥 x2" # J'ai ajouté 'x2' pour que ce soit explicite
                                             # NOUVEAUTÉ : Style Doré / Or pour le prono osé réussi
                                             color_bg = "#fde047"  # Doré éclatant
                                             color_txt = "#713f12"  # Or foncé / Marron pour un super contraste
