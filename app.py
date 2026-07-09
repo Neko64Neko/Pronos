@@ -548,11 +548,29 @@ else:
                     sd, se = match.get('score_dom'), match.get('score_ext')
                     if sd is not None and se is not None:
                         vg = "home" if sd > se else ("away" if sd < se else "draw")
+        # Recalcul de la tranche pour le compteur visuel
+                        vrai_ecart_points = abs(sd - se)
+                        if vrai_ecart_points <= 6: vraie_tranche_m = "1-6"
+                        elif vrai_ecart_points <= 10: vraie_tranche_m = "7-10"
+                        elif vrai_ecart_points <= 15: vraie_tranche_m = "11-15"
+                        elif vrai_ecart_points <= 20: vraie_tranche_m = "16-20"
+                        elif vrai_ecart_points <= 30: vraie_tranche_m = "21-30"
+                        elif vrai_ecart_points <= 40: vraie_tranche_m = "31-40"
+                        elif vrai_ecart_points <= 50: vraie_tranche_m = "41-50"
+                        else: vraie_tranche_m = "51+"
+                        
+                        # Si le joueur a le bon vainqueur
                         if p['gagnant_prevu'] == vg:
                             pronos_m = [pr for pr in pronostics_tous if pr['match_id'] == m_id]
-                            nb_bons = sum(1 for pm in pronos_m if pm['gagnant_prevu'] == vg)
-                            if (nb_bons / len(pronos_m) * 100) <= seuil_ose_cfg:
-                                stats_oses += 1
+                            nb_gagnants = sum(1 for pm in pronos_m if pm['gagnant_prevu'] == vg)
+                            
+                            # Le bonus ne s'active QUE si le nombre de gagnants est inférieur à X
+                            if nb_gagnants < seuil_ose_cfg:
+                                stats_oses += 1  # +1 pour le vainqueur osé
+                                
+                                # Si en plus il a le bon écart, on ajoute +1 au compteur de bonus réussis
+                                if p['ecart_prevu'] == vraie_tranche_m and vg != "draw":
+                                    stats_oses += 1
 
             rang_joueur = "-"
             for idx, j in enumerate(tous_les_joueurs_ordonnes):
