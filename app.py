@@ -479,7 +479,7 @@ else:
                 if p['gagnant_prevu'] == vrai_gagnant:
                     pts_v = float(pts_gagnant_cfg)
                     # BONUS VAINQUEUR OSÉ : si le nombre de gagnants est inférieur à ta limite X
-                    if mises_gagnant < seuil_ose_cfg:
+                    if mises_gagnant <= seuil_ose_cfg:
                         pts_v = pts_v * mult_ose_cfg
                     points_ce_match += pts_v
                     
@@ -487,7 +487,7 @@ else:
                     if p['ecart_prevu'] == vraie_tranche and vrai_gagnant != "draw":
                         pts_e = float(pts_ecart_cfg)
                         # BONUS ÉCART OSÉ : si le nombre de pronos parfaits est inférieur à ta limite X
-                        if mises_parfaites < seuil_ose_cfg:
+                        if mises_parfaites <= seuil_ose_cfg:
                             pts_e = pts_e * mult_ose_cfg
                         points_ce_match += pts_e
 
