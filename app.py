@@ -467,14 +467,7 @@ else:
                 # Combien ont trouvé le bon vainqueur ?
                 mises_gagnant = sum(1 for pr in pronos_ce_match if pr['gagnant_prevu'] == vrai_gagnant)
                 
-                # --- DEBUG TEMPORAIRE POUR ANALYSE ---
-                if m_id == pronostics_tous[0]['match_id']: # Ou un ID de match spécifique
-                    st.info(f"--- DEBUG MATCH {m_id} ---")
-                    st.info(f"Joueurs ayant pronostiqué : {len(pronos_ce_match)}")
-                    st.info(f"Mises gagnantes trouvées : {mises_gagnant}")
-                    st.info(f"Seuil configuré (limite) : {seuil_ose_cfg}")
-                    st.info(f"Condition (Mises <= Seuil) : {mises_gagnant <= int(float(seuil_ose_cfg))}")
-                points_ce_match = 0.0
+            #    points_ce_match = 0.0
                 
                 # 1. Le joueur doit avoir le bon vainqueur
                 if p['gagnant_prevu'] == vrai_gagnant:
