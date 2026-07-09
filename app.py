@@ -469,11 +469,11 @@ else:
                 
                 # --- DEBUG TEMPORAIRE POUR ANALYSE ---
                 if m_id == pronostics_tous[0]['match_id']: # Ou un ID de match spécifique
-                    st.sidebar.write(f"--- DEBUG MATCH {m_id} ---")
-                    st.sidebar.write(f"Joueurs ayant pronostiqué : {len(pronos_ce_match)}")
-                    st.sidebar.write(f"Mises gagnantes trouvées : {mises_gagnant}")
-                    st.sidebar.write(f"Seuil configuré (limite) : {seuil_ose_cfg}")
-                    st.sidebar.write(f"Condition (Mises <= Seuil) : {mises_gagnant <= int(float(seuil_ose_cfg))}")
+                    st.info(f"--- DEBUG MATCH {m_id} ---")
+                    st.info(f"Joueurs ayant pronostiqué : {len(pronos_ce_match)}")
+                    st.info(f"Mises gagnantes trouvées : {mises_gagnant}")
+                    st.info(f"Seuil configuré (limite) : {seuil_ose_cfg}")
+                    st.info(f"Condition (Mises <= Seuil) : {mises_gagnant <= int(float(seuil_ose_cfg))}")
                 points_ce_match = 0.0
                 
                 # 1. Le joueur doit avoir le bon vainqueur
