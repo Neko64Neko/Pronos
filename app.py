@@ -183,28 +183,25 @@ def sauvegarder_bonus_auto(question_id, user_id, valeur_saisie=None):
         st.error(f"Erreur lors de l'enregistrement automatique : {e}")
         
 #2.5 Scraping auto si on dépasse la date du match
-def est_dans_fenetre_match():
-    """Vérifie si on est entre le début du match et 100 minutes après."""
-    maintenant = datetime.utcnow()
+def verifier_fenetre_match():
+    """Retourne (bool_actif, message_debug)"""
+    maintenant = datetime.now(timezone.utc)
     try:
-        # On récupère tous les matchs non terminés
-        matchs = supabase.table("Matchs").select("date_match").neq("statut", "FT").execute().data
-        
+        matchs = supabase.table("Matchs").select("equipe_dom, equipe_ext, date_match").neq("statut", "FT").execute().data
         for match in matchs:
-            # Nettoyage de la date (gestion du Z UTC)
-            date_str = match['date_match'].replace("Z", "")
-            try:
-                date_match = datetime.fromisoformat(date_str)
-                fin_fenetre = date_match + timedelta(minutes=100)
-                
-                # Si on est pile dans la fenêtre de 100 min
-                if date_match <= maintenant <= fin_fenetre:
-                    return True
-            except:
-                continue
-        return False
+            date_match = datetime.fromisoformat(match['date_match'].replace("Z", "+00:00"))
+            if date_match.tzinfo is None: date_match = date_match.replace(tzinfo=timezone.utc)
+            
+            fin_fenetre = date_match + timedelta(minutes=100)
+            
+            if date_match <= maintenant <= fin_fenetre:
+                return True, f"✅ Fenêtre active : Match {match['equipe_dom']} vs {match['equipe_ext']} en cours (Fin à {fin_fenetre.strftime('%H:%M')} UTC)"
+            elif maintenant < date_match:
+                # Optionnel : afficher le temps avant le prochain match
+                return False, f"🕒 En attente : Prochain match {match['equipe_dom']} à {date_match.strftime('%H:%M')} UTC"
+        return False, "💤 Aucune fenêtre active."
     except:
-        return False
+        return False, "⚠️ Erreur calcul fenêtre"
 # =====================================================================
 # 3 - INITIALISATION ET GESTION DE LA SESSION
 # =====================================================================
