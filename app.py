@@ -1,6 +1,6 @@
 import streamlit as st
 from supabase import create_client
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import requests
 from bs4 import BeautifulSoup
 import time
