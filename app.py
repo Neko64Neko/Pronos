@@ -1607,14 +1607,39 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
         except Exception as e:
             st.error(f"Erreur lors du chargement du module de validation : {e}")
             
-    # 9.5 - TAB 5 : RE-SCRAPING MANUEL
+    # 9.5 - TAB 5 : TOUR DE CONTRÔLE SCRAPING
     with tab5:
-        st.subheader("🔄 Lanceur de Scraping Manuel")
-        if st.button("⚡ Lancer la Synchronisation"):
-            with st.spinner("Scraping en cours..."):
-                nb = verifier_et_importer_matchs()
-                st.success(f"Terminé ! {nb} matchs traités avec succès.")
-                st.rerun()
+    st.subheader("🛠️ Tour de Contrôle Scraping")
+    
+    # 1. Vérification de l'état actuel
+    is_active, debug_msg = verifier_fenetre_match()
+    
+    # 2. Affichage des indicateurs clés
+    col1, col2 = st.columns(2)
+    col1.metric("Statut Auto", "ACTIF" if is_active else "VEILLE")
+    col2.metric("Dernier Run", st.session_state.dernier_run)
+    
+    # 3. Ligne d'info sur la fenêtre de 100 minutes
+    st.info(debug_msg)
+    
+    # 4. Logs techniques (repliés par défaut pour ne pas polluer l'écran)
+    with st.expander("Voir les derniers logs du scraper"):
+        if not st.session_state.logs_scraping:
+            st.write("Aucun log disponible.")
+        else:
+            for log in reversed(st.session_state.logs_scraping):
+                st.write(log)
+    
+    st.divider()
+    
+    # 5. Lanceur manuel
+    st.subheader("⚡ Lanceur de Scraping Manuel")
+    if st.button("Lancer la Synchronisation"):
+        with st.spinner("Scraping en cours..."):
+            nb = verifier_et_importer_matchs()
+            st.success(f"Terminé ! {nb} matchs traités.")
+            # On force le rafraîchissement pour mettre à jour les logs affichés
+            st.rerun()
 
     # 9.6 - TAB 6 : ZONE DE DANGER
     with tab6:
