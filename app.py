@@ -216,15 +216,16 @@ if "onglet_actif" not in st.session_state: st.session_state.onglet_actif = "📊
 TRANCHES_ECARTS = ["1-6", "7-10", "11-15", "16-20", "21-30", "31-40", "41-50", "51+"]
 maintenant_paris = datetime.utcnow() + timedelta(hours=2)
 
-# 3.1 -REFRESH AUTOMATIQUE INTELLIGENT SI MATCH EN DIRECT
-try:
-    matchs_en_direct = supabase.table("Matchs").select("id").eq("statut", "LIVE").execute().data
-    if matchs_en_direct:
-        st_autorefresh(interval=300000, key="live_rugby_refresh")
-        verifier_et_importer_matchs()
-except Exception:
-    pass
+# 3.1 - SCRAPING AUTOMATIQUE INTELLIGENT (FENÊTRE DE 100 MIN)
 
+if est_dans_fenetre_match():
+    # On rafraîchit toutes les 5 minutes (300 000 ms)
+    # L'auto-refresh va recharger la page, relancer le script, 
+    # et donc exécuter la ligne ci-dessous à chaque cycle.
+    st_autorefresh(interval=300000, key="live_rugby_refresh")
+    
+    # On lance le scraping
+    verifier_et_importer_matchs()
 
 # =====================================================================
 # 4 - ÉCRAN DE CONNEXION / INSCRIPTION
