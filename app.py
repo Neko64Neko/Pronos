@@ -181,6 +181,30 @@ def sauvegarder_bonus_auto(question_id, user_id, valeur_saisie=None):
             supabase.table("Réponses_Questions").insert({"user_id": user_id, "question_id": question_id, "reponse_joueur": valeur_propre}).execute()
     except Exception as e:
         st.error(f"Erreur lors de l'enregistrement automatique : {e}")
+        
+#2.5 Scraping auto si on dépasse la date du match
+def est_dans_fenetre_match():
+    """Vérifie si on est entre le début du match et 100 minutes après."""
+    maintenant = datetime.utcnow()
+    try:
+        # On récupère tous les matchs non terminés
+        matchs = supabase.table("Matchs").select("date_match").neq("statut", "FT").execute().data
+        
+        for match in matchs:
+            # Nettoyage de la date (gestion du Z UTC)
+            date_str = match['date_match'].replace("Z", "")
+            try:
+                date_match = datetime.fromisoformat(date_str)
+                fin_fenetre = date_match + timedelta(minutes=100)
+                
+                # Si on est pile dans la fenêtre de 100 min
+                if date_match <= maintenant <= fin_fenetre:
+                    return True
+            except:
+                continue
+        return False
+    except:
+        return False
 # =====================================================================
 # 3 - INITIALISATION ET GESTION DE LA SESSION
 # =====================================================================
