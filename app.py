@@ -215,13 +215,14 @@ maintenant_paris = datetime.utcnow() + timedelta(hours=2)
 
 # 3.1 - SCRAPING AUTOMATIQUE INTELLIGENT (FENÊTRE DE 100 MIN)
 
-if est_dans_fenetre_match():
-    # On rafraîchit toutes les 5 minutes (300 000 ms)
-    # L'auto-refresh va recharger la page, relancer le script, 
-    # et donc exécuter la ligne ci-dessous à chaque cycle.
-    st_autorefresh(interval=300000, key="live_rugby_refresh")
+is_active, _ = verifier_fenetre_match()
+
+if is_active:
+    # On rafraîchit toutes les 5 minutes
+    st_autorefresh(interval=300000, key="live_refresh")
     
     # On lance le scraping
+    # Note : Assure-toi que verifier_et_importer_matchs met à jour 'st.session_state.logs_scraping'
     verifier_et_importer_matchs()
 
 # =====================================================================
