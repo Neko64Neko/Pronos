@@ -121,6 +121,14 @@ def verifier_et_importer_matchs():
                         }).execute()
                         matchs_traites += 1
             except Exception: pass
+            # Mise à jour de l'heure du dernier passage et ajout du log
+            st.session_state.dernier_run = datetime.now(timezone.utc).strftime("%H:%M:%S UTC")
+            
+            msg_log = f"[{datetime.now(timezone.utc).strftime('%H:%M:%S')}] {matchs_traites} matchs traités."
+            st.session_state.logs_scraping.append(msg_log)
+            
+            # On garde seulement les 10 derniers logs pour ne pas encombrer la mémoire
+            st.session_state.logs_scraping = st.session_state.logs_scraping[-10:]
             
     return matchs_traites
     
