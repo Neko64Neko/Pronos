@@ -104,6 +104,14 @@ def verifier_et_importer_matchs():
                     # ... (reste du code)
                     
                     # On ne fait l'upsert QUE si on a bien des noms
+                    # --- DEBUG : AFFICHER CE QU'ON A TROUVÉ ---
+                    st.session_state.logs_scraping.append(f"Debug: Dom='{eq_dom}', Ext='{eq_ext}', Score='{score_txt}'")
+                    
+                    # SI ON TROUVE DES VIDE, ON NE FAIT PAS L'UPSERT
+                    if not eq_dom.strip() or not eq_ext.strip():
+                        st.session_state.logs_scraping.append("STOP : Noms vides détectés, insertion annulée.")
+                        continue
+                    # -------------------------------------------
                     supabase.table("Matchs").upsert({
                         "id": match_id, "equipe_dom": eq_dom, "equipe_ext": eq_ext,
                         # ...
@@ -118,7 +126,7 @@ def verifier_et_importer_matchs():
             st.session_state.logs_scraping.append(f"Erreur ligne {e.__traceback__.tb_lineno}: {e}")
 
     # 2.2 - Sécurité TheSportsDB - CALCUL DYNAMIQUE DE LA SAISON
-    if matchs_traites == 0:
+   ''' if matchs_traites == 0:
         maintenant = datetime.now()
         annee_saison_courante = maintenant.year - 1 if maintenant.month < 8 else maintenant.year
         annees_a_tester = [str(annee_saison_courante - 1), str(annee_saison_courante)]
@@ -156,7 +164,7 @@ def verifier_et_importer_matchs():
             # On garde seulement les 10 derniers logs pour ne pas encombrer la mémoire
             st.session_state.logs_scraping = st.session_state.logs_scraping[-10:]
             
-    return matchs_traites
+    return matchs_traites '''
     
 #2.3 - SAUVEGARDE AUTO PRONO (VERSION SILENCIEUSE)
 def sauvegarder_prono_auto(match_id, equipe_dom, equipe_ext, user_id_cible):
