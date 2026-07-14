@@ -70,7 +70,7 @@ def verifier_et_importer_matchs():
 
     
 # 2.1 - Tentative via le scraping L'Équipe (Méthode structurelle "Blindée")
-try:
+    try:
         headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
         response = requests.get(url_scraping, headers=headers, timeout=10)
         
