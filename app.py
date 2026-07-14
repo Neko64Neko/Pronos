@@ -68,7 +68,7 @@ def verifier_et_importer_matchs():
     matchs_traites = 0
     url_scraping = "https://www.lequipe.fr/Rugby/top-14/page-calendrier-resultats"
 # CHANGEMENT ICI : on utilise un nom unique
-response_scraping = requests.get(url_scraping, headers=headers, timeout=10)
+    response_scraping = requests.get(url_scraping, headers=headers, timeout=10)
     
 # 2.1 - Audit de structure
     if response_scraping.status_code == 200:
