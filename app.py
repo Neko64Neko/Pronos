@@ -69,68 +69,68 @@ def verifier_et_importer_matchs():
     url_scraping = "https://www.lequipe.fr/Rugby/Top-14/page-calendrier-resultats"
 
     
-    # 2.1 - Tentative via le scraping L'Équipe
+# 2.1 - Tentative via le scraping L'Équipe (Méthode structurelle "Blindée")
     try:
         headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
         response = requests.get(url_scraping, headers=headers, timeout=10)
-        # CODE TEMPORAIRE POUR DEBUG
-        # Affiche les 500 premiers caractères du site pour voir ce qu'on reçoit
-        st.session_state.logs_scraping.append(f"Debug: Réponse reçue {len(response.text)} caractères.")
-        # Si tu vois très peu de texte, le site bloque ton accès ou charge en JS
+        
         if response.status_code == 200:
             soup = BeautifulSoup(response.text, 'html.parser')
-            blocs_matchs = soup.find_all('div', class_='Match_match__')
-            # --- DEBUG : VOIR CE QUE LE SCRAPER VOIT ---
-            blocs_matchs = soup.find_all('div', class_='Match_match__') 
-            st.session_state.logs_scraping.append(f"Nombre de blocs trouvés avec 'Match_match__' : {len(blocs_matchs)}")
             
-            if len(blocs_matchs) > 0:
-                st.session_state.logs_scraping.append(f"Exemple de classe du 1er bloc : {blocs_matchs[0].get('class')}")
+            # --- MÉTHODE BLINDÉE : On cherche les blocs sans dépendre des classes ---
+            # On récupère tous les div et on filtre ceux qui contiennent un score (" - ")
+            tous_les_divs = soup.find_all('div')
+            blocs_matchs = [d for d in tous_les_divs if " - " in d.get_text() and len(d.get_text()) < 300]
+            
+            # On élimine les doublons (si un bloc contient un autre bloc)
+            blocs_matchs = list(set(blocs_matchs))
+            
+            st.session_state.logs_scraping.append(f"Méthode blindée : {len(blocs_matchs)} blocs potentiels détectés.")
             
             for bloc in blocs_matchs:
                 try:
-                    # 1. On cherche les éléments
-                    dom_node = bloc.find('span', class_='team-home')
-                    ext_node = bloc.find('span', class_='team-away')
-                    score_node = bloc.find('span', class_='score')
-
-                    # 2. Sécurité : Si on ne trouve pas de span avec ces classes, on saute
-                    if not dom_node or not ext_node:
-                        continue 
-
-                    eq_dom = dom_node.text.strip()
-                    eq_ext = ext_node.text.strip()
+                    # On récupère tous les textes des spans dans ce bloc
+                    # C'est une méthode "aveugle" qui ne dépend pas des noms de classes
+                    spans = bloc.find_all('span')
+                    textes = [s.text.strip() for s in spans if len(s.text.strip()) > 1]
                     
-                    # 3. VERROU FINAL : Si après extraction c'est vide, on bloque l'envoi
-                    if not eq_dom or not eq_ext:
-                        st.session_state.logs_scraping.append("Bloc ignoré : noms d'équipes vides.")
+                    # On suppose que le bloc contient au moins : [Equipe Dom, Score, Equipe Ext]
+                    # Si on n'a pas assez d'infos, on ignore ce bloc
+                    if len(textes) < 3:
                         continue
-
-                    # Gestion score
-                    score_txt = score_node.text.strip() if score_node else "0-0"
-                    # ... (reste du code)
+                        
+                    eq_dom = textes[0]
+                    score_txt = textes[1]
+                    eq_ext = textes[2]
                     
-                    # On ne fait l'upsert QUE si on a bien des noms
-                    # --- DEBUG : AFFICHER CE QU'ON A TROUVÉ ---
-                    st.session_state.logs_scraping.append(f"Debug: Dom='{eq_dom}', Ext='{eq_ext}', Score='{score_txt}'")
+                    # DEBUG : Pour voir ce qu'on a extrait
+                    st.session_state.logs_scraping.append(f"Debug: Extrait '{eq_dom}' vs '{eq_ext}' ({score_txt})")
                     
-                    # SI ON TROUVE DES VIDE, ON NE FAIT PAS L'UPSERT
-                    if not eq_dom.strip() or not eq_ext.strip():
-                        st.session_state.logs_scraping.append("STOP : Noms vides détectés, insertion annulée.")
-                        continue
-                    # -------------------------------------------
+                    # Calcul de l'ID et Upsert Supabase
+                    import hashlib
+                    match_string = f"{eq_dom}_{eq_ext}".encode('utf-8')
+                    match_id = int(hashlib.md5(match_string).hexdigest(), 16) % 10000000
+                    
+                    # Gestion score et statut
+                    sc_dom, sc_ext = (int(s) for s in score_txt.split("-")) if "-" in score_txt else (None, None)
+                    statut = "FT" if "-" in score_txt else "NS"
+                    
                     supabase.table("Matchs").upsert({
                         "id": match_id, "equipe_dom": eq_dom, "equipe_ext": eq_ext,
-                        # ...
+                        "date_match": datetime.utcnow().isoformat(),
+                        "score_dom": sc_dom, "score_ext": sc_ext, "statut": statut
                     }).execute()
                     
                     matchs_traites += 1
                 
                 except Exception as e:
-                    st.session_state.logs_scraping.append(f"Erreur traitée: {e}")
+                    # On n'affiche pas les erreurs de chaque bloc pour ne pas polluer les logs
                     continue
+        else:
+            st.session_state.logs_scraping.append(f"Erreur HTTP: {response.status_code}")
+            
     except Exception as e:
-            st.session_state.logs_scraping.append(f"Erreur ligne {e.__traceback__.tb_lineno}: {e}")
+        st.session_state.logs_scraping.append(f"Erreur critique scraping : {e}")
 
     # 2.2 - Sécurité TheSportsDB - CALCUL DYNAMIQUE DE LA SAISON
 #    if matchs_traites == 0:
