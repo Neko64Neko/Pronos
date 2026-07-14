@@ -67,27 +67,34 @@ def verifier_et_importer_matchs():
     """Version robuste : scanne L'Équipe et dynamiquement TheSportsDB selon la saison en cours."""
     matchs_traites = 0
     url_scraping = "https://www.lequipe.fr/Rugby/top-14/page-calendrier-resultats"
-# CHANGEMENT ICI : on utilise un nom unique
-    response_scraping = requests.get(url_scraping, headers=headers, timeout=10)
+
+    # 2.1 - Tentative via le scraping L'Équipe
+    try:
+        # On définit explicitement les headers ici pour être sûr qu'ils existent
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+        }
+        
+        # On appelle le site avec la variable définie juste au-dessus
+        response_scraping = requests.get(url_scraping, headers=headers, timeout=10)
     
-# 2.1 - Audit de structure
-    if response_scraping.status_code == 200:
-        soup = BeautifulSoup(response.text, 'html.parser')
-        
-        # On cherche l'élément qui contient le nom d'une équipe
-        equipe_test = "Bayonne" # <--- METS LE NOM D'UNE ÉQUIPE DU JOUR ICI
-        element = soup.find(string=lambda text: text and equipe_test in text)
-        
-        if element:
-            parent = element.find_parent()
-            st.session_state.logs_scraping.append(f"Trouvé ! '{equipe_test}' est dans une balise <{parent.name}>")
-            st.session_state.logs_scraping.append(f"Classes du parent : {parent.get('class')}")
+        if response_scraping.status_code == 200:
+            soup = BeautifulSoup(response.text, 'html.parser')
             
-            # On remonte d'un cran pour voir la structure globale
-            grand_parent = parent.find_parent()
-            st.session_state.logs_scraping.append(f"Grand-parent : <{grand_parent.name}> avec classes {grand_parent.get('class')}")
-        else:
-            st.session_state.logs_scraping.append("Équipe non trouvée dans le texte (mais était dans le response.text)")
+            # On cherche l'élément qui contient le nom d'une équipe
+            equipe_test = "Bayonne" # <--- METS LE NOM D'UNE ÉQUIPE DU JOUR ICI
+            element = soup.find(string=lambda text: text and equipe_test in text)
+            
+            if element:
+                parent = element.find_parent()
+                st.session_state.logs_scraping.append(f"Trouvé ! '{equipe_test}' est dans une balise <{parent.name}>")
+                st.session_state.logs_scraping.append(f"Classes du parent : {parent.get('class')}")
+                
+                # On remonte d'un cran pour voir la structure globale
+                grand_parent = parent.find_parent()
+                st.session_state.logs_scraping.append(f"Grand-parent : <{grand_parent.name}> avec classes {grand_parent.get('class')}")
+            else:
+                st.session_state.logs_scraping.append("Équipe non trouvée dans le texte (mais était dans le response.text)")
             
 
     # 2.2 - Sécurité TheSportsDB - CALCUL DYNAMIQUE DE LA SAISON
