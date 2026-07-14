@@ -69,27 +69,24 @@ def verifier_et_importer_matchs():
     url_scraping = "https://www.lequipe.fr/Rugby/top-14/page-calendrier-resultats"
 
     
-# 2.1 - Tentative via le scraping L'Équipe (Méthode structurelle "Blindée")
-    try:
-        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
-        response = requests.get(url_scraping, headers=headers, timeout=10)
+# 2.1 - Audit de structure
+    if response.status_code == 200:
+        soup = BeautifulSoup(response.text, 'html.parser')
         
-        # DEBUG RADICAL
-        if response.status_code == 200:
-            # On cherche une équipe que tu sais être sur la page (ex: "PSG", "OM", "Real")
-            # Remplace "NomDuneEquipe" par une équipe qui joue aujourd'hui
-            equipe_test = "Bayonne" 
-            if equipe_test in response.text:
-                st.session_state.logs_scraping.append("SUCCÈS : Les données sont bien dans le code source.")
-            else:
-                st.session_state.logs_scraping.append("ÉCHEC : Impossible de trouver une équipe dans le code. Le site est dynamique (JS) ou l'URL est fausse.")
-                # On affiche un petit morceau du début pour voir ce qu'il y a
-                st.session_state.logs_scraping.append(f"Aperçu: {response.text[:200]}")
-        else:
-            st.session_state.logs_scraping.append(f"Erreur HTTP: {response.status_code}")
+        # On cherche l'élément qui contient le nom d'une équipe
+        equipe_test = "Bayonne" # <--- METS LE NOM D'UNE ÉQUIPE DU JOUR ICI
+        element = soup.find(string=lambda text: text and equipe_test in text)
+        
+        if element:
+            parent = element.find_parent()
+            st.session_state.logs_scraping.append(f"Trouvé ! '{equipe_test}' est dans une balise <{parent.name}>")
+            st.session_state.logs_scraping.append(f"Classes du parent : {parent.get('class')}")
             
-    except Exception as e:
-        st.session_state.logs_scraping.append(f"Erreur: {e}")
+            # On remonte d'un cran pour voir la structure globale
+            grand_parent = parent.find_parent()
+            st.session_state.logs_scraping.append(f"Grand-parent : <{grand_parent.name}> avec classes {grand_parent.get('class')}")
+        else:
+            st.session_state.logs_scraping.append("Équipe non trouvée dans le texte (mais était dans le response.text)")
 
     # 2.2 - Sécurité TheSportsDB - CALCUL DYNAMIQUE DE LA SAISON
 #    if matchs_traites == 0:
