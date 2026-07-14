@@ -132,7 +132,8 @@ def verifier_et_importer_matchs():
                             "statut": statut
                         }).execute()
                         matchs_traites += 1
-            except Exception: pass
+            except Exception as e:
+                st.session_state.logs_scraping.append(f"Erreur ligne {e.__traceback__.tb_lineno}: {e}")
             # Mise à jour de l'heure du dernier passage et ajout du log
             st.session_state.dernier_run = datetime.now(timezone.utc).strftime("%H:%M:%S UTC")
             
