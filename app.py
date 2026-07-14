@@ -70,79 +70,26 @@ def verifier_et_importer_matchs():
 
     
 # 2.1 - Tentative via le scraping L'Équipe (Méthode structurelle "Blindée")
-    try:
+try:
         headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
-        st.session_state.logs_scraping.append(f"Debug: URL tentée = {url_scraping}")
         response = requests.get(url_scraping, headers=headers, timeout=10)
         
+        # DEBUG RADICAL
         if response.status_code == 200:
-            soup = BeautifulSoup(response.text, 'html.parser')
-            
-            # --- MÉTHODE BLINDÉE : On cherche les blocs sans dépendre des classes ---
-            # On récupère tous les div et on filtre ceux qui contiennent un score (" - ")
-            tous_les_divs = soup.find_all('div')
-           # --- NOUVELLE MÉTHODE BLINDÉE (Stricte) ---
-            # On cherche les div qui contiennent un score ET qui ont au moins 3 balises <span> à l'intérieur
-            # C'est cette structure qui définit un match.
-            blocs_matchs = [
-                d for d in soup.find_all('div') 
-                if " - " in d.get_text() 
-                and len(d.find_all('span')) >= 3 
-                and len(d.get_text()) < 300
-            ]
-            
-            st.session_state.logs_scraping.append(f"Méthode blindée stricte : {len(blocs_matchs)} blocs potentiels détectés.")
-            
-            # On élimine les doublons (si un bloc contient un autre bloc)
-            blocs_matchs = list(set(blocs_matchs))
-            
-            st.session_state.logs_scraping.append(f"Méthode blindée : {len(blocs_matchs)} blocs potentiels détectés.")
-            
-            for bloc in blocs_matchs:
-                try:
-                    # On récupère tous les textes des spans dans ce bloc
-                    spans = bloc.find_all('span')
-                    textes = [s.text.strip() for s in spans if len(s.text.strip()) > 1]
-                    
-                    # --- DEBUG : AFFICHER CE QU'ON A TROUVÉ ---
-                    st.session_state.logs_scraping.append(f"Debug bloc trouvé : {textes}")
-                    
-                    # On continue ton traitement normal après
-                    if len(textes) < 3:
-                        continue
-                        
-                    eq_dom = textes[0]
-                    score_txt = textes[1]
-                    eq_ext = textes[2]
-                    
-                    # DEBUG : Pour voir ce qu'on a extrait
-                    st.session_state.logs_scraping.append(f"Debug: Extrait '{eq_dom}' vs '{eq_ext}' ({score_txt})")
-                    
-                    # Calcul de l'ID et Upsert Supabase
-                    import hashlib
-                    match_string = f"{eq_dom}_{eq_ext}".encode('utf-8')
-                    match_id = int(hashlib.md5(match_string).hexdigest(), 16) % 10000000
-                    
-                    # Gestion score et statut
-                    sc_dom, sc_ext = (int(s) for s in score_txt.split("-")) if "-" in score_txt else (None, None)
-                    statut = "FT" if "-" in score_txt else "NS"
-                    
-                    supabase.table("Matchs").upsert({
-                        "id": match_id, "equipe_dom": eq_dom, "equipe_ext": eq_ext,
-                        "date_match": datetime.utcnow().isoformat(),
-                        "score_dom": sc_dom, "score_ext": sc_ext, "statut": statut
-                    }).execute()
-                    
-                    matchs_traites += 1
-                
-                except Exception as e:
-                    # On n'affiche pas les erreurs de chaque bloc pour ne pas polluer les logs
-                    continue
+            # On cherche une équipe que tu sais être sur la page (ex: "PSG", "OM", "Real")
+            # Remplace "NomDuneEquipe" par une équipe qui joue aujourd'hui
+            equipe_test = "Bayonne" 
+            if equipe_test in response.text:
+                st.session_state.logs_scraping.append("SUCCÈS : Les données sont bien dans le code source.")
+            else:
+                st.session_state.logs_scraping.append("ÉCHEC : Impossible de trouver une équipe dans le code. Le site est dynamique (JS) ou l'URL est fausse.")
+                # On affiche un petit morceau du début pour voir ce qu'il y a
+                st.session_state.logs_scraping.append(f"Aperçu: {response.text[:200]}")
         else:
             st.session_state.logs_scraping.append(f"Erreur HTTP: {response.status_code}")
             
     except Exception as e:
-        st.session_state.logs_scraping.append(f"Erreur critique scraping : {e}")
+        st.session_state.logs_scraping.append(f"Erreur: {e}")
 
     # 2.2 - Sécurité TheSportsDB - CALCUL DYNAMIQUE DE LA SAISON
 #    if matchs_traites == 0:
