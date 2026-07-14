@@ -99,7 +99,8 @@ def verifier_et_importer_matchs():
                         "score_dom": sc_dom, "score_ext": sc_ext, "statut": statut
                     }).execute()
                     matchs_traites += 1
-                except Exception: continue
+                except Exception as e:
+                    st.session_state.logs_scraping.append(f"Erreur ligne {e.__traceback__.tb_lineno}: {e}")
     except Exception as e:
             st.session_state.logs_scraping.append(f"Erreur ligne {e.__traceback__.tb_lineno}: {e}")
 
