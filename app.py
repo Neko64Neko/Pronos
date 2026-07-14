@@ -100,7 +100,8 @@ def verifier_et_importer_matchs():
                     }).execute()
                     matchs_traites += 1
                 except Exception: continue
-    except Exception: pass
+    except Exception as e:
+            st.session_state.logs_scraping.append(f"Erreur ligne {e.__traceback__.tb_lineno}: {e}")
 
     # 2.2 - Sécurité TheSportsDB - CALCUL DYNAMIQUE DE LA SAISON
     if matchs_traites == 0:
