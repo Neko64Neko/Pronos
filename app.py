@@ -227,17 +227,30 @@ if "onglet_actif" not in st.session_state: st.session_state.onglet_actif = "📊
 TRANCHES_ECARTS = ["1-6", "7-10", "11-15", "16-20", "21-30", "31-40", "41-50", "51+"]
 maintenant_paris = datetime.utcnow() + timedelta(hours=2)
 
-# 3.1 - SCRAPING AUTOMATIQUE INTELLIGENT (FENÊTRE DE 100 MIN)
+# =====================================================================
+# 3.1 - MOTEUR COLLABORATIF INTELLIGENT
+# =====================================================================
 
 is_active, _ = verifier_fenetre_match()
 
 if is_active:
-    # On rafraîchit toutes les 5 minutes
-    st_autorefresh(interval=300000, key="live_refresh")
+    # 1. On vérifie quand a eu lieu le dernier scraping dans Supabase
+    config = supabase.table("system_config").select("last_scrape").eq("id", 1).execute().data
+    last_run = datetime.fromisoformat(config[0]['last_scrape'])
     
-    # On lance le scraping
-    # Note : Assure-toi que verifier_et_importer_matchs met à jour 'st.session_state.logs_scraping'
-    verifier_et_importer_matchs()
+    # 2. Si ça fait plus de 5 minutes (300 secondes)
+    if (datetime.now(timezone.utc) - last_run).total_seconds() > 300:
+        
+        # On lance le scraping
+        nb = verifier_et_importer_matchs()
+        
+        # On met à jour le verrou de sécurité dans la base
+        supabase.table("system_config").update({
+            "last_scrape": datetime.now(timezone.utc).isoformat()
+        }).eq("id", 1).execute()
+        
+    # Le autorefresh reste actif pour tous, mais il ne fera le travail que si nécessaire
+    st_autorefresh(interval=300000, key="live_refresh")
 
 # =====================================================================
 # 4 - ÉCRAN DE CONNEXION / INSCRIPTION
