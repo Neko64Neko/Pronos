@@ -82,44 +82,37 @@ def verifier_et_importer_matchs():
             blocs_matchs = soup.find_all('div', class_='Match_match__')
             for bloc in blocs_matchs:
                 try:
-                    # 1. On cherche les éléments avec des variables temporaires
+                    # 1. On cherche les éléments
                     dom_node = bloc.find('span', class_='team-home')
                     ext_node = bloc.find('span', class_='team-away')
                     score_node = bloc.find('span', class_='score')
 
-                    # 2. VÉRIFICATION : Si un élément manque, ce n'est pas un match, on saute !
+                    # 2. Sécurité : Si on ne trouve pas de span avec ces classes, on saute
                     if not dom_node or not ext_node:
                         continue 
 
-                    # 3. Extraction sécurisée
                     eq_dom = dom_node.text.strip()
                     eq_ext = ext_node.text.strip()
                     
-                    # Gestion score (si absent on met "0-0" ou None)
+                    # 3. VERROU FINAL : Si après extraction c'est vide, on bloque l'envoi
+                    if not eq_dom or not eq_ext:
+                        st.session_state.logs_scraping.append("Bloc ignoré : noms d'équipes vides.")
+                        continue
+
+                    # Gestion score
                     score_txt = score_node.text.strip() if score_node else "0-0"
+                    # ... (reste du code)
                     
-                    statut = "FT" if "-" in score_txt else "NS"
-                    sc_dom, sc_ext = map(int, score_txt.split("-")) if "-" in score_txt else (None, None)
-                    
-                    if "En cours" in bloc.text or "Direct" in bloc.text: 
-                        statut = "LIVE"
-                    
-                    # ... (Le reste de ton code d'insertion reste identique) ...
-                    import hashlib
-                    match_string = f"{eq_dom}_{eq_ext}".encode('utf-8')
-                    match_id = int(hashlib.md5(match_string).hexdigest(), 16) % 10000000
-                    
+                    # On ne fait l'upsert QUE si on a bien des noms
                     supabase.table("Matchs").upsert({
                         "id": match_id, "equipe_dom": eq_dom, "equipe_ext": eq_ext,
-                        "date_match": (datetime.utcnow() + timedelta(days=2)).isoformat(),
-                        "score_dom": sc_dom, "score_ext": sc_ext, "statut": statut
+                        # ...
                     }).execute()
                     
                     matchs_traites += 1
                 
                 except Exception as e:
-                    # On affiche l'erreur spécifique si quelque chose plante ici
-                    st.session_state.logs_scraping.append(f"Erreur traitement bloc: {e}")
+                    st.session_state.logs_scraping.append(f"Erreur traitée: {e}")
                     continue
     except Exception as e:
             st.session_state.logs_scraping.append(f"Erreur ligne {e.__traceback__.tb_lineno}: {e}")
