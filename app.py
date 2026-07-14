@@ -73,6 +73,10 @@ def verifier_et_importer_matchs():
     try:
         headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
         response = requests.get(url_scraping, headers=headers, timeout=10)
+        # CODE TEMPORAIRE POUR DEBUG
+        # Affiche les 500 premiers caractères du site pour voir ce qu'on reçoit
+        st.session_state.logs_scraping.append(f"Debug: Réponse reçue {len(response.text)} caractères.")
+        # Si tu vois très peu de texte, le site bloque ton accès ou charge en JS
         if response.status_code == 200:
             soup = BeautifulSoup(response.text, 'html.parser')
             blocs_matchs = soup.find_all('div', class_='Match_match__')
