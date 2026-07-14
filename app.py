@@ -91,12 +91,13 @@ def verifier_et_importer_matchs():
             for bloc in blocs_matchs:
                 try:
                     # On récupère tous les textes des spans dans ce bloc
-                    # C'est une méthode "aveugle" qui ne dépend pas des noms de classes
                     spans = bloc.find_all('span')
                     textes = [s.text.strip() for s in spans if len(s.text.strip()) > 1]
                     
-                    # On suppose que le bloc contient au moins : [Equipe Dom, Score, Equipe Ext]
-                    # Si on n'a pas assez d'infos, on ignore ce bloc
+                    # --- DEBUG : AFFICHER CE QU'ON A TROUVÉ ---
+                    st.session_state.logs_scraping.append(f"Debug bloc trouvé : {textes}")
+                    
+                    # On continue ton traitement normal après
                     if len(textes) < 3:
                         continue
                         
