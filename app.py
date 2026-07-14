@@ -80,6 +80,13 @@ def verifier_et_importer_matchs():
         if response.status_code == 200:
             soup = BeautifulSoup(response.text, 'html.parser')
             blocs_matchs = soup.find_all('div', class_='Match_match__')
+            # --- DEBUG : VOIR CE QUE LE SCRAPER VOIT ---
+            blocs_matchs = soup.find_all('div', class_='Match_match__') 
+            st.session_state.logs_scraping.append(f"Nombre de blocs trouvés avec 'Match_match__' : {len(blocs_matchs)}")
+            
+            if len(blocs_matchs) > 0:
+                st.session_state.logs_scraping.append(f"Exemple de classe du 1er bloc : {blocs_matchs[0].get('class')}")
+            
             for bloc in blocs_matchs:
                 try:
                     # 1. On cherche les éléments
