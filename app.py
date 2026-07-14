@@ -81,7 +81,17 @@ def verifier_et_importer_matchs():
             # --- MÉTHODE BLINDÉE : On cherche les blocs sans dépendre des classes ---
             # On récupère tous les div et on filtre ceux qui contiennent un score (" - ")
             tous_les_divs = soup.find_all('div')
-            blocs_matchs = [d for d in tous_les_divs if " - " in d.get_text() and len(d.get_text()) < 300]
+           # --- NOUVELLE MÉTHODE BLINDÉE (Stricte) ---
+            # On cherche les div qui contiennent un score ET qui ont au moins 3 balises <span> à l'intérieur
+            # C'est cette structure qui définit un match.
+            blocs_matchs = [
+                d for d in soup.find_all('div') 
+                if " - " in d.get_text() 
+                and len(d.find_all('span')) >= 3 
+                and len(d.get_text()) < 300
+            ]
+            
+            st.session_state.logs_scraping.append(f"Méthode blindée stricte : {len(blocs_matchs)} blocs potentiels détectés.")
             
             # On élimine les doublons (si un bloc contient un autre bloc)
             blocs_matchs = list(set(blocs_matchs))
