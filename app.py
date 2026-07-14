@@ -126,35 +126,35 @@ def verifier_et_importer_matchs():
             st.session_state.logs_scraping.append(f"Erreur ligne {e.__traceback__.tb_lineno}: {e}")
 
     # 2.2 - Sécurité TheSportsDB - CALCUL DYNAMIQUE DE LA SAISON
-   ''' if matchs_traites == 0:
-        maintenant = datetime.now()
-        annee_saison_courante = maintenant.year - 1 if maintenant.month < 8 else maintenant.year
-        annees_a_tester = [str(annee_saison_courante - 1), str(annee_saison_courante)]
-        
-        for annee in annees_a_tester:
-            try:
-                url_tsdb = f"https://www.thesportsdb.com/api/v1/json/3/eventsseason.php?id=4413&s={annee}"
-                res = requests.get(url_tsdb, timeout=10).json()
-                if res.get("events"):
-                    for event in res["events"]:
-                        m_id = int(event["idEvent"])
-                        statut = "LIVE" if event.get("strProgress") == "In Progress" else ("FT" if event.get("strStatus") == "Match Finished" else "NS")
-                        
-                        if event["intHomeScore"] is None:
-                            date_match = (datetime.utcnow() + timedelta(days=5)).isoformat()
-                        else:
-                            date_match = f"{event['dateEvent']}T{event['strTime']}" if event.get('strTime') else datetime.utcnow().isoformat()
-
-                        supabase.table("Matchs").upsert({
-                            "id": m_id, "equipe_dom": event["strHomeTeam"], "equipe_ext": event["strAwayTeam"],
-                            "date_match": date_match,
-                            "score_dom": int(event["intHomeScore"]) if event["intHomeScore"] is not None else None,
-                            "score_ext": int(event["intAwayScore"]) if event["intAwayScore"] is not None else None,
-                            "statut": statut
-                        }).execute()
-                        matchs_traites += 1
-            except Exception as e:
-                st.session_state.logs_scraping.append(f"Erreur ligne {e.__traceback__.tb_lineno}: {e}")
+#    if matchs_traites == 0:
+#        maintenant = datetime.now()
+#        annee_saison_courante = maintenant.year - 1 if maintenant.month < 8 else maintenant.year
+#        annees_a_tester = [str(annee_saison_courante - 1), str(annee_saison_courante)]
+#        
+#        for annee in annees_a_tester:
+#            try:
+#                url_tsdb = f"https://www.thesportsdb.com/api/v1/json/3/eventsseason.php?id=4413&s={annee}"
+#                res = requests.get(url_tsdb, timeout=10).json()
+#                if res.get("events"):
+#                    for event in res["events"]:
+#                        m_id = int(event["idEvent"])
+#                        statut = "LIVE" if event.get("strProgress") == "In Progress" else ("FT" if event.get("strStatus") == "Match Finished" else "NS")
+#                        
+#                        if event["intHomeScore"] is None:
+#                            date_match = (datetime.utcnow() + timedelta(days=5)).isoformat()
+#                        else:
+#                            date_match = f"{event['dateEvent']}T{event['strTime']}" if event.get('strTime') else datetime.utcnow().isoformat()
+#
+#                        supabase.table("Matchs").upsert({
+#                            "id": m_id, "equipe_dom": event["strHomeTeam"], "equipe_ext": event["strAwayTeam"],
+#                            "date_match": date_match,
+#                            "score_dom": int(event["intHomeScore"]) if event["intHomeScore"] is not None else None,
+#                            "score_ext": int(event["intAwayScore"]) if event["intAwayScore"] is not None else None,
+#                            "statut": statut
+#                        }).execute()
+#                        matchs_traites += 1
+#            except Exception as e:
+ #               st.session_state.logs_scraping.append(f"Erreur ligne {e.__traceback__.tb_lineno}: {e}")
             # Mise à jour de l'heure du dernier passage et ajout du log
             st.session_state.dernier_run = datetime.now(timezone.utc).strftime("%H:%M:%S UTC")
             
@@ -164,7 +164,7 @@ def verifier_et_importer_matchs():
             # On garde seulement les 10 derniers logs pour ne pas encombrer la mémoire
             st.session_state.logs_scraping = st.session_state.logs_scraping[-10:]
             
-    return matchs_traites '''
+    return matchs_traites 
     
 #2.3 - SAUVEGARDE AUTO PRONO (VERSION SILENCIEUSE)
 def sauvegarder_prono_auto(match_id, equipe_dom, equipe_ext, user_id_cible):
