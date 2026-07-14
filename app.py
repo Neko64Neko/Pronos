@@ -69,24 +69,23 @@ def verifier_et_importer_matchs():
     url_scraping = "https://www.lequipe.fr/Rugby/top-14/page-calendrier-resultats"
 
     
-# 2.1 - Audit de structure
-    if response.status_code == 200:
-        soup = BeautifulSoup(response.text, 'html.parser')
+# 2.1 - Tentative via le scraping L'Équipe
+    try:
+        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
         
-        # On cherche l'élément qui contient le nom d'une équipe
-        equipe_test = "Bayonne" # <--- METS LE NOM D'UNE ÉQUIPE DU JOUR ICI
-        element = soup.find(string=lambda text: text and equipe_test in text)
+        # CHANGEMENT ICI : on utilise un nom unique
+        response_scraping = requests.get(url_scraping, headers=headers, timeout=10)
         
-        if element:
-            parent = element.find_parent()
-            st.session_state.logs_scraping.append(f"Trouvé ! '{equipe_test}' est dans une balise <{parent.name}>")
-            st.session_state.logs_scraping.append(f"Classes du parent : {parent.get('class')}")
+        # On vérifie avec la bonne variable
+        if response_scraping.status_code == 200:
+            soup = BeautifulSoup(response_scraping.text, 'html.parser')
+            # ... le reste de ton code en utilisant response_scraping.text ...
             
-            # On remonte d'un cran pour voir la structure globale
-            grand_parent = parent.find_parent()
-            st.session_state.logs_scraping.append(f"Grand-parent : <{grand_parent.name}> avec classes {grand_parent.get('class')}")
         else:
-            st.session_state.logs_scraping.append("Équipe non trouvée dans le texte (mais était dans le response.text)")
+            st.session_state.logs_scraping.append(f"Erreur HTTP: {response_scraping.status_code}")
+            
+    except Exception as e:
+        st.session_state.logs_scraping.append(f"Erreur lors du scraping : {e}")
 
     # 2.2 - Sécurité TheSportsDB - CALCUL DYNAMIQUE DE LA SAISON
 #    if matchs_traites == 0:
