@@ -68,32 +68,29 @@ def verifier_et_importer_matchs():
     matchs_traites = 0
     url_scraping = "https://www.lequipe.fr/Rugby/top-14/page-calendrier-resultats"
 
-    # 2.1 - Tentative via le scraping L'Équipe
-    # On définit explicitement les headers ici pour être sûr qu'ils existent
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-    }
-    
-    # On appelle le site avec la variable définie juste au-dessus
-    response_scraping = requests.get(url_scraping, headers=headers, timeout=10)
-
-    if response_scraping.status_code == 200:
-        soup = BeautifulSoup(response.text, 'html.parser')
+# 2.1 - Tentative via le scraping L'Équipe
+    try:
+        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
         
-        # On cherche l'élément qui contient le nom d'une équipe
-        equipe_test = "Bayonne" # <--- METS LE NOM D'UNE ÉQUIPE DU JOUR ICI
-        element = soup.find(string=lambda text: text and equipe_test in text)
+        # On utilise un nom unique pour éviter les conflits
+        data_web = requests.get(url_scraping, headers=headers, timeout=10)
         
-        if element:
-            parent = element.find_parent()
-            st.session_state.logs_scraping.append(f"Trouvé ! '{equipe_test}' est dans une balise <{parent.name}>")
-            st.session_state.logs_scraping.append(f"Classes du parent : {parent.get('class')}")
+        # On vérifie si data_web est bien une réponse HTTP
+        if data_web.status_code == 200:
+            # On utilise data_web.text ici !
+            soup = BeautifulSoup(data_web.text, 'html.parser')
             
-            # On remonte d'un cran pour voir la structure globale
-            grand_parent = parent.find_parent()
-            st.session_state.logs_scraping.append(f"Grand-parent : <{grand_parent.name}> avec classes {grand_parent.get('class')}")
+            # --- Audit de structure ---
+            st.session_state.logs_scraping.append("Page chargée. Analyse en cours...")
+            
+            # Reste de ton code de scraping ici...
+            # Exemple : blocs_matchs = [d for d in soup.find_all('div') ...]
+            
         else:
-            st.session_state.logs_scraping.append("Équipe non trouvée dans le texte (mais était dans le response.text)")
+            st.session_state.logs_scraping.append(f"Erreur HTTP: {data_web.status_code}")
+            
+    except Exception as e:
+        st.session_state.logs_scraping.append(f"Erreur critique lors du scraping : {str(e)}")
         
 
     # 2.2 - Sécurité TheSportsDB - CALCUL DYNAMIQUE DE LA SAISON
