@@ -77,7 +77,7 @@ def verifier_et_importer_matchs():
             soup = BeautifulSoup(data_web.text, 'html.parser')
             
             # --- CHERCHEZ UNE ÉQUIPE RÉELLE ---
-            equipe_cible = "PSG" # Remplace par une équipe qui joue aujourd'hui
+            equipe_cible = "Bayonne" # Remplace par une équipe qui joue aujourd'hui
             elements = soup.find_all(string=lambda text: text and equipe_cible in text)
             
             if not elements:
