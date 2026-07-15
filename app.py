@@ -68,72 +68,32 @@ def verifier_et_importer_matchs():
     matchs_traites = 0
     url_scraping = "https://www.lequipe.fr/Rugby/top-14/page-calendrier-resultats"
 
-# 2.1 - Tentative via le scraping L'Équipe (Version sécurisée)
+# 2.1 - DIAGNOSTIC : Trouver la structure exacte
     try:
-        # Définition propre des headers
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-        }
-        
-        # Appel avec une variable unique pour éviter les conflits de nom
+        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
         data_web = requests.get(url_scraping, headers=headers, timeout=10)
         
         if data_web.status_code == 200:
             soup = BeautifulSoup(data_web.text, 'html.parser')
             
-            # --- MÉTHODE BLINDÉE : On cherche les blocs structurellement ---
-            # On cherche les div qui contiennent un score (" - ") et qui ont au moins 3 span
-            all_divs = soup.find_all('div')
-            blocs_matchs = [d for d in all_divs if " - " in d.get_text() and len(d.find_all('span')) >= 3 and len(d.get_text()) < 300]
+            # --- CHERCHEZ UNE ÉQUIPE RÉELLE ---
+            equipe_cible = "PSG" # Remplace par une équipe qui joue aujourd'hui
+            elements = soup.find_all(string=lambda text: text and equipe_cible in text)
             
-            # Suppression des doublons
-            blocs_matchs = list(set(blocs_matchs))
-            st.session_state.logs_scraping.append(f"Scraping : {len(blocs_matchs)} blocs de matchs détectés.")
-            
-            for bloc in blocs_matchs:
-                try:
-                    # Extraction des textes
-                    spans = bloc.find_all('span')
-                    textes = [s.text.strip() for s in spans if len(s.text.strip()) > 1]
-                    
-                    if len(textes) < 3:
-                        continue
-                    
-                    eq_dom = textes[0]
-                    score_txt = textes[1]
-                    eq_ext = textes[2]
-                    
-                    # Log de contrôle
-                    st.session_state.logs_scraping.append(f"Debug: '{eq_dom}' vs '{eq_ext}' ({score_txt})")
-                    
-                    # Génération ID (Hash simple)
-                    import hashlib
-                    match_id = int(hashlib.md5(f"{eq_dom}_{eq_ext}".encode()).hexdigest(), 16) % 10000000
-                    
-                    # Nettoyage score
-                    sc_dom, sc_ext = (int(s) for s in score_txt.split("-")) if "-" in score_txt else (None, None)
-                    statut = "FT" if "-" in score_txt else "NS"
-                    
-                    # Upsert Supabase
-                    supabase.table("Matchs").upsert({
-                        "id": match_id, 
-                        "equipe_dom": eq_dom, 
-                        "equipe_ext": eq_ext,
-                        "date_match": datetime.utcnow().isoformat(),
-                        "score_dom": sc_dom, 
-                        "score_ext": sc_ext, 
-                        "statut": statut
-                    }).execute()
-                    
-                    matchs_traites += 1
-                
-                except Exception as e:
-                    continue
+            if not elements:
+                st.session_state.logs_scraping.append(f"Échec : Impossible de trouver '{equipe_cible}' dans la page.")
+            else:
+                for el in elements:
+                    parent = el.parent
+                    st.session_state.logs_scraping.append(f"Trouvé ! '{equipe_cible}' est dans une balise <{parent.name}>")
+                    st.session_state.logs_scraping.append(f"Classes du parent : {parent.get('class')}")
+                    # On affiche aussi le texte contenu dans le parent pour vérifier si c'est un match
+                    st.session_state.logs_scraping.append(f"Contenu du parent : {parent.text[:100]}...")
         else:
-            st.session_state.logs_scraping.append(f"Erreur HTTP scraping : {data_web.status_code}")
+            st.session_state.logs_scraping.append(f"Erreur HTTP: {data_web.status_code}")
             
     except Exception as e:
-        st.session_state.logs_scraping.append(f"Erreur critique scraping : {str(e)}")
+        st.session_state.logs_scraping.append(f"Erreur: {e}")
         
 
     # 2.2 - Sécurité TheSportsDB - CALCUL DYNAMIQUE DE LA SAISON
