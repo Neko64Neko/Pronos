@@ -22,7 +22,7 @@ def run_calendar():
     
     # 2. Debug : Très important pour la première fois !
     # Cela va t'afficher la structure pour que tu puisses adapter le mapping ci-dessous
-     print(f"DEBUG - Structure reçue : {data}") 
+    print(f"DEBUG - Structure reçue : {data}") 
     
     events = data.get('events', [])
 
