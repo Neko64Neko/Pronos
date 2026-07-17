@@ -25,8 +25,13 @@ def run_update():
         print("Aucun match trouvé.")
         return
 
-    for match in events: # Utilisez 'events' directement, pas 'data['events']'
-        # Renommez cette variable en 'match_data' pour éviter le conflit avec 'data'
+    for match in events:
+        # On vérifie si le tournoi correspond à l'ID 420
+        # Attention : vérifie bien le chemin vers l'ID du tournoi dans ton JSON (ex: match['tournament']['id'])
+        if str(match['tournament']['id']) != "420":
+            continue # On ignore les autres matchs
+            
+        # Si c'est le bon tournoi, on continue le traitement
         match_data = {
             "external_id": match['id'],
             "statut": match['status']['type'],
