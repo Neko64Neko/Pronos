@@ -33,8 +33,9 @@ def run_update():
         print(f"Erreur API : {data['message']}")
         return
     # ------------------------------------
-    
-    for match in data:
+    # Afficher le premier match pour voir sa structure
+    print(f"Structure d'un match : {data['events'][0]}")
+    for match in data['events']:
         data = {
             "external_id": match['id'],
             "statut": match['status']['type'],
