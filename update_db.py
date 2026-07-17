@@ -19,22 +19,13 @@ def run_update():
     
     response = requests.get(url, headers=headers)
     data = response.json()
+    events = data.get('events', []) # Récupère la liste, ou une liste vide si 'events' est absent
 
-# --- AJOUTEZ CES LIGNES DE DEBUG ---
-    print(f"DEBUG: Les clés disponibles dans la réponse sont : {data.keys()}")
-    
-    # --- AJOUTEZ CE BLOC DE SÉCURITÉ ---
-    if 'message' in data and 'subscribed' in data['message'].lower():
-        print(f"ERREUR : Vous n'êtes pas abonné à l'API. Allez sur RapidAPI pour cliquer sur 'Subscribe'.")
-        return # On arrête le script ici, proprement
-    
-    # Si d'autres erreurs surviennent
-    if not isinstance(data, list) and 'message' in data:
-        print(f"Erreur API : {data['message']}")
-        return
-    # ------------------------------------
-    # Afficher le premier match pour voir sa structure
-    print(f"Structure d'un match : {data['events'][0]}")
+    # Vérification de sécurité : si la liste est vide, on s'arrête gentiment
+    if not events:
+        print("Aucun match trouvé pour le moment (intersaison ?).")
+        return # Arrête la fonction ici proprement
+
     for match in data['events']:
         data = {
             "external_id": match['id'],
