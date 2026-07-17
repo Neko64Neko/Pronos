@@ -18,7 +18,12 @@ def run_calendar():
     }
     
     response = requests.get(url, headers=headers)
-    data = response.json()
+    # --- AJOUTEZ CECI ---
+    print(f"Status Code: {response.status_code}")
+    print(f"Réponse brute : {response.text}")
+    # --------------------
+    
+    #data = response.json()
     
     # 2. Debug : Très important pour la première fois !
     # Cela va t'afficher la structure pour que tu puisses adapter le mapping ci-dessous
