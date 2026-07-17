@@ -19,6 +19,9 @@ def run_update():
     
     response = requests.get(url, headers=headers)
     data = response.json()
+
+# --- AJOUTEZ CES LIGNES DE DEBUG ---
+    print(f"DEBUG: Les clés disponibles dans la réponse sont : {data.keys()}")
     
     # --- AJOUTEZ CE BLOC DE SÉCURITÉ ---
     if 'message' in data and 'subscribed' in data['message'].lower():
