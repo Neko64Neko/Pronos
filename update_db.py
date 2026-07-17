@@ -19,15 +19,15 @@ def run_update():
     
     response = requests.get(url, headers=headers)
     data = response.json()
-    events = data.get('events', []) # Récupère la liste, ou une liste vide si 'events' est absent
+    events = data.get('events', [])
 
-    # Vérification de sécurité : si la liste est vide, on s'arrête gentiment
     if not events:
-        print("Aucun match trouvé pour le moment (intersaison ?).")
-        return # Arrête la fonction ici proprement
+        print("Aucun match trouvé.")
+        return
 
-    for match in data['events']:
-        data = {
+    for match in events: # Utilisez 'events' directement, pas 'data['events']'
+        # Renommez cette variable en 'match_data' pour éviter le conflit avec 'data'
+        match_data = {
             "external_id": match['id'],
             "statut": match['status']['type'],
             "equipe_dom": match['homeTeam']['name'],
@@ -35,7 +35,9 @@ def run_update():
             "score_dom": match['homeScore']['current'],
             "score_ext": match['awayScore']['current']
         }
-        supabase.table("Matchs").upsert(data, on_conflict="external_id").execute()
+        
+        # Upsert avec la variable renommée
+        supabase.table("Matchs").upsert(match_data, on_conflict="external_id").execute()
 
 if __name__ == "__main__":
     run_update()
