@@ -10,14 +10,19 @@ RAPIDAPI_KEY = os.environ.get("RAPIDAPI_KEY")
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 def run_calendar():
-    # 1. URL Calendrier (A adapter si l'endpoint est différent)
-    url = "https://rugbyapi2.p.rapidapi.com/api/calendar/season/61643/2026/days-with-events"
+    url = "https://rugbyapi2.p.rapidapi.com/api/rugby/getTournamentUpcomingMatches"
     headers = {
         "x-rapidapi-key": RAPIDAPI_KEY,
         "x-rapidapi-host": "rugbyapi2.p.rapidapi.com"
     }
     
-    response = requests.get(url, headers=headers)
+    # On envoie les paramètres directement ici
+    params = {
+        "tournament_id": "420",
+        "season_id": "98426" #SAISON 2026-2027!!!!
+    }
+    
+    response = requests.get(url, headers=headers, params=params)
     
     # Vérification du code HTTP
     if response.status_code == 204:
