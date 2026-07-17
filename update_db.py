@@ -11,10 +11,10 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 def run_update():
     # URL de l'API (à remplacer par la vôtre)
-    url = "https://votre-api-endpoint.com/matches"
+    url = "https://rugbyapi2.p.rapidapi.com/api/rugby/matches/live"
     headers = {
         "x-rapidapi-key": RAPIDAPI_KEY,
-        "x-rapidapi-host": "votre-api-host.com"
+        "x-rapidapi-host": "rugbyapi2.p.rapidapi.com"
     }
     
     response = requests.get(url, headers=headers)
