@@ -18,16 +18,17 @@ def run_calendar():
     }
     
     response = requests.get(url, headers=headers)
-    # --- AJOUTEZ CECI ---
-    print(f"Status Code: {response.status_code}")
-    print(f"Réponse brute : {response.text}")
-    # --------------------
     
-    #data = response.json()
+    # Vérification du code HTTP
+    if response.status_code == 204:
+        print("API connectée avec succès, mais aucun match à venir (204).")
+        return # On arrête le script proprement sans crash
+        
+    # Si on arrive ici, c'est qu'on a du contenu (200 OK)
+    data = response.json()
     
-    # 2. Debug : Très important pour la première fois !
-    # Cela va t'afficher la structure pour que tu puisses adapter le mapping ci-dessous
-    print(f"DEBUG - Structure reçue : {data}") 
+    # Maintenant on peut traiter data en toute sécurité
+    events = data.get('events', [])
     
     events = data.get('events', [])
 
