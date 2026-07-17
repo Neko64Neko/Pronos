@@ -37,7 +37,7 @@ def run_update():
         }
         
         # Upsert avec la variable renommée
-        supabase.table("Matchs").upsert(match_data, on_conflict="external_id").execute()
-
+        supabase.table("Matchs").upsert([match_data], on_conflict="external_id").execute()
+        
 if __name__ == "__main__":
     run_update()
