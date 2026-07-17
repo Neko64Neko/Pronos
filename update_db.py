@@ -18,15 +18,20 @@ def run_update():
     }
     
     response = requests.get(url, headers=headers)
-    matches = response.json()
-# AJOUTEZ CELA POUR VOIR L'ERREUR EXACTE
-    if 'message' in matches:
-        print(f"ERREUR API : {matches['message']}")
+    data = response.json()
     
-    # Affichez tout le data pour bien comprendre
-    print(f"Contenu total reçu : {matches}")
+    # --- AJOUTEZ CE BLOC DE SÉCURITÉ ---
+    if 'message' in data and 'subscribed' in data['message'].lower():
+        print(f"ERREUR : Vous n'êtes pas abonné à l'API. Allez sur RapidAPI pour cliquer sur 'Subscribe'.")
+        return # On arrête le script ici, proprement
     
-    for match in matches:
+    # Si d'autres erreurs surviennent
+    if not isinstance(data, list) and 'message' in data:
+        print(f"Erreur API : {data['message']}")
+        return
+    # ------------------------------------
+    
+    for match in data:
         data = {
             "external_id": match['id'],
             "statut": match['status']['type'],
