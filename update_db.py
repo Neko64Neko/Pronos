@@ -19,8 +19,12 @@ def run_update():
     
     response = requests.get(url, headers=headers)
     matches = response.json()
-    # AJOUTEZ CETTE LIGNE POUR VOIR LA STRUCTURE
-    print(f"Structure de l'API: {matches.keys()}")
+# AJOUTEZ CELA POUR VOIR L'ERREUR EXACTE
+    if 'message' in matches:
+        print(f"ERREUR API : {matches['message']}")
+    
+    # Affichez tout le data pour bien comprendre
+    print(f"Contenu total reçu : {matches}")
     
     for match in matches:
         data = {
