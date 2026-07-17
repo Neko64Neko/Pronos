@@ -19,6 +19,8 @@ def run_update():
     
     response = requests.get(url, headers=headers)
     matches = response.json()
+    # AJOUTEZ CETTE LIGNE POUR VOIR LA STRUCTURE
+    print(f"Structure de l'API: {data.keys()}")
     
     for match in matches:
         data = {
