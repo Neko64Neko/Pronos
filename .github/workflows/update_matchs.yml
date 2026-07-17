@@ -1,0 +1,26 @@
+name: Mise à jour Scores
+
+on:
+  workflow_dispatch: # Permet de lancer le script manuellement depuis l'onglet "Actions"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v3
+
+      - name: Installation de Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Installation des dépendances
+        run: pip install -r requirements.txt
+
+      - name: Lancement du script
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          RAPIDAPI_KEY: ${{ secrets.RAPIDAPI_KEY }}
+        run: python update_db.py
