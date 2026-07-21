@@ -1435,7 +1435,7 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
                             "id": new_id,
                             "equipe_dom": equipe_dom,
                             "equipe_ext": equipe_ext,
-                            "date_match": utc_dt.isoformat()
+                            "date_match": utc_dt.isoformat(),
                             "external_id": f"manual_{new_id}"  # <-- Contourne la contrainte NOT NULL
                         }).execute()
                         
