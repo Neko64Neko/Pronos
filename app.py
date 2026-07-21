@@ -1627,37 +1627,52 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
             
     # 9.5 - TAB 5 : TOUR DE CONTRÔLE SCRAPING
     with tab5:
-        st.subheader("🛠️ Tour de Contrôle Scraping")
+        # --- Onglet API ---
+        if "api_request_count" not in st.session_state:
+            st.session_state.api_request_count = 0
+        if "api_request_logs" not in st.session_state:
+            st.session_state.api_request_logs = []
         
-        # 1. Vérification de l'état actuel
-        is_active, debug_msg = verifier_fenetre_match()
+        st.subheader("🔌 Gestion de l'API")
         
-        # 2. Affichage des indicateurs clés
+        # Compteur de requêtes envoyées
+        st.metric(label="Requêtes envoyées à l'API", value=st.session_state.api_request_count)
+        
         col1, col2 = st.columns(2)
-        col1.metric("Statut Auto", "ACTIF" if is_active else "VEILLE")
-        col2.metric("Dernier Run", st.session_state.dernier_run)
         
-        # 3. Ligne d'info sur la fenêtre de 100 minutes
-        st.info(debug_msg)
+        with col1:
+            if st.button("MAJ score"):
+                st.session_state.api_request_count += 1
+                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                st.session_state.api_request_logs.insert(0, f"[{timestamp}] MAJ score (get_live)")
+                if len(st.session_state.api_request_logs) > 20:
+                    st.session_state.api_request_logs.pop()
+                try:
+                    get_live()
+                    st.success("Mise à jour des scores effectuée avec succès.")
+                except Exception as e:
+                    st.error(f"Erreur lors de la mise à jour des scores : {e}")
         
-        # 4. Logs techniques (repliés par défaut pour ne pas polluer l'écran)
-        with st.expander("Voir les derniers logs du scraper"):
-            if not st.session_state.logs_scraping:
-                st.write("Aucun log disponible.")
+        with col2:
+            if st.button("MAJ Calendrier"):
+                st.session_state.api_request_count += 1
+                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                st.session_state.api_request_logs.insert(0, f"[{timestamp}] MAJ Calendrier (get_calendar)")
+                if len(st.session_state.api_request_logs) > 20:
+                    st.session_state.api_request_logs.pop()
+                try:
+                    get_calendar()
+                    st.success("Mise à jour du calendrier effectuée avec succès.")
+                except Exception as e:
+                    st.error(f"Erreur lors de la mise à jour du calendrier : {e}")
+        
+        # Menu déroulant pour le log des 20 dernières requêtes
+        with st.expander("📜 Historique des 20 dernières requêtes"):
+            if st.session_state.api_request_logs:
+                for log in st.session_state.api_request_logs:
+                    st.text(log)
             else:
-                for log in reversed(st.session_state.logs_scraping):
-                    st.write(log)
-        
-        st.divider()
-        
-        # 5. Lanceur manuel
-        st.subheader("⚡ Lanceur de Scraping Manuel")
-        if st.button("Lancer la Synchronisation"):
-            with st.spinner("Scraping en cours..."):
-                nb = verifier_et_importer_matchs()
-                st.success(f"Terminé ! {nb} matchs traités.")
-                # On force le rafraîchissement pour mettre à jour les logs affichés
-                st.rerun()
+                st.info("Aucune requête enregistrée pour le moment.")
 
     # 9.6 - TAB 6 : ZONE DE DANGER
     with tab6:
