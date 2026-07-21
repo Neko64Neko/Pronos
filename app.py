@@ -1339,7 +1339,7 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
             "➕ Ajouter Match", 
             "📝 Matchs Existants", 
             "🎯 Questions Bonus", 
-            "🔄 Scraping", 
+            "🔄 API", 
             "🚨 Danger",
             "Suppression matchs",
             "Gestion des joueurs"
