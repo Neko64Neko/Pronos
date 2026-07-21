@@ -906,7 +906,7 @@ if st.session_state.onglet_actif == "🏉":
                                     matchs_visibles.append(m)
 
                     if matchs_visibles:
-                        matchs_visibles = sorted(matchs_visibles, key=lambda x: x['date_match'])
+                        matchs_visibles = sorted(matchs_visibles, key=lambda x: x['date_match'] if x.get('date_match') is not None else "9999-12-31")
                         
                         for m in matchs_visibles:
                             with st.container():
