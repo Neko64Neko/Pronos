@@ -1335,13 +1335,13 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
     else:
         st.title("⚙️ Panneau d'Administration")
         
-        # Ajout de l'onglet Barème & Points en premier
+        # Ajout des onglets du panneau admin (Vérifiez bien qu'il y en a 8)
         tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
             "⚙️ Barème & Points",
             "➕ Ajouter Match", 
             "📝 Matchs Existants", 
             "🎯 Questions Bonus", 
-            "🔄 API", 
+            "🔌 API",  # Renommé en "API" comme demandé précédemment
             "🚨 Danger",
             "Suppression matchs",
             "Gestion des joueurs"
