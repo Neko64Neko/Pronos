@@ -20,16 +20,17 @@ def run_update():
         matches_db = response_db.data
         
         match_en_cours = False
-        for m in matches_db:
-            if m.get('date_match') and m.get('statut') != 'finished':
-                # Conversion de la date Supabase en objet datetime gérable par Python
-                match_time_str = m['date_match']
-                match_time = datetime.fromisoformat(match_time_str.replace('Z', '+00:00'))
-                
-                # Fenêtre active : Le match a commencé il y a moins de 100 minutes (et n'est pas dans le futur lointain)
-                if match_time <= now <= match_time + timedelta(minutes=100):
-                    match_en_cours = True
-                    break
+        if matches_db:
+            for m in matches_db:
+                if m.get('date_match') and m.get('statut') != 'finished':
+                    # Conversion de la date Supabase en objet datetime gérable par Python
+                    match_time_str = m['date_match']
+                    match_time = datetime.fromisoformat(match_time_str.replace('Z', '+00:00'))
+                    
+                    # Fenêtre active : Le match a commencé il y a moins de 100 minutes (et n'est pas dans le futur lointain)
+                    if match_time <= now <= match_time + timedelta(minutes=100):
+                        match_en_cours = True
+                        break
         
         # Si aucun match n'est dans sa fenêtre des 100 minutes, on stoppe tout de suite
         if not match_en_cours:
@@ -48,6 +49,45 @@ def run_update():
     }
     
     response = requests.get(url, headers=headers)
+    
+    # 3. Incrémentation du compteur et des logs dans Supabase (1 seule fois par appel API réussi)
+    try:
+        today_str = datetime.now().strftime("%Y-%m-%d")
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
+        res = supabase.table("Configuration").select("*").eq("id", "default_config").execute()
+        current_count = 0
+        current_logs = []
+        
+        if res.data:
+            config_api = res.data[0]
+            saved_date = config_api.get("last_reset_date")
+            current_logs = config_api.get("api_request_logs", []) or []
+            
+            # Si c'est un nouveau jour, on réinitialise le compteur
+            if saved_date != today_str:
+                current_count = 0
+            else:
+                current_count = config_api.get("api_request_count", 0)
+        
+        new_count = current_count + 1
+        current_logs.insert(0, f"[{timestamp}] MAJ Live (Automatique)")
+        if len(current_logs) > 20:
+            current_logs = current_logs[:20]
+            
+        supabase.table("Configuration").upsert({
+            "id": "default_config",
+            "api_request_count": new_count,
+            "last_reset_date": today_str,
+            "api_request_logs": current_logs
+        }, on_conflict="id").execute()
+        
+        print(f"Suivi API mis à jour : {new_count} requêtes aujourd'hui.")
+        
+    except Exception as e:
+        print(f"Erreur lors de la mise à jour automatique du compteur : {e}")
+
+    # 4. Traitement des données reçues de l'API Live
     data = response.json()
     events = data.get('events', [])
 
@@ -70,29 +110,6 @@ def run_update():
         }
         
         supabase.table("Matchs").upsert([match_data], on_conflict="external_id").execute()
-
-        # Exemple à intégrer dans votre fonction d'appel automatique
-        try:
-            # 1. Récupérer le compteur actuel depuis Supabase
-            res = supabase.table("Configuration").select("api_request_count, api_request_logs").eq("id", "default_config").execute()
-            if res.data:
-                current_count = res.data[0].get("api_request_count", 0)
-                current_logs = res.data[0].get("api_request_logs", []) or []
-                
-                # 2. Incrémenter et ajouter un log automatique
-                new_count = current_count + 1
-                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                current_logs.insert(0, f"[{timestamp}] Appel automatique (ex: 3h du matin)")
-                if len(current_logs) > 20:
-                    current_logs = current_logs[:20]
-                    
-                # 3. Sauvegarder dans Supabase
-                supabase.table("Configuration").update({
-                    "api_request_count": new_count,
-                    "api_request_logs": current_logs
-                }).eq("id", "api_tracking").execute()
-        except Exception as e:
-            print(f"Erreur lors de la mise à jour automatique du compteur : {e}")
         print(f"Match mis à jour : {match['homeTeam']['name']} vs {match['awayTeam']['name']}")
 
 if __name__ == "__main__":
