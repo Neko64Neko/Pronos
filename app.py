@@ -1401,7 +1401,7 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
                 except Exception as e:
                     st.error(f"Erreur : {e}")
 
-    # 9.2 - TAB 2 : AJOUTER UN MATCH MANUELLEMENT
+ # 9.2 - TAB 2 : AJOUTER UN MATCH MANUELLEMENT
     with tab2:
         if st.session_state.is_admin:
             st.subheader("➕ Ajouter un match")
@@ -1411,7 +1411,6 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
                 equipe_dom = st.text_input("Équipe Domicile", key="dom")
                 equipe_ext = st.text_input("Équipe Extérieure", key="ext")
             with col2:
-
                 date_saisie = st.date_input("Date du match", key="date")
                 heure_saisie = st.time_input("Heure du match", key="heure")
             
@@ -1430,13 +1429,13 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
                         local_dt = paris_tz.localize(naive_dt)
                         utc_dt = local_dt.astimezone(pytz.UTC)
                         
-                        # 3. Insertion
+                        # 3. Insertion avec un external_id numérique (ex: -new_id pour éviter les conflits avec l'API)
                         supabase.table("Matchs").insert({
                             "id": new_id,
                             "equipe_dom": equipe_dom,
                             "equipe_ext": equipe_ext,
                             "date_match": utc_dt.isoformat(),
-                            "external_id": f"manual_{new_id}"  # <-- Contourne la contrainte NOT NULL
+                            "external_id": -new_id  # Entier unique pour satisfaire le format bigint NOT NULL
                         }).execute()
                         
                         st.success(f"Match {equipe_dom} vs {equipe_ext} créé (ID: {new_id}) !")
