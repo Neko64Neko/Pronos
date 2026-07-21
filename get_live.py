@@ -74,7 +74,7 @@ def run_update():
         # Exemple à intégrer dans votre fonction d'appel automatique
         try:
             # 1. Récupérer le compteur actuel depuis Supabase
-            res = supabase.table("Configuration").select("api_request_count, api_request_logs").eq("id", "api_tracking").execute()
+            res = supabase.table("Configuration").select("api_request_count, api_request_logs").eq("id", "default_config").execute()
             if res.data:
                 current_count = res.data[0].get("api_request_count", 0)
                 current_logs = res.data[0].get("api_request_logs", []) or []
