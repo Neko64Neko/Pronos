@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 import requests
 from supabase import create_client
 
@@ -19,7 +20,7 @@ def run_calendar():
     # On envoie les paramètres directement ici
     params = {
         "tournament_id": "420",
-        "season_id": "98426" #SAISON 2026-2027!!!!
+        "season_id": "98426" # SAISON 2026-2027
     }
     
     response = requests.get(url, headers=headers, params=params)
@@ -32,9 +33,6 @@ def run_calendar():
     # Si on arrive ici, c'est qu'on a du contenu (200 OK)
     data = response.json()
     
-    # Maintenant on peut traiter data en toute sécurité
-    events = data.get('events', [])
-    
     events = data.get('events', [])
 
     if not events:
@@ -44,43 +42,56 @@ def run_calendar():
     # 3. Préparation des données pour Supabase
     all_matches = []
     for match in events:
-        # ATTENTION : Adapte ces clés selon ce que tu vois dans le print de debug
         match_data = {
             "external_id": match['id'],
-            "statut": "scheduled", # Ou match['status']['type'] si dispo
+            "statut": "scheduled",
             "equipe_dom": match['homeTeam']['name'],
             "equipe_ext": match['awayTeam']['name'],
-            "date_match": match.get('date'), # Assure-toi que c'est bien la clé date
-            "score_dom": 0, # Par défaut, car pas encore joué
-            "score_ext": 0  # Par défaut
+            "date_match": match.get('date'),
+            "score_dom": 0,
+            "score_ext": 0
         }
         all_matches.append(match_data)
     
-    # 4. Upsert en masse
+    # 4. Upsert en masse des matchs
     if all_matches:
         supabase.table("Matchs").upsert(all_matches, on_conflict="external_id").execute()
         print(f"{len(all_matches)} matchs mis à jour/ajoutés au calendrier.")
 
-    # Exemple à intégrer dans votre fonction d'appel automatique
+    # 5. Mise à jour automatique du compteur et des logs dans Supabase avec default_config
     try:
-        # 1. Récupérer le compteur actuel depuis Supabase
-        res = supabase.table("Configuration").select("api_request_count, api_request_logs").eq("id", "default_config").execute()
+        today_str = datetime.now().strftime("%Y-%m-%d")
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
+        res = supabase.table("Configuration").select("*").eq("id", "default_config").execute()
+        current_count = 0
+        current_logs = []
+        
         if res.data:
-            current_count = res.data[0].get("api_request_count", 0)
-            current_logs = res.data[0].get("api_request_logs", []) or []
+            config_api = res.data[0]
+            saved_date = config_api.get("last_reset_date")
+            current_logs = config_api.get("api_request_logs", []) or []
             
-            # 2. Incrémenter et ajouter un log automatique
-            new_count = current_count + 1
-            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            current_logs.insert(0, f"[{timestamp}] Appel automatique (ex: 3h du matin)")
-            if len(current_logs) > 20:
-                current_logs = current_logs[:20]
-                
-            # 3. Sauvegarder dans Supabase
-            supabase.table("Configuration").update({
-                "api_request_count": new_count,
-                "api_request_logs": current_logs
-            }).eq("id", "api_tracking").execute()
+            # Si c'est un nouveau jour, on réinitialise le compteur
+            if saved_date != today_str:
+                current_count = 0
+            else:
+                current_count = config_api.get("api_request_count", 0)
+        
+        new_count = current_count + 1
+        current_logs.insert(0, f"[{timestamp}] MAJ Calendrier (Automatique)")
+        if len(current_logs) > 20:
+            current_logs = current_logs[:20]
+            
+        supabase.table("Configuration").upsert({
+            "id": "default_config",
+            "api_request_count": new_count,
+            "last_reset_date": today_str,
+            "api_request_logs": current_logs
+        }, on_conflict="id").execute()
+        
+        print(f"Suivi API mis à jour : {new_count} requêtes aujourd'hui.")
+        
     except Exception as e:
         print(f"Erreur lors de la mise à jour automatique du compteur : {e}")
 
