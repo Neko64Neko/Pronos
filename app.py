@@ -428,9 +428,9 @@ else:
         if response.data:
             conf = response.data
             # On écrase le session_state avec ce qui vient de la base
-            st.session_state.pts_vainqueur = conf.get("pts_gagnant", 3)
+            st.session_state.pts_vainqueur = conf.get("pts_gagnant", 1)
             st.session_state.pts_ecart = conf.get("pts_ecart", 2)
-            st.session_state.pct_ose = conf.get("seuil_poursentage_ose", 20)
+            st.session_state.pct_ose = conf.get("seuil_poursentage_ose", 3)
             st.session_state.mult_ose = conf.get("multiplicateur_ose", 2)
             
             st.sidebar.success("Configuration chargée depuis Supabase") # Petit feedback visuel
@@ -445,15 +445,15 @@ else:
 # --- RÉCUPÉRATION DYNAMIQUE DE LA CONFIGURATION SUPABASE ---
         try:
             # On utilise de préférence les valeurs déjà nettoyées et chargées dans le session_state au point 5.7
-            pts_gagnant_cfg = float(st.session_state.get("pts_vainqueur", 2))
-            pts_ecart_cfg = float(st.session_state.get("pts_ecart", 3))
-            seuil_ose_cfg = int(st.session_state.get("pct_ose", 1)) # C'est un entier (ex: 1)
+            pts_gagnant_cfg = float(st.session_state.get("pts_vainqueur", 1))
+            pts_ecart_cfg = float(st.session_state.get("pts_ecart", 2))
+            seuil_ose_cfg = int(st.session_state.get("pct_ose", 3)) # C'est un entier (ex: 1)
             mult_ose_cfg = float(st.session_state.get("mult_ose", 2))
         except Exception as e:
             # Sécurité si le session_state n'était pas encore initialisé
-            pts_gagnant_cfg = 2.0
-            pts_ecart_cfg = 3.0
-            seuil_ose_cfg = 1
+            pts_gagnant_cfg = 1.0
+            pts_ecart_cfg = 2.0
+            seuil_ose_cfg = 3
             mult_ose_cfg = 2.0
         
         try:
