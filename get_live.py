@@ -26,6 +26,7 @@ def run_update():
         return
 
     for match in events:
+        print("DEBUG - Objet Tournoi du match :", match.get('tournament'))
         # On vérifie si le tournoi correspond à l'ID 420
         # Attention : vérifie bien le chemin vers l'ID du tournoi dans ton JSON (ex: match['tournament']['id'])
         if str(match['tournament']['id']) != "420":
