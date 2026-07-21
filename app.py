@@ -1145,12 +1145,9 @@ elif st.session_state.onglet_actif == "📅":
                         mises_home = sum(1 for p in pronos if p['gagnant_prevu'] == "home") if pronos else 0
                         mises_away = sum(1 for p in pronos if p['gagnant_prevu'] == "away") if pronos else 0
                         
-                        pct_home = (mises_home / total_pronos_match * 100) if total_pronos_match > 0 else 100
-                        pct_away = (mises_away / total_pronos_match * 100) if total_pronos_match > 0 else 100
-                        
                         st.markdown("**Pronostics des joueurs :**")
                         
-# Initialisation des lignes du tableau HTML
+                        # Initialisation des lignes du tableau HTML
                         lignes_table_html = ""
                         
                         # Boucle sur TOUS les joueurs pour construire les lignes du tableau
@@ -1194,13 +1191,14 @@ elif st.session_state.onglet_actif == "📅":
                                         
                                         if is_ose:
                                             pts = float(base_match * mult_ose_cfg)
-                                            badge_ose = " 🔥 x2" # J'ai ajouté 'x2' pour que ce soit explicite
-                                            # NOUVEAUTÉ : Style Doré / Or pour le prono osé réussi
+                                            badge_ose = " 🔥 x2"
                                             color_bg = "#fde047"  # Doré éclatant
                                             color_txt = "#713f12"  # Or foncé / Marron pour un super contraste
                                             texte_badge_resultat += " [OSÉ]"
                                         else:
                                             pts = float(base_match)
+                                    else:
+                                        pts = 0.0
                                 
                                 if en_attente:
                                     texte_points = "-"
@@ -1212,17 +1210,17 @@ elif st.session_state.onglet_actif == "📅":
                                 style_ligne_joueur = "font-weight: bold; background-color: #f1f5f9;" if j['id'] == st.session_state.user_id else ""
                                 pseudo_final = f"{j['pseudo']} (Toi)" if j['id'] == st.session_state.user_id else j['pseudo']
 
-                                # Ajout de la ligne au tableau HTML
+                                # Ajout de la ligne au tableau HTML avec police noire (#000000)
                                 lignes_table_html += f"""
-                                <tr style="{style_ligne_joueur} border-bottom: 1px solid #e2e8f0;">
-                                    <td style="padding: 10px; font-size: 13px;">{pseudo_final}</td>
-                                    <td style="padding: 10px; font-size: 13px;"><b>{nom_gagnant_prevu}</b> <span style="font-size:11px; color:#64748b;">({ec_prevu} pts)</span>{badge_ose}</td>
+                                <tr style="{style_ligne_joueur} border-bottom: 1px solid #e2e8f0; color: #000000;">
+                                    <td style="padding: 10px; font-size: 13px; color: #000000;">{pseudo_final}</td>
+                                    <td style="padding: 10px; font-size: 13px; color: #000000;"><b>{nom_gagnant_prevu}</b> <span style="font-size:11px; color:#333333;">({ec_prevu} pts)</span>{badge_ose}</td>
                                     <td style="padding: 10px; text-align: center;">
                                         <span style="background-color: {color_bg}; color: {color_txt}; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; display: inline-block;">
                                             {texte_badge_resultat}
                                         </span>
                                     </td>
-                                    <td style="padding: 10px; text-align: right; font-weight: bold; color: {color_txt if not en_attente else '#64748b'}; font-size: 13px;">{texte_points}</td>
+                                    <td style="padding: 10px; text-align: right; font-weight: bold; color: {color_txt if not en_attente else '#000000'}; font-size: 13px;">{texte_points}</td>
                                 </tr>
                                 """
                             else:
@@ -1231,24 +1229,24 @@ elif st.session_state.onglet_actif == "📅":
                                 pseudo_final = f"{j['pseudo']} (Toi)" if j['id'] == st.session_state.user_id else j['pseudo']
                                 
                                 lignes_table_html += f"""
-                                <tr style="{style_ligne_joueur} border-bottom: 1px solid #e2e8f0; color: #94a3b8;">
-                                    <td style="padding: 10px; font-size: 13px;">{pseudo_final}</td>
-                                    <td style="padding: 10px; font-size: 13px; font-style: italic;">Aucun pronostic</td>
+                                <tr style="{style_ligne_joueur} border-bottom: 1px solid #e2e8f0; color: #000000;">
+                                    <td style="padding: 10px; font-size: 13px; color: #000000;">{pseudo_final}</td>
+                                    <td style="padding: 10px; font-size: 13px; font-style: italic; color: #555555;">Aucun pronostic</td>
                                     <td style="padding: 10px; text-align: center;"><span style="background-color: #f1f5f9; color: #64748b; padding: 3px 8px; border-radius: 12px; font-size: 11px;">❌ Absent</span></td>
-                                    <td style="padding: 10px; text-align: right; font-size: 13px;">0 pt</td>
+                                    <td style="padding: 10px; text-align: right; font-size: 13px; color: #000000;">0 pt</td>
                                 </tr>
                                 """
 
-                        # Rendu final du tableau HTML propre et responsive
+                        # Rendu final du tableau HTML avec police noire globale (`color: #000000;`)
                         st.markdown(f"""
                         <div style="overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 8px; background-color: #ffffff; margin-top: 5px;">
-                            <table style="width: 100%; border-collapse: collapse; font-family: sans-serif; text-align: left;">
+                            <table style="width: 100%; border-collapse: collapse; font-family: sans-serif; text-align: left; color: #000000;">
                                 <thead style="background-color: #f8fafc; border-bottom: 2px solid #e2e8f0;">
                                     <tr>
-                                        <th style="padding: 8px 10px; font-size: 12px; color: #64748b;">Joueur</th>
-                                        <th style="padding: 8px 10px; font-size: 12px; color: #64748b;">Prono (Écart)</th>
-                                        <th style="padding: 8px 10px; font-size: 12px; color: #64748b; text-align: center;">Statut</th>
-                                        <th style="padding: 8px 10px; font-size: 12px; color: #64748b; text-align: right;">Points</th>
+                                        <th style="padding: 8px 10px; font-size: 12px; color: #000000;">Joueur</th>
+                                        <th style="padding: 8px 10px; font-size: 12px; color: #000000;">Prono (Écart)</th>
+                                        <th style="padding: 8px 10px; font-size: 12px; color: #000000; text-align: center;">Statut</th>
+                                        <th style="padding: 8px 10px; font-size: 12px; color: #000000; text-align: right;">Points</th>
                                     </tr>
                                 </thead>
                                 <tbody>
