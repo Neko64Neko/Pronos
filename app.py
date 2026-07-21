@@ -1633,7 +1633,7 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
         
         # 1. Chargement et vérification depuis Supabase (persistance + reset journalier)
         try:
-            response_api = supabase.table("Configuration").select("*").eq("id", "api_tracking").execute()
+            response_api = supabase.table("Configuration").select("*").eq("id", "default_config").execute()
             if response_api.data:
                 config_api = response_api.data[0]
                 saved_date = config_api.get("last_reset_date")
@@ -1643,7 +1643,7 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
                     current_count = 0
                     current_logs = config_api.get("api_request_logs", []) or []
                     supabase.table("Configuration").upsert({
-                        "id": "api_tracking",
+                        "id": "default_config",
                         "api_request_count": 0,
                         "last_reset_date": today_str,
                         "api_request_logs": current_logs
@@ -1656,7 +1656,7 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
                 current_count = 0
                 current_logs = []
                 supabase.table("Configuration").upsert({
-                    "id": "api_tracking",
+                    "id": "default_config",
                     "api_request_count": 0,
                     "last_reset_date": today_str,
                     "api_request_logs": []
@@ -1683,7 +1683,7 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
             
             try:
                 supabase.table("Configuration").upsert({
-                    "id": "api_tracking",
+                    "id": "default_config",
                     "api_request_count": new_count,
                     "last_reset_date": today_str,
                     "api_request_logs": new_logs
