@@ -1637,8 +1637,8 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
         
         st.subheader("🔌 Gestion de l'API")
         
-        # Compteur de requêtes envoyées
-        st.metric(label="Requêtes envoyées à l'API", value=st.session_state.api_request_count)
+        # Compteur de requêtes envoyées avec format /50
+        st.metric(label="Requêtes envoyées à l'API", value=f"{st.session_state.api_request_count}/50")
         
         col1, col2 = st.columns(2)
         
