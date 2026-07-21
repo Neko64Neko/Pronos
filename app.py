@@ -1698,11 +1698,11 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
         with col1:
             if st.button("MAJ score"):
                 new_count = st.session_state.api_request_count + 1
-                new_count, updated_logs = save_api_state(new_count, st.session_state.api_request_logs, "MAJ score (get_live)")
+                new_count, updated_logs = save_api_state(new_count, st.session_state.api_request_logs, "MAJ score (run_update)")
                 st.session_state.api_request_count = new_count
                 st.session_state.api_request_logs = updated_logs
                 try:
-                    get_live()
+                    run_update()
                     st.success("Mise à jour des scores effectuée avec succès.")
                     time.sleep(1)
                     st.rerun()
@@ -1712,11 +1712,11 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
         with col2:
             if st.button("MAJ Calendrier"):
                 new_count = st.session_state.api_request_count + 1
-                new_count, updated_logs = save_api_state(new_count, st.session_state.api_request_logs, "MAJ Calendrier (get_calendar)")
+                new_count, updated_logs = save_api_state(new_count, st.session_state.api_request_logs, "MAJ Calendrier (run_calendar)")
                 st.session_state.api_request_count = new_count
                 st.session_state.api_request_logs = updated_logs
                 try:
-                    get_calendar()
+                    run_calendar()
                     st.success("Mise à jour du calendrier effectuée avec succès.")
                     time.sleep(1)
                     st.rerun()
