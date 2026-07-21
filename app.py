@@ -1646,11 +1646,11 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
             if st.button("MAJ score"):
                 st.session_state.api_request_count += 1
                 timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                st.session_state.api_request_logs.insert(0, f"[{timestamp}] MAJ score (get_live)")
+                st.session_state.api_request_logs.insert(0, f"[{timestamp}] MAJ score (run_update)")
                 if len(st.session_state.api_request_logs) > 20:
                     st.session_state.api_request_logs.pop()
                 try:
-                    get_live()
+                    run_update()
                     st.success("Mise à jour des scores effectuée avec succès.")
                 except Exception as e:
                     st.error(f"Erreur lors de la mise à jour des scores : {e}")
@@ -1659,11 +1659,11 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
             if st.button("MAJ Calendrier"):
                 st.session_state.api_request_count += 1
                 timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                st.session_state.api_request_logs.insert(0, f"[{timestamp}] MAJ Calendrier (get_calendar)")
+                st.session_state.api_request_logs.insert(0, f"[{timestamp}] MAJ Calendrier (run_calendar)")
                 if len(st.session_state.api_request_logs) > 20:
                     st.session_state.api_request_logs.pop()
                 try:
-                    get_calendar()
+                    run_calendar()
                     st.success("Mise à jour du calendrier effectuée avec succès.")
                 except Exception as e:
                     st.error(f"Erreur lors de la mise à jour du calendrier : {e}")
