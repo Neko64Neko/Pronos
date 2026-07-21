@@ -1695,51 +1695,53 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
                     st.error(f"Erreur : {e}")
 
 # 9.7 - GESTION DES MATCHS (TABLEAU INTERACTIF)
-    with tab7: 
-        st.subheader("🗑️ Gestion des Matchs")
-        st.warning("⚠️ Attention : Toute suppression est définitive.")
+with tab7: 
+    st.subheader("🗑️ Gestion des Matchs")
+    st.warning("⚠️ Attention : Toute suppression est définitive.")
+    
+    # Récupération des matchs
+    tous_matchs = supabase.table("Matchs").select("*").order("date_match").execute().data
+    
+    if tous_matchs:
+        # Création d'un tableau pour l'affichage
+        matchs_data = []
+        for m in tous_matchs:
+            # Sécurité : on vérifie si date_match existe et n'est pas None
+            date_formatee = m['date_match'][:10] if m.get('date_match') else "Date non définie"
+            matchs_data.append({
+                "Date": date_formatee,
+                "Match": f"{m['equipe_dom']} vs {m['equipe_ext']}",
+                "ID": m['id'] # On garde l'ID pour la suppression
+            })
         
-        # Récupération des matchs
-        tous_matchs = supabase.table("Matchs").select("*").order("date_match").execute().data
+        # Affichage du tableau
+        st.table(matchs_data)
         
-        if tous_matchs:
-            # Création d'un tableau pour l'affichage
-            matchs_data = []
-            for m in tous_matchs:
-                matchs_data.append({
-                    "Date": m['date_match'][:10],
-                    "Match": f"{m['equipe_dom']} vs {m['equipe_ext']}",
-                    "ID": m['id'] # On garde l'ID pour la suppression
-                })
-            
-            # Affichage du tableau
-            st.table(matchs_data)
-            
-            # Sélecteur pour choisir quel match supprimer (plus propre qu'un bouton par ligne)
-            st.markdown("---")
-            match_a_supprimer = st.selectbox(
-                "Sélectionnez le match à supprimer :",
-                options=[(m['id'], f"{m['date_match'][:10]} | {m['equipe_dom']} vs {m['equipe_ext']}") for m in tous_matchs],
-                format_func=lambda x: x[1]
-            )
-            
-            if match_a_supprimer:
-                with st.popover("🗑️ Supprimer ce match"):
-                    st.error(f"Êtes-vous sûr de vouloir supprimer **{match_a_supprimer[1]}** ?")
-                    if st.button("Confirmer la suppression", key=f"del_confirm_{match_a_supprimer[0]}"):
-                        try:
-                            # 1. Suppression des pronostics liés
-                            supabase.table("Pronostics").delete().eq("match_id", match_a_supprimer[0]).execute()
-                            # 2. Suppression du match
-                            supabase.table("Matchs").delete().eq("id", match_a_supprimer[0]).execute()
-                            
-                            st.success("Match supprimé avec succès.")
-                            time.sleep(1)
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f"Erreur : {e}")
-        else:
-            st.info("Aucun match trouvé en base de données.")
+        # Sélecteur pour choisir quel match supprimer
+        st.markdown("---")
+        match_a_supprimer = st.selectbox(
+            "Sélectionnez le match à supprimer :",
+            options=[(m['id'], f"{(m['date_match'][:10] if m.get('date_match') else 'N/A')} | {m['equipe_dom']} vs {m['equipe_ext']}") for m in tous_matchs],
+            format_func=lambda x: x[1]
+        )
+        
+        if match_a_supprimer:
+            with st.popover("🗑️ Supprimer ce match"):
+                st.error(f"Êtes-vous sûr de vouloir supprimer **{match_a_supprimer[1]}** ?")
+                if st.button("Confirmer la suppression", key=f"del_confirm_{match_a_supprimer[0]}"):
+                    try:
+                        # 1. Suppression des pronostics liés
+                        supabase.table("Pronostics").delete().eq("match_id", match_a_supprimer[0]).execute()
+                        # 2. Suppression du match
+                        supabase.table("Matchs").delete().eq("id", match_a_supprimer[0]).execute()
+                        
+                        st.success("Match supprimé avec succès.")
+                        time.sleep(1)
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Erreur : {e}")
+    else:
+        st.info("Aucun match trouvé en base de données.")
 
 # 9.8 - GESTION DES JOUEURS (SUPPRESSION SÉCURISÉE)
     with tab8:
