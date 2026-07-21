@@ -8,6 +8,8 @@ import random
 import extra_streamlit_components as stx
 import pytz
 from streamlit_autorefresh import st_autorefresh
+from get_calendar import get_calendar
+from get_live import get_live
 
 # 1 - PARAMETRES ET CONNEXION
 import streamlit.components.v1 as components
