@@ -59,7 +59,7 @@ def run_calendar():
         print(f"{len(all_matches)} matchs mis à jour/ajoutés au calendrier.")
 
     # 5. Mise à jour automatique du compteur et des logs dans Supabase avec default_config
-    try:
+#    try:
         today_str = datetime.now().strftime("%Y-%m-%d")
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
@@ -92,8 +92,8 @@ def run_calendar():
         
         print(f"Suivi API mis à jour : {new_count} requêtes aujourd'hui.")
         
-    except Exception as e:
-        print(f"Erreur lors de la mise à jour automatique du compteur : {e}")
+#    except Exception as e:
+#        print(f"Erreur lors de la mise à jour automatique du compteur : {e}")
 
 if __name__ == "__main__":
     run_calendar()
