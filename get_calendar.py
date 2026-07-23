@@ -3,6 +3,8 @@ from datetime import datetime
 import requests
 from supabase import create_client
 
+print("--- LE SCRIPT COMMENCE ---")
+
 # Configuration
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
