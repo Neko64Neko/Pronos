@@ -874,7 +874,7 @@ if st.session_state.onglet_actif == "🏉":
                 st.markdown('<div style="height: 1px; background-color: #cbd5e1; margin: 25px auto 15px auto; width: calc(100% - 40px);"></div>', unsafe_allow_html=True)
                 st.subheader("🏉 Liste des Matchs")
 
-                # Injection du CSS global pour les cartes, les titres, la couleur des libellés et l'élargissement du curseur
+                # Injection du CSS global pour les cartes, les titres, la couleur des libellés et le curseur en forme de boîte
                 st.markdown("""
                     <style>
                         .match-card {
@@ -892,19 +892,27 @@ if st.session_state.onglet_actif == "🏉":
                             color: #2563eb;
                             margin-bottom: 12px;
                         }
-                        /* Élargissement du curseur pour qu'il occupe toute la largeur de la carte */
-                        div[data-testid="stSlider"] {
-                            width: calc(100% + 40px) !important;
-                            margin-left: -20px !important;
-                            margin-right: -20px !important;
+                        /* Le curseur reste dans la largeur de la carte (sans dépassement) */
+                        div[data-testid="stSlider"], div[data-testid="stSelectSlider"] {
+                            width: 100% !important;
+                            margin-left: 0 !important;
+                            margin-right: 0 !important;
                         }
-                        /* Personnalisation et agrandissement du curseur (cercle) et des points */
+                        /* Transformation de la ligne en une boîte/piste épaisse */
+                        div[data-baseweb="slider"] > div:nth-child(1) {
+                            height: 18px !important;
+                            border-radius: 10px !important;
+                            background-color: #f1f5f9 !important;
+                            border: 1px solid #cbd5e1 !important;
+                        }
+                        /* Personnalisation et agrandissement du curseur (cercle) et centrage */
                         div[data-baseweb="slider"] div[role="slider"] {
-                            width: 22px !important;
-                            height: 22px !important;
+                            width: 26px !important;
+                            height: 26px !important;
                             background-color: #2563eb !important;
                             border: 2px solid #ffffff !important;
                             box-shadow: 0 2px 6px rgba(0,0,0,0.3) !important;
+                            top: -4px !important;
                         }
                         div[data-baseweb="slider"] span {
                             font-size: 13px !important;
