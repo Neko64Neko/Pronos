@@ -874,7 +874,7 @@ if st.session_state.onglet_actif == "🏉":
                 st.markdown('<div style="height: 1px; background-color: #cbd5e1; margin: 25px auto 15px auto; width: calc(100% - 40px);"></div>', unsafe_allow_html=True)
                 st.subheader("🏉 Liste des Matchs")
 
-                # CSS global pour les cartes, les titres et le séparateur propre
+                # CSS global pour les cartes, les titres et le séparateur propre en CSS pur
                 st.markdown("""
                     <style>
                         .match-card {
@@ -892,14 +892,13 @@ if st.session_state.onglet_actif == "🏉":
                             color: #2563eb;
                             margin-bottom: 12px;
                         }
-                        /* Séparateur élégant à double ligne */
+                        /* Séparateur à double ligne ultra-propre sans bloc parasite */
                         .match-separator {
                             margin: 30px auto;
-                            width: 50%;
-                        }
-                        .match-separator div {
-                            height: 1px;
-                            background-color: #cbd5e1;
+                            width: 40%;
+                            height: 6px;
+                            border-top: 1px solid #cbd5e1;
+                            border-bottom: 1px solid #cbd5e1;
                         }
                     </style>
                 """, unsafe_allow_html=True)
@@ -1113,12 +1112,7 @@ if st.session_state.onglet_actif == "🏉":
 
                                 # --- SÉPARATEUR PROPRE ENTRE LES MATCHS (sauf pour le dernier) ---
                                 if index < total_matchs - 1:
-                                    st.markdown("""
-                                        <div class="match-separator">
-                                            <div></div>
-                                            <div style="margin-top: 4px;"></div>
-                                        </div>
-                                    """, unsafe_allow_html=True)
+                                    st.markdown('<div class="match-separator"></div>', unsafe_allow_html=True)
                     else: 
                         st.info("Aucun match disponible à pronostiquer.")
                 except Exception as e: 
