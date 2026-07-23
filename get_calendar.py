@@ -3,16 +3,31 @@ from datetime import datetime, timezone
 import requests
 from supabase import create_client
 
+def get_secret(key):
+    """Récupère un secret depuis os.environ ou st.secrets de manière transparente"""
+    # 1. Essayer os.environ (pour GitHub Actions et variables d'environnement)
+    val = os.environ.get(key)
+    if val:
+        return val
+    # 2. Essayer st.secrets (pour Streamlit Cloud)
+    try:
+        import streamlit as st
+        if hasattr(st, "secrets") and key in st.secrets:
+            return st.secrets[key]
+    except Exception:
+        pass
+    return None
+
 def run_calendar():
     print("--- LE SCRIPT CALENDRIER COMMENCE ---")
     
-    # Récupération des secrets
-    SUPABASE_URL = os.environ.get("SUPABASE_URL")
-    SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
-    RAPIDAPI_KEY = os.environ.get("RAPIDAPI_KEY")
+    # Récupération universelle des secrets
+    SUPABASE_URL = get_secret("SUPABASE_URL")
+    SUPABASE_KEY = get_secret("SUPABASE_KEY")
+    RAPIDAPI_KEY = get_secret("RAPIDAPI_KEY")
 
     if not SUPABASE_URL or not SUPABASE_KEY or not RAPIDAPI_KEY:
-        print("ERREUR : Il manque un ou plusieurs secrets dans l'environnement.")
+        print("ERREUR : Il manque un ou plusieurs secrets (Vérifiez les secrets GitHub ou Streamlit).")
         return
 
     supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
@@ -56,7 +71,7 @@ def run_calendar():
                 current_count = int(ligne_config.get("api_request_count", 0) or 0)
             
             new_count = current_count + 1
-            current_logs.insert(0, f"[{timestamp}] MAJ Calendrier (Automatique)")
+            current_logs.insert(0, f"[{timestamp}] MAJ Calendrier (Admin App)")
             if len(current_logs) > 20:
                 current_logs = current_logs[:20]
                 
