@@ -988,9 +988,11 @@ if st.session_state.onglet_actif == "🏉":
                                 def cb_clic_gagnant(match_id, equipe_choisie, eq_dom, eq_ext, u_id):
                                     st.session_state[f"w_{match_id}_{u_id}"] = equipe_choisie
                                     sauvegarder_prono_auto(match_id, eq_dom, eq_ext, u_id)
+                                    st.toast("Pronostic enregistré !", icon="🏉")
 
                                 def cb_changement_ecart(match_id, eq_dom, eq_ext, u_id):
                                     sauvegarder_prono_auto(match_id, eq_dom, eq_ext, u_id)
+                                    st.toast("Pronostic enregistré !", icon="🏉")
 
                                 # Label personnalisé pour le vainqueur (couleur #64748b)
                                 st.markdown('<div style="font-size: 1.1em; font-weight: 600; color: #64748b; margin-bottom: 6px;">Sélectionner le Vainqueur :</div>', unsafe_allow_html=True)
@@ -1088,7 +1090,7 @@ if st.session_state.onglet_actif == "🏉":
                                     label_visibility="collapsed"
                                 )
                                 
-                                # --- GESTION DU MESSAGE D'ÉTAT DYNAMIQUE ---
+                                # --- GESTION DU MESSAGE D'ÉTAT DYNAMIQUE (DANS DES ENCADRÉS COLORÉS) ---
                                 val_vainqueur = st.session_state.get(f"w_{m['id']}_{id_joueur_cible}", choix_actuel)
                                 val_ecart = st.session_state.get(key_m, ecart_existant)
                                 
@@ -1096,11 +1098,26 @@ if st.session_state.onglet_actif == "🏉":
                                 has_ecart = bool(val_ecart and val_ecart != "...")
                                 
                                 if has_vainqueur and has_ecart:
-                                    st.markdown("<div style='color: #15803d; font-size: 0.9em; font-weight: bold; margin-top: 10px; text-align: center;'>✅ Pronostic complet enregistré</div>", unsafe_allow_html=True)
+                                    st.markdown(
+                                        "<div style='background-color: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; padding: 10px; border-radius: 8px; font-size: 0.9em; font-weight: bold; margin-top: 15px; text-align: center;'>"
+                                        "✅ Pronostic complet enregistré"
+                                        "</div>", 
+                                        unsafe_allow_html=True
+                                    )
                                 elif has_vainqueur and not has_ecart:
-                                    st.markdown("<div style='color: #d97706; font-size: 0.9em; font-weight: bold; margin-top: 10px; text-align: center;'>⚠️ Vainqueur enregistré, n'oubliez pas l'écart</div>", unsafe_allow_html=True)
+                                    st.markdown(
+                                        "<div style='background-color: #fffbeb; border: 1px solid #fde68a; color: #92400e; padding: 10px; border-radius: 8px; font-size: 0.9em; font-weight: bold; margin-top: 15px; text-align: center;'>"
+                                        "⚠️ Vainqueur enregistré, n'oubliez pas l'écart"
+                                        "</div>", 
+                                        unsafe_allow_html=True
+                                    )
                                 elif not has_vainqueur and has_ecart:
-                                    st.markdown("<div style='color: #d97706; font-size: 0.9em; font-weight: bold; margin-top: 10px; text-align: center;'>⚠️ Écart enregistré, n'oubliez pas le vainqueur</div>", unsafe_allow_html=True)
+                                    st.markdown(
+                                        "<div style='background-color: #fffbeb; border: 1px solid #fde68a; color: #92400e; padding: 10px; border-radius: 8px; font-size: 0.9em; font-weight: bold; margin-top: 15px; text-align: center;'>"
+                                        "⚠️ Écart enregistré, n'oubliez pas le vainqueur"
+                                        "</div>", 
+                                        unsafe_allow_html=True
+                                    )
 
                                 st.markdown('</div>', unsafe_allow_html=True)
                     else: 
