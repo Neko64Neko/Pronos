@@ -874,7 +874,7 @@ if st.session_state.onglet_actif == "🏉":
                 st.markdown('<div style="height: 1px; background-color: #cbd5e1; margin: 25px auto 15px auto; width: calc(100% - 40px);"></div>', unsafe_allow_html=True)
                 st.subheader("🏉 Liste des Matchs")
 
-                # Injection du CSS global pour les cartes, les titres et le style ciblé du curseur en bande 2D
+                # Injection du CSS global pour les cartes et les titres
                 st.markdown("""
                     <style>
                         .match-card {
@@ -891,37 +891,6 @@ if st.session_state.onglet_actif == "🏉":
                             text-align: center;
                             color: #2563eb;
                             margin-bottom: 12px;
-                        }
-                        
-                        /* Styles ciblés pour transformer la ligne en une bande 2D (piste large) */
-                        .custom-slider-wrapper div[data-testid="stSelectSlider"],
-                        .custom-slider-wrapper div[data-testid="stSlider"] {
-                            width: 100% !important;
-                            margin-left: 0 !important;
-                            margin-right: 0 !important;
-                        }
-                        .custom-slider-wrapper div[data-baseweb="slider"] {
-                            padding-top: 6px !important;
-                            padding-bottom: 6px !important;
-                        }
-                        .custom-slider-wrapper div[data-baseweb="slider"] > div {
-                            height: 28px !important;
-                            border-radius: 14px !important;
-                            background-color: #f1f5f9 !important;
-                            border: 1.5px solid #cbd5e1 !important;
-                        }
-                        .custom-slider-wrapper div[data-baseweb="slider"] div[role="slider"] {
-                            width: 32px !important;
-                            height: 32px !important;
-                            background-color: #2563eb !important;
-                            border: 3px solid #ffffff !important;
-                            box-shadow: 0 3px 8px rgba(0,0,0,0.25) !important;
-                            top: 50% !important;
-                            transform: translateY(-50%) !important;
-                        }
-                        .custom-slider-wrapper div[data-baseweb="slider"] span {
-                            font-size: 13px !important;
-                            font-weight: 600 !important;
                         }
                     </style>
                 """, unsafe_allow_html=True)
@@ -1081,7 +1050,7 @@ if st.session_state.onglet_actif == "🏉":
                                 st.markdown('</div>', unsafe_allow_html=True)
                                 st.markdown("<br>", unsafe_allow_html=True)
                                 
-                                # --- CURSEUR POUR LES ÉCARTS (SELECT SLIDER DANS SON CONTENEUR) ---
+                                # --- SÉLECTEUR D'ÉCARTS EN BANDE 2D (SEGMENTED CONTROL) ---
                                 key_m = f"m_{m['id']}_{id_joueur_cible}"
                                 options_ecarts = ["..."] + TRANCHES_ECARTS
                                 
@@ -1089,19 +1058,18 @@ if st.session_state.onglet_actif == "🏉":
                                     st.session_state[key_m] = ecart_existant if ecart_existant in TRANCHES_ECARTS else "..."
 
                                 # Label personnalisé pour l'écart (couleur #64748b)
-                                st.markdown('<div style="font-size: 1.1em; font-weight: 600; color: #64748b; margin-bottom: 2px;">Écart (pts) :</div>', unsafe_allow_html=True)
+                                st.markdown('<div style="font-size: 1.1em; font-weight: 600; color: #64748b; margin-bottom: 6px;">Écart (pts) :</div>', unsafe_allow_html=True)
                                 
-                                st.markdown('<div class="custom-slider-wrapper">', unsafe_allow_html=True)
-                                st.select_slider(
+                                st.segmented_control(
                                     "Écart (pts)", 
                                     options=options_ecarts,
                                     key=key_m, 
                                     on_change=cb_changement_ecart, 
                                     args=(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible),
                                     disabled=bouton_bloque,
-                                    label_visibility="collapsed"
+                                    label_visibility="collapsed",
+                                    selection_mode="single"
                                 )
-                                st.markdown('</div>', unsafe_allow_html=True)
                                 
                                 # --- GESTION DU MESSAGE D'ÉTAT DYNAMIQUE (DANS DES ENCADRÉS COLORÉS) ---
                                 val_vainqueur = st.session_state.get(f"w_{m['id']}_{id_joueur_cible}", choix_actuel)
