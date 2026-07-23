@@ -21,19 +21,19 @@ def run_calendar():
     
     params = {
         "tournament_id": "420",
-        "season_id": "98426" # SAISON 2026-2027
+        "season_id": "98426"  # SAISON 2026-2027
     }
     
+    print("Appel de l'API RapidAPI...")
     response = requests.get(url, headers=headers, params=params)
+    print(f"Réponse API reçue avec le code statut : {response.status_code}")
 
-# --- COMPTEUR API AVEC DEBUG VISIBLE ---
+    # --- MISE À JOUR DU COMPTEUR API DANS SUPABASE ---
     try:
         today_str = datetime.now().strftime("%Y-%m-%d")
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
-        # 1. Lecture
         res = supabase.table("Configuration").select("*").execute()
-        print("DEBUG - Données lues dans Supabase :", res.data)
         
         if res.data and len(res.data) > 0:
             ligne_config = res.data[0]
@@ -42,7 +42,6 @@ def run_calendar():
             saved_date = ligne_config.get("last_reset_date")
             current_logs = ligne_config.get("api_request_logs", []) or []
             
-            # Gestion du reset journalier
             if saved_date != today_str:
                 current_count = 0
             else:
@@ -53,22 +52,18 @@ def run_calendar():
             if len(current_logs) > 20:
                 current_logs = current_logs[:20]
                 
-            print(f"DEBUG - Valeurs calculées -> New count: {new_count}, Logs: {current_logs}")
-
-            # 2. Écriture / Update
-            response_update = supabase.table("Configuration").update({
+            supabase.table("Configuration").update({
                 "api_request_count": new_count,
                 "last_reset_date": today_str,
                 "api_request_logs": current_logs
             }).eq("id", target_id).execute()
             
-            print("DEBUG - Réponse de Supabase après update :", response_update)
-            print(f"Succès ! Requêtes aujourd'hui : {new_count}")
+            print(f"SUCCÈS : Compteur API mis à jour à {new_count} requêtes aujourd'hui.")
         else:
             print("ERREUR : Aucune ligne trouvée dans la table Configuration.")
             
     except Exception as e:
-        print("ERREUR CRITIQUE DÉTECTÉE DANS LE COMPTEUR :", e)
+        print(f"ERREUR LORS DE LA MAJ DU COMPTEUR : {e}")
 
     # Vérification du code HTTP
     if response.status_code == 204:
@@ -79,7 +74,7 @@ def run_calendar():
     events = data.get('events', [])
 
     if not events:
-        print("Aucun match à venir trouvé.")
+        print("Aucun match à venir trouvé dans les données.")
         return
 
     # Préparation des données pour Supabase
@@ -100,3 +95,6 @@ def run_calendar():
     if all_matches:
         supabase.table("Matchs").upsert(all_matches, on_conflict="external_id").execute()
         print(f"{len(all_matches)} matchs mis à jour/ajoutés au calendrier.")
+
+if __name__ == "__main__":
+    run_calendar()
