@@ -877,7 +877,7 @@ if st.session_state.onglet_actif == "🏉":
                 st.markdown('<div style="height: 1px; background-color: #cbd5e1; margin: 25px 0 15px 0;"></div>', unsafe_allow_html=True)
                 st.subheader("🏉 Liste des Matchs")
 
-                # Injection du CSS avec un titre d'équipe en couleur flashy/vibrante
+                # Injection du CSS avec un titre d'équipe plus grand et flashy
                 st.markdown("""
                     <style>
                         .match-card {
@@ -1049,15 +1049,17 @@ if st.session_state.onglet_actif == "🏉":
                                 st.markdown('</div>', unsafe_allow_html=True)
                                 st.markdown("<br>", unsafe_allow_html=True)
                                 
-                                index_ecart_defaut = 0
-                                if ecart_existant in TRANCHES_ECARTS:
-                                    index_ecart_defaut = TRANCHES_ECARTS.index(ecart_existant) + 1
+                                # --- CURSEUR POUR LES ÉCARTS (SELECT SLIDER) ---
+                                key_m = f"m_{m['id']}_{id_joueur_cible}"
+                                options_ecarts = ["..."] + TRANCHES_ECARTS
                                 
-                                st.selectbox(
+                                if key_m not in st.session_state:
+                                    st.session_state[key_m] = ecart_existant if ecart_existant in TRANCHES_ECARTS else "..."
+
+                                st.select_slider(
                                     "Écart (pts)", 
-                                    ["..."] + TRANCHES_ECARTS, 
-                                    index=index_ecart_defaut,
-                                    key=f"m_{m['id']}_{id_joueur_cible}", 
+                                    options=options_ecarts,
+                                    key=key_m, 
                                     on_change=sauvegarder_prono_auto, 
                                     args=(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible),
                                     disabled=bouton_bloque
@@ -1065,7 +1067,7 @@ if st.session_state.onglet_actif == "🏉":
                                 
                                 # --- GESTION DU MESSAGE D'ÉTAT DYNAMIQUE ---
                                 val_vainqueur = st.session_state.get(f"w_{m['id']}_{id_joueur_cible}", choix_actuel)
-                                val_ecart = st.session_state.get(f"m_{m['id']}_{id_joueur_cible}", ecart_existant)
+                                val_ecart = st.session_state.get(key_m, ecart_existant)
                                 
                                 has_vainqueur = bool(val_vainqueur and val_vainqueur != "")
                                 has_ecart = bool(val_ecart and val_ecart != "...")
