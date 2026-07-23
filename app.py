@@ -874,17 +874,9 @@ if st.session_state.onglet_actif == "🏉":
                 st.markdown('<div style="height: 1px; background-color: #cbd5e1; margin: 25px auto 15px auto; width: calc(100% - 40px);"></div>', unsafe_allow_html=True)
                 st.subheader("🏉 Liste des Matchs")
 
-                # CSS global pour les cartes, les titres et le séparateur propre
+                # CSS global pour les titres et le séparateur propre uniquement
                 st.markdown("""
                     <style>
-                        .match-card {
-                            background-color: #ffffff;
-                            border: 0.5px solid #cbd5e1;
-                            border-radius: 12px;
-                            padding: 20px;
-                            margin-bottom: 20px;
-                            box-shadow: 0 1px 2px rgba(0,0,0,0.02);
-                        }
                         .match-title {
                             font-size: 1.35em;
                             font-weight: bold;
@@ -935,8 +927,8 @@ if st.session_state.onglet_actif == "🏉":
                         
                         total_matchs = len(matchs_visibles)
                         for index, m in enumerate(matchs_visibles):
-                            with st.container():
-                                st.markdown(f'<div class="match-card">', unsafe_allow_html=True)
+                            # Utilisation du conteneur natif Streamlit : zéro bug HTML et zéro bulle parasite
+                            with st.container(border=True):
                                 st.markdown(f'<div class="match-title">{m["equipe_dom"]} vs {m["equipe_ext"]}</div>', unsafe_allow_html=True)
                                 
                                 bouton_bloque = False
@@ -1110,11 +1102,9 @@ if st.session_state.onglet_actif == "🏉":
                                         unsafe_allow_html=True
                                     )
 
-                                st.markdown('</div>', unsafe_allow_html=True)
-
-                                # --- SÉPARATEUR PROPRE ENTRE LES MATCHS (sauf pour le dernier) ---
-                                if index < total_matchs - 1:
-                                    st.markdown('<hr class="match-separator">', unsafe_allow_html=True)
+                            # --- SÉPARATEUR PROPRE ENTRE LES MATCHS (sauf pour le dernier) ---
+                            if index < total_matchs - 1:
+                                st.markdown('<hr class="match-separator">', unsafe_allow_html=True)
                     else: 
                         st.info("Aucun match disponible à pronostiquer.")
                 except Exception as e: 
