@@ -874,7 +874,7 @@ if st.session_state.onglet_actif == "🏉":
                 st.markdown('<div style="height: 1px; background-color: #cbd5e1; margin: 25px auto 15px auto; width: calc(100% - 40px);"></div>', unsafe_allow_html=True)
                 st.subheader("🏉 Liste des Matchs")
 
-                # Injection du CSS global pour les cartes, les titres et la transformation du slider en bande 2D
+                # Injection du CSS global ultra-renforcé pour forcer le look "bande 2D 3D" du slider
                 st.markdown("""
                     <style>
                         .match-card {
@@ -893,39 +893,48 @@ if st.session_state.onglet_actif == "🏉":
                             margin-bottom: 12px;
                         }
                         
-                        /* Forcer le select_slider à rester strictement dans la largeur de la carte */
-                        .match-card div[data-testid="stSelectSlider"] {
+                        /* Forcer le select_slider à occuper toute la largeur de la carte */
+                        div[data-testid="stSelectSlider"] {
                             width: 100% !important;
-                            max-width: 100% !important;
                         }
                         
-                        /* Transformer la piste du slider en une bande 2D épaisse (boîte) */
-                        .match-card div[data-baseweb="slider"] {
-                            margin-top: 8px;
-                            margin-bottom: 8px;
+                        /* Transformation de la piste de base en une véritable bande 2D épaisse */
+                        div[data-baseweb="slider"] {
+                            padding-top: 10px !important;
+                            padding-bottom: 10px !important;
                         }
-                        .match-card div[data-baseweb="slider"] > div:first-child {
-                            height: 26px !important;
-                            border-radius: 13px !important;
+                        
+                        /* Le conteneur global de la piste */
+                        div[data-baseweb="slider"] > div {
+                            height: 28px !important;
+                            border-radius: 14px !important;
                             background-color: #f1f5f9 !important;
-                            border: 1px solid #cbd5e1 !important;
+                            border: 1.5px solid #cbd5e1 !important;
                         }
                         
-                        /* Le curseur (cercle) qui glisse par-dessus, parfaitement centré verticalement */
-                        .match-card div[data-baseweb="slider"] div[role="slider"] {
-                            width: 32px !important;
-                            height: 32px !important;
+                        /* La partie intérieure remplie de la piste */
+                        div[data-baseweb="slider"] > div > div {
+                            background-color: #93c5fd !important;
+                            border-radius: 14px !important;
+                        }
+                        
+                        /* Le curseur (cercle) parfaitement centré et massif qui glisse par-dessus */
+                        div[data-baseweb="slider"] div[role="slider"] {
+                            width: 34px !important;
+                            height: 34px !important;
                             background-color: #2563eb !important;
                             border: 3px solid #ffffff !important;
-                            box-shadow: 0 3px 6px rgba(0,0,0,0.3) !important;
+                            border-radius: 50% !important;
+                            box-shadow: 0 4px 10px rgba(0,0,0,0.25) !important;
                             top: 50% !important;
                             transform: translateY(-50%) !important;
                         }
                         
-                        /* Style des libellés de ticks du slider */
-                        .match-card div[data-baseweb="slider"] span {
+                        /* Style des textes sous le slider */
+                        div[data-baseweb="slider"] span {
                             font-size: 12px !important;
                             font-weight: 600 !important;
+                            color: #64748b !important;
                         }
                     </style>
                 """, unsafe_allow_html=True)
@@ -1085,7 +1094,7 @@ if st.session_state.onglet_actif == "🏉":
                                 st.markdown('</div>', unsafe_allow_html=True)
                                 st.markdown("<br>", unsafe_allow_html=True)
                                 
-                                # --- SÉLECTEUR D'ÉCARTS EN CURSEUR SUR BANDE 2D (SELECT SLIDER) ---
+                                # --- SÉLECTEUR D'ÉCARTS EN BANDE 2D AVEC CURSEUR CENTRÉ ---
                                 key_m = f"m_{m['id']}_{id_joueur_cible}"
                                 options_ecarts = ["..."] + TRANCHES_ECARTS
                                 
@@ -1105,7 +1114,7 @@ if st.session_state.onglet_actif == "🏉":
                                     label_visibility="collapsed"
                                 )
                                 
-                                # --- GESTION DU MESSAGE D'ÉTAT DYNAMIQUE (DANS DES ENCADRÉS COLORÉS) ---
+                                # --- GESTION DU MESSAGE D'ÉTAT DYNAMIQUE ---
                                 val_vainqueur = st.session_state.get(f"w_{m['id']}_{id_joueur_cible}", choix_actuel)
                                 val_ecart = st.session_state.get(key_m, ecart_existant)
                                 
