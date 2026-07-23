@@ -1087,6 +1087,20 @@ if st.session_state.onglet_actif == "🏉":
                                     disabled=bouton_bloque,
                                     label_visibility="collapsed"
                                 )
+                                
+                                # --- GESTION DU MESSAGE D'ÉTAT DYNAMIQUE ---
+                                val_vainqueur = st.session_state.get(f"w_{m['id']}_{id_joueur_cible}", choix_actuel)
+                                val_ecart = st.session_state.get(key_m, ecart_existant)
+                                
+                                has_vainqueur = bool(val_vainqueur and val_vainqueur != "")
+                                has_ecart = bool(val_ecart and val_ecart != "...")
+                                
+                                if has_vainqueur and has_ecart:
+                                    st.markdown("<div style='color: #15803d; font-size: 0.9em; font-weight: bold; margin-top: 10px; text-align: center;'>✅ Pronostic complet enregistré</div>", unsafe_allow_html=True)
+                                elif has_vainqueur and not has_ecart:
+                                    st.markdown("<div style='color: #d97706; font-size: 0.9em; font-weight: bold; margin-top: 10px; text-align: center;'>⚠️ Vainqueur enregistré, n'oubliez pas l'écart</div>", unsafe_allow_html=True)
+                                elif not has_vainqueur and has_ecart:
+                                    st.markdown("<div style='color: #d97706; font-size: 0.9em; font-weight: bold; margin-top: 10px; text-align: center;'>⚠️ Écart enregistré, n'oubliez pas le vainqueur</div>", unsafe_allow_html=True)
 
                                 st.markdown('</div>', unsafe_allow_html=True)
                     else: 
