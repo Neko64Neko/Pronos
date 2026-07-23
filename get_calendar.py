@@ -24,17 +24,18 @@ def run_calendar():
     
     response = requests.get(url, headers=headers, params=params)
 
-# --- COMPTEUR API PAR MISE À JOUR CIBLÉE (.update) ---
+# --- COMPTEUR API AVEC DEBUG VISIBLE ---
     try:
         today_str = datetime.now().strftime("%Y-%m-%d")
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
-        # 1. On récupère la ligne unique existante dans la table Configuration
+        # 1. Lecture
         res = supabase.table("Configuration").select("*").execute()
+        print("DEBUG - Données lues dans Supabase :", res.data)
         
         if res.data and len(res.data) > 0:
             ligne_config = res.data[0]
-            target_id = ligne_config.get("id") # Récupère l'ID réel (qu'il soit 1, UUID ou autre)
+            target_id = ligne_config.get("id")
             
             saved_date = ligne_config.get("last_reset_date")
             current_logs = ligne_config.get("api_request_logs", []) or []
@@ -43,26 +44,29 @@ def run_calendar():
             if saved_date != today_str:
                 current_count = 0
             else:
-                current_count = ligne_config.get("api_request_count", 0) or 0
+                current_count = int(ligne_config.get("api_request_count", 0) or 0)
             
             new_count = current_count + 1
-            current_logs.insert(0, f"[{timestamp}] MAJ Calendrier (Automatique)") # (Mettre "MAJ Live" pour l'autre script)
+            current_logs.insert(0, f"[{timestamp}] MAJ Calendrier (Automatique)")
             if len(current_logs) > 20:
                 current_logs = current_logs[:20]
                 
-            # 2. On met à jour UNIQUEMENT les colonnes du compteur (le reste de la ligne est préservé)
-            supabase.table("Configuration").update({
+            print(f"DEBUG - Valeurs calculées -> New count: {new_count}, Logs: {current_logs}")
+
+            # 2. Écriture / Update
+            response_update = supabase.table("Configuration").update({
                 "api_request_count": new_count,
                 "last_reset_date": today_str,
                 "api_request_logs": current_logs
             }).eq("id", target_id).execute()
             
-            print(f"Suivi API mis à jour avec succès : {new_count} requêtes aujourd'hui.")
+            print("DEBUG - Réponse de Supabase après update :", response_update)
+            print(f"Succès ! Requêtes aujourd'hui : {new_count}")
         else:
-            print("Erreur : La table Configuration est vide.")
+            print("ERREUR : Aucune ligne trouvée dans la table Configuration.")
             
     except Exception as e:
-        print(f"Erreur lors de la mise à jour automatique du compteur : {e}")
+        print("ERREUR CRITIQUE DÉTECTÉE DANS LE COMPTEUR :", e)
 
     # Vérification du code HTTP
     if response.status_code == 204:
