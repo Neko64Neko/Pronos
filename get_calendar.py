@@ -63,42 +63,6 @@ def run_calendar():
         print(f"Suivi API mis à jour : {new_count} requêtes aujourd'hui.")
     except Exception as e:
         print(f"Erreur lors de la mise à jour automatique du compteur : {e}")
-    
-    # --- COMPTAGE IMMÉDIAT DE LA REQUÊTE API ---
-    try:
-        today_str = datetime.now().strftime("%Y-%m-%d")
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        
-        res = supabase.table("Configuration").select("*").eq("id", "default_config").execute()
-        current_count = 0
-        current_logs = []
-        
-        if res.data:
-            config_api = res.data[0]
-            saved_date = config_api.get("last_reset_date")
-            current_logs = config_api.get("api_request_logs", []) or []
-            
-            if saved_date != today_str:
-                current_count = 0
-            else:
-                current_count = config_api.get("api_request_count", 0)
-        
-        new_count = current_count + 1
-        current_logs.insert(0, f"[{timestamp}] MAJ Calendrier (Automatique)")
-        if len(current_logs) > 20:
-            current_logs = current_logs[:20]
-            
-        supabase.table("Configuration").upsert({
-            "id": "default_config",
-            "api_request_count": new_count,
-            "last_reset_date": today_str,
-            "api_request_logs": current_logs
-        }, on_conflict="id").execute()
-        
-        print(f"Suivi API mis à jour : {new_count} requêtes aujourd'hui.")
-    except Exception as e:
-        print(f"Erreur lors de la mise à jour automatique du compteur : {e}")
-    # -------------------------------------------
 
     # Vérification du code HTTP
     if response.status_code == 204:
