@@ -889,7 +889,7 @@ if st.session_state.onglet_actif == "🏉":
                             box-shadow: 0 1px 2px rgba(0,0,0,0.02);
                         }
                         .match-title {
-                            font-size: 1.15em;
+                            font-size: 1.35em;
                             font-weight: bold;
                             text-align: center;
                             color: #2563eb;
