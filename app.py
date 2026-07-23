@@ -874,7 +874,7 @@ if st.session_state.onglet_actif == "🏉":
                 st.markdown('<div style="height: 1px; background-color: #cbd5e1; margin: 25px auto 15px auto; width: calc(100% - 40px);"></div>', unsafe_allow_html=True)
                 st.subheader("🏉 Liste des Matchs")
 
-                # Injection du CSS global pour les cartes, les titres, la couleur des libellés et le curseur en forme de boîte
+                # Injection du CSS global pour transformer la ligne en une bande 2D épaisse
                 st.markdown("""
                     <style>
                         .match-card {
@@ -892,27 +892,32 @@ if st.session_state.onglet_actif == "🏉":
                             color: #2563eb;
                             margin-bottom: 12px;
                         }
-                        /* Le curseur reste dans la largeur de la carte (sans dépassement) */
+                        /* Le conteneur du curseur reste dans la largeur de la carte */
                         div[data-testid="stSlider"], div[data-testid="stSelectSlider"] {
                             width: 100% !important;
                             margin-left: 0 !important;
                             margin-right: 0 !important;
                         }
-                        /* Transformation de la ligne en une boîte/piste épaisse */
-                        div[data-baseweb="slider"] > div:nth-child(1) {
-                            height: 18px !important;
-                            border-radius: 10px !important;
-                            background-color: #f1f5f9 !important;
-                            border: 1px solid #cbd5e1 !important;
+                        /* Transformation de la ligne en une véritable bande 2D (piste large) */
+                        div[data-baseweb="slider"] {
+                            padding-top: 8px !important;
+                            padding-bottom: 8px !important;
                         }
-                        /* Personnalisation et agrandissement du curseur (cercle) et centrage */
+                        div[data-baseweb="slider"] > div {
+                            height: 28px !important;
+                            border-radius: 14px !important;
+                            background-color: #f1f5f9 !important;
+                            border: 1.5px solid #cbd5e1 !important;
+                        }
+                        /* Personnalisation et agrandissement du curseur (cercle) parfaitement centré dans la bande 2D */
                         div[data-baseweb="slider"] div[role="slider"] {
-                            width: 26px !important;
-                            height: 26px !important;
+                            width: 32px !important;
+                            height: 32px !important;
                             background-color: #2563eb !important;
-                            border: 2px solid #ffffff !important;
-                            box-shadow: 0 2px 6px rgba(0,0,0,0.3) !important;
-                            top: -4px !important;
+                            border: 3px solid #ffffff !important;
+                            box-shadow: 0 3px 8px rgba(0,0,0,0.25) !important;
+                            top: 50% !important;
+                            transform: translateY(-50%) !important;
                         }
                         div[data-baseweb="slider"] span {
                             font-size: 13px !important;
