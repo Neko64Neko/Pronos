@@ -1,5 +1,5 @@
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 import requests
 from supabase import create_client
 
@@ -13,15 +13,19 @@ RAPIDAPI_KEY = os.environ.get("RAPIDAPI_KEY")
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 def run_calendar():
-    url = "https://rugbyapi2.p.rapidapi.com/api/rugby/tournament/420/season/98426/matches/next/0"
+    tournament_id = "420"
+    season_id = "98426"
+    
+    # Nouvel endpoint validé
+    url = f"https://rugbyapi2.p.rapidapi.com/api/rugby/tournament/{tournament_id}/season/{season_id}/matches/next/0"
+    
     headers = {
         "x-rapidapi-key": RAPIDAPI_KEY,
         "x-rapidapi-host": "rugbyapi2.p.rapidapi.com"
     }
     
-    
     print("Appel de l'API RapidAPI...")
-    response = requests.get(url, headers=headers, params=params)
+    response = requests.get(url, headers=headers)
     print(f"Réponse API reçue avec le code statut : {response.status_code}")
 
     # --- MISE À JOUR DU COMPTEUR API DANS SUPABASE ---
@@ -67,7 +71,9 @@ def run_calendar():
         return
         
     data = response.json()
-    events = data.get('events', [])
+    
+    # L'API renvoie directement une liste de matchs
+    events = data if isinstance(data, list) else data.get('events', [])
 
     if not events:
         print("Aucun match à venir trouvé dans les données.")
@@ -76,14 +82,20 @@ def run_calendar():
     # Préparation des données pour Supabase
     all_matches = []
     for match in events:
+        # Conversion du timestamp Unix en format ISO pour Supabase
+        start_timestamp = match.get('startTimestamp')
+        date_match_iso = None
+        if start_timestamp:
+            date_match_iso = datetime.fromtimestamp(start_timestamp, tz=timezone.utc).isoformat()
+
         match_data = {
-            "external_id": match['id'],
-            "statut": "scheduled",
+            "external_id": str(match['id']),
+            "statut": match.get('status', {}).get('type', 'scheduled'),
             "equipe_dom": match['homeTeam']['name'],
             "equipe_ext": match['awayTeam']['name'],
-            "date_match": match.get('date'),
-            "score_dom": 0,
-            "score_ext": 0
+            "date_match": date_match_iso,
+            "score_dom": match.get('homeScore', {}).get('current', 0) or 0,
+            "score_ext": match.get('awayScore', {}).get('current', 0) or 0
         }
         all_matches.append(match_data)
     
