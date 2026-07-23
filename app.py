@@ -874,10 +874,10 @@ if st.session_state.onglet_actif == "🏉":
                     st.error(f"Erreur lors du chargement des questions bonus : {e}")
                         
 # 7.2.2 - SECTION MATCHS OUVERTS
-                st.markdown('<div style="height: 1px; background-color: #cbd5e1; margin: 25px 0 15px 0;"></div>', unsafe_allow_html=True)
+                st.markdown('<div style="height: 1px; background-color: #cbd5e1; margin: 25px auto 15px auto; width: calc(100% - 40px);"></div>', unsafe_allow_html=True)
                 st.subheader("🏉 Liste des Matchs")
 
-                # Injection du CSS global pour les cartes, les titres et la personnalisation du curseur (taille du cercle et des points)
+                # Injection du CSS global pour les cartes, les titres, la couleur des libellés et l'élargissement du curseur
                 st.markdown("""
                     <style>
                         .match-card {
@@ -894,6 +894,12 @@ if st.session_state.onglet_actif == "🏉":
                             text-align: center;
                             color: #2563eb;
                             margin-bottom: 12px;
+                        }
+                        /* Élargissement du curseur pour qu'il occupe toute la largeur de la carte */
+                        div[data-testid="stSlider"] {
+                            width: calc(100% + 40px) !important;
+                            margin-left: -20px !important;
+                            margin-right: -20px !important;
                         }
                         /* Personnalisation et agrandissement du curseur (cercle) et des points */
                         div[data-baseweb="slider"] div[role="slider"] {
@@ -986,8 +992,8 @@ if st.session_state.onglet_actif == "🏉":
                                     st.session_state[f"w_{match_id}_{u_id}"] = equipe_choisie
                                     sauvegarder_prono_auto(match_id, eq_dom, eq_ext, u_id)
 
-                                # Label personnalisé plus grand pour le vainqueur
-                                st.markdown('<div style="font-size: 1.1em; font-weight: 600; color: #334155; margin-bottom: 6px;">Sélectionner le Vainqueur :</div>', unsafe_allow_html=True)
+                                # Label personnalisé pour le vainqueur (couleur #64748b)
+                                st.markdown('<div style="font-size: 1.1em; font-weight: 600; color: #64748b; margin-bottom: 6px;">Sélectionner le Vainqueur :</div>', unsafe_allow_html=True)
                                 
                                 st.markdown("""
                                     <style>
@@ -1069,8 +1075,8 @@ if st.session_state.onglet_actif == "🏉":
                                 if key_m not in st.session_state:
                                     st.session_state[key_m] = ecart_existant if ecart_existant in TRANCHES_ECARTS else "..."
 
-                                # Label personnalisé plus grand pour l'écart au-dessus du curseur
-                                st.markdown('<div style="font-size: 1.1em; font-weight: 600; color: #334155; margin-bottom: 2px;">Écart (pts) :</div>', unsafe_allow_html=True)
+                                # Label personnalisé pour l'écart (couleur #64748b)
+                                st.markdown('<div style="font-size: 1.1em; font-weight: 600; color: #64748b; margin-bottom: 2px;">Écart (pts) :</div>', unsafe_allow_html=True)
                                 
                                 st.select_slider(
                                     "Écart (pts)", 
