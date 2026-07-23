@@ -874,7 +874,7 @@ if st.session_state.onglet_actif == "🏉":
                 st.markdown('<div style="height: 1px; background-color: #cbd5e1; margin: 25px auto 15px auto; width: calc(100% - 40px);"></div>', unsafe_allow_html=True)
                 st.subheader("🏉 Liste des Matchs")
 
-                # CSS global pour les cartes et les titres uniquement (sans CSS instable sur le slider)
+                # CSS global pour les cartes, les titres et le séparateur propre
                 st.markdown("""
                     <style>
                         .match-card {
@@ -882,7 +882,7 @@ if st.session_state.onglet_actif == "🏉":
                             border: 0.5px solid #cbd5e1;
                             border-radius: 12px;
                             padding: 20px;
-                            margin-bottom: 25px;
+                            margin-bottom: 20px;
                             box-shadow: 0 1px 2px rgba(0,0,0,0.02);
                         }
                         .match-title {
@@ -891,6 +891,15 @@ if st.session_state.onglet_actif == "🏉":
                             text-align: center;
                             color: #2563eb;
                             margin-bottom: 12px;
+                        }
+                        /* Séparateur élégant à double ligne */
+                        .match-separator {
+                            margin: 30px auto;
+                            width: 50%;
+                        }
+                        .match-separator div {
+                            height: 1px;
+                            background-color: #cbd5e1;
                         }
                     </style>
                 """, unsafe_allow_html=True)
@@ -923,7 +932,8 @@ if st.session_state.onglet_actif == "🏉":
                     if matchs_visibles:
                         matchs_visibles = sorted(matchs_visibles, key=lambda x: x['date_match'] if x.get('date_match') is not None else "9999-12-31")
                         
-                        for m in matchs_visibles:
+                        total_matchs = len(matchs_visibles)
+                        for index, m in enumerate(matchs_visibles):
                             with st.container():
                                 st.markdown(f'<div class="match-card">', unsafe_allow_html=True)
                                 st.markdown(f'<div class="match-title">{m["equipe_dom"]} vs {m["equipe_ext"]}</div>', unsafe_allow_html=True)
@@ -1050,7 +1060,7 @@ if st.session_state.onglet_actif == "🏉":
                                 st.markdown('</div>', unsafe_allow_html=True)
                                 st.markdown("<br>", unsafe_allow_html=True)
                                 
-                                # --- SÉLECTEUR D'ÉCARTS (SELECT SLIDER NATIF FIABLE) ---
+                                # --- SÉLECTEUR D'ÉCARTS (SELECT SLIDER NATIF) ---
                                 key_m = f"m_{m['id']}_{id_joueur_cible}"
                                 options_ecarts = ["..."] + TRANCHES_ECARTS
                                 
@@ -1100,6 +1110,15 @@ if st.session_state.onglet_actif == "🏉":
                                     )
 
                                 st.markdown('</div>', unsafe_allow_html=True)
+
+                                # --- SÉPARATEUR PROPRE ENTRE LES MATCHS (sauf pour le dernier) ---
+                                if index < total_matchs - 1:
+                                    st.markdown("""
+                                        <div class="match-separator">
+                                            <div></div>
+                                            <div style="margin-top: 4px;"></div>
+                                        </div>
+                                    """, unsafe_allow_html=True)
                     else: 
                         st.info("Aucun match disponible à pronostiquer.")
                 except Exception as e: 
