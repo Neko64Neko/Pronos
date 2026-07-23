@@ -170,9 +170,6 @@ def sauvegarder_prono_auto(match_id, equipe_dom, equipe_ext, user_id_cible):
             supabase.table("Pronostics").update(donnees_prono).eq("id", prono_existant[0]["id"]).execute()
         else:
             supabase.table("Pronostics").insert(donnees_prono).execute()
-            
-        # ✨ LA NOUVEAUTÉ : Un petit toast discret en bas à droite de l'écran
-        st.toast("Pronostic enregistré ! 🏉", icon="✅")
 
     except Exception as e:
         st.error(f"Erreur sauvegarde automatique : {e}")
@@ -991,11 +988,9 @@ if st.session_state.onglet_actif == "🏉":
                                 def cb_clic_gagnant(match_id, equipe_choisie, eq_dom, eq_ext, u_id):
                                     st.session_state[f"w_{match_id}_{u_id}"] = equipe_choisie
                                     sauvegarder_prono_auto(match_id, eq_dom, eq_ext, u_id)
-                                    st.toast("Pronostic enregistré !", icon="🏉")
 
                                 def cb_changement_ecart(match_id, eq_dom, eq_ext, u_id):
                                     sauvegarder_prono_auto(match_id, eq_dom, eq_ext, u_id)
-                                    st.toast("Pronostic enregistré !", icon="🏉")
 
                                 # Label personnalisé pour le vainqueur (couleur #64748b)
                                 st.markdown('<div style="font-size: 1.1em; font-weight: 600; color: #64748b; margin-bottom: 6px;">Sélectionner le Vainqueur :</div>', unsafe_allow_html=True)
