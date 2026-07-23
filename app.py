@@ -877,7 +877,7 @@ if st.session_state.onglet_actif == "🏉":
                 st.markdown('<div style="height: 1px; background-color: #cbd5e1; margin: 25px 0 15px 0;"></div>', unsafe_allow_html=True)
                 st.subheader("🏉 Liste des Matchs")
 
-                # Injection du CSS avec un titre d'équipe plus grand et flashy
+                # Injection du CSS global pour les cartes, les titres et la personnalisation du curseur (taille du cercle et des points)
                 st.markdown("""
                     <style>
                         .match-card {
@@ -894,6 +894,18 @@ if st.session_state.onglet_actif == "🏉":
                             text-align: center;
                             color: #2563eb;
                             margin-bottom: 12px;
+                        }
+                        /* Personnalisation et agrandissement du curseur (cercle) et des points */
+                        div[data-baseweb="slider"] div[role="slider"] {
+                            width: 22px !important;
+                            height: 22px !important;
+                            background-color: #2563eb !important;
+                            border: 2px solid #ffffff !important;
+                            box-shadow: 0 2px 6px rgba(0,0,0,0.3) !important;
+                        }
+                        div[data-baseweb="slider"] span {
+                            font-size: 13px !important;
+                            font-weight: 600 !important;
                         }
                     </style>
                 """, unsafe_allow_html=True)
@@ -974,7 +986,8 @@ if st.session_state.onglet_actif == "🏉":
                                     st.session_state[f"w_{match_id}_{u_id}"] = equipe_choisie
                                     sauvegarder_prono_auto(match_id, eq_dom, eq_ext, u_id)
 
-                                st.caption("Sélectionner le Vainqueur :")
+                                # Label personnalisé plus grand pour le vainqueur
+                                st.markdown('<div style="font-size: 1.1em; font-weight: 600; color: #334155; margin-bottom: 6px;">Sélectionner le Vainqueur :</div>', unsafe_allow_html=True)
                                 
                                 st.markdown("""
                                     <style>
@@ -1056,13 +1069,17 @@ if st.session_state.onglet_actif == "🏉":
                                 if key_m not in st.session_state:
                                     st.session_state[key_m] = ecart_existant if ecart_existant in TRANCHES_ECARTS else "..."
 
+                                # Label personnalisé plus grand pour l'écart au-dessus du curseur
+                                st.markdown('<div style="font-size: 1.1em; font-weight: 600; color: #334155; margin-bottom: 2px;">Écart (pts) :</div>', unsafe_allow_html=True)
+                                
                                 st.select_slider(
                                     "Écart (pts)", 
                                     options=options_ecarts,
                                     key=key_m, 
                                     on_change=sauvegarder_prono_auto, 
                                     args=(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible),
-                                    disabled=bouton_bloque
+                                    disabled=bouton_bloque,
+                                    label_visibility="collapsed"
                                 )
                                 
                                 # --- GESTION DU MESSAGE D'ÉTAT DYNAMIQUE ---
