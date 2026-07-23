@@ -874,7 +874,7 @@ if st.session_state.onglet_actif == "🏉":
                 st.markdown('<div style="height: 1px; background-color: #cbd5e1; margin: 25px auto 15px auto; width: calc(100% - 40px);"></div>', unsafe_allow_html=True)
                 st.subheader("🏉 Liste des Matchs")
 
-                # Injection du CSS global ultra-renforcé pour forcer le look "bande 2D 3D" du slider
+                # CSS global pour les cartes et les titres uniquement (sans CSS instable sur le slider)
                 st.markdown("""
                     <style>
                         .match-card {
@@ -891,50 +891,6 @@ if st.session_state.onglet_actif == "🏉":
                             text-align: center;
                             color: #2563eb;
                             margin-bottom: 12px;
-                        }
-                        
-                        /* Forcer le select_slider à occuper toute la largeur de la carte */
-                        div[data-testid="stSelectSlider"] {
-                            width: 100% !important;
-                        }
-                        
-                        /* Transformation de la piste de base en une véritable bande 2D épaisse */
-                        div[data-baseweb="slider"] {
-                            padding-top: 10px !important;
-                            padding-bottom: 10px !important;
-                        }
-                        
-                        /* Le conteneur global de la piste */
-                        div[data-baseweb="slider"] > div {
-                            height: 28px !important;
-                            border-radius: 14px !important;
-                            background-color: #f1f5f9 !important;
-                            border: 1.5px solid #cbd5e1 !important;
-                        }
-                        
-                        /* La partie intérieure remplie de la piste */
-                        div[data-baseweb="slider"] > div > div {
-                            background-color: #93c5fd !important;
-                            border-radius: 14px !important;
-                        }
-                        
-                        /* Le curseur (cercle) parfaitement centré et massif qui glisse par-dessus */
-                        div[data-baseweb="slider"] div[role="slider"] {
-                            width: 34px !important;
-                            height: 34px !important;
-                            background-color: #2563eb !important;
-                            border: 3px solid #ffffff !important;
-                            border-radius: 50% !important;
-                            box-shadow: 0 4px 10px rgba(0,0,0,0.25) !important;
-                            top: 50% !important;
-                            transform: translateY(-50%) !important;
-                        }
-                        
-                        /* Style des textes sous le slider */
-                        div[data-baseweb="slider"] span {
-                            font-size: 12px !important;
-                            font-weight: 600 !important;
-                            color: #64748b !important;
                         }
                     </style>
                 """, unsafe_allow_html=True)
@@ -1018,7 +974,7 @@ if st.session_state.onglet_actif == "🏉":
                                 def cb_changement_ecart(match_id, eq_dom, eq_ext, u_id):
                                     sauvegarder_prono_auto(match_id, eq_dom, eq_ext, u_id)
 
-                                # Label personnalisé pour le vainqueur (couleur #64748b)
+                                # Label personnalisé pour le vainqueur
                                 st.markdown('<div style="font-size: 1.1em; font-weight: 600; color: #64748b; margin-bottom: 6px;">Sélectionner le Vainqueur :</div>', unsafe_allow_html=True)
                                 
                                 st.markdown("""
@@ -1094,14 +1050,14 @@ if st.session_state.onglet_actif == "🏉":
                                 st.markdown('</div>', unsafe_allow_html=True)
                                 st.markdown("<br>", unsafe_allow_html=True)
                                 
-                                # --- SÉLECTEUR D'ÉCARTS EN BANDE 2D AVEC CURSEUR CENTRÉ ---
+                                # --- SÉLECTEUR D'ÉCARTS (SELECT SLIDER NATIF FIABLE) ---
                                 key_m = f"m_{m['id']}_{id_joueur_cible}"
                                 options_ecarts = ["..."] + TRANCHES_ECARTS
                                 
                                 if key_m not in st.session_state:
                                     st.session_state[key_m] = ecart_existant if ecart_existant in TRANCHES_ECARTS else "..."
 
-                                # Label personnalisé pour l'écart (couleur #64748b)
+                                # Label personnalisé pour l'écart
                                 st.markdown('<div style="font-size: 1.1em; font-weight: 600; color: #64748b; margin-bottom: 2px;">Écart (pts) :</div>', unsafe_allow_html=True)
                                 
                                 st.select_slider(
