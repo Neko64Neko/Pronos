@@ -17,7 +17,6 @@ def run_calendar():
         "x-rapidapi-host": "rugbyapi2.p.rapidapi.com"
     }
     
-    # On envoie les paramètres directement ici
     params = {
         "tournament_id": "420",
         "season_id": "98426" # SAISON 2026-2027
@@ -25,41 +24,8 @@ def run_calendar():
     
     response = requests.get(url, headers=headers, params=params)
     
-    # Vérification du code HTTP
-    if response.status_code == 204:
-        print("API connectée avec succès, mais aucun match à venir (204).")
-        return # On arrête le script proprement sans crash
-        
-    # Si on arrive ici, c'est qu'on a du contenu (200 OK)
-    data = response.json()
-    
-    events = data.get('events', [])
-
-    if not events:
-        print("Aucun match à venir trouvé.")
-        return
-
-    # 3. Préparation des données pour Supabase
-    all_matches = []
-    for match in events:
-        match_data = {
-            "external_id": match['id'],
-            "statut": "scheduled",
-            "equipe_dom": match['homeTeam']['name'],
-            "equipe_ext": match['awayTeam']['name'],
-            "date_match": match.get('date'),
-            "score_dom": 0,
-            "score_ext": 0
-        }
-        all_matches.append(match_data)
-    
-    # 4. Upsert en masse des matchs
-    if all_matches:
-        supabase.table("Matchs").upsert(all_matches, on_conflict="external_id").execute()
-        print(f"{len(all_matches)} matchs mis à jour/ajoutés au calendrier.")
-
-    # 5. Mise à jour automatique du compteur et des logs dans Supabase avec default_config
-#    try:
+    # --- COMPTAGE IMMÉDIAT DE LA REQUÊTE API ---
+    try:
         today_str = datetime.now().strftime("%Y-%m-%d")
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
@@ -72,7 +38,6 @@ def run_calendar():
             saved_date = config_api.get("last_reset_date")
             current_logs = config_api.get("api_request_logs", []) or []
             
-            # Si c'est un nouveau jour, on réinitialise le compteur
             if saved_date != today_str:
                 current_count = 0
             else:
@@ -91,9 +56,37 @@ def run_calendar():
         }, on_conflict="id").execute()
         
         print(f"Suivi API mis à jour : {new_count} requêtes aujourd'hui.")
-        
-#    except Exception as e:
-#        print(f"Erreur lors de la mise à jour automatique du compteur : {e}")
+    except Exception as e:
+        print(f"Erreur lors de la mise à jour automatique du compteur : {e}")
+    # -------------------------------------------
 
-if __name__ == "__main__":
-    run_calendar()
+    # Vérification du code HTTP
+    if response.status_code == 204:
+        print("API connectée avec succès, mais aucun match à venir (204).")
+        return
+        
+    data = response.json()
+    events = data.get('events', [])
+
+    if not events:
+        print("Aucun match à venir trouvé.")
+        return
+
+    # Préparation des données pour Supabase
+    all_matches = []
+    for match in events:
+        match_data = {
+            "external_id": match['id'],
+            "statut": "scheduled",
+            "equipe_dom": match['homeTeam']['name'],
+            "equipe_ext": match['awayTeam']['name'],
+            "date_match": match.get('date'),
+            "score_dom": 0,
+            "score_ext": 0
+        }
+        all_matches.append(match_data)
+    
+    # Upsert en masse des matchs
+    if all_matches:
+        supabase.table("Matchs").upsert(all_matches, on_conflict="external_id").execute()
+        print(f"{len(all_matches)} matchs mis à jour/ajoutés au calendrier.")
