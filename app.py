@@ -877,6 +877,27 @@ if st.session_state.onglet_actif == "🏉":
                 st.markdown("""<hr style="border: 1px solid #e2e8f0; margin: 30px 0 20px 0;">""", unsafe_allow_html=True)
                 st.subheader("🏉 Liste des Matchs")
 
+                # Injection du CSS propre pour les cartes de matchs (supprime l'effet bandeau blanc)
+                st.markdown("""
+                    <style>
+                        .match-card {
+                            background-color: #ffffff;
+                            border: 1px solid #e2e8f0;
+                            border-radius: 12px;
+                            padding: 20px;
+                            margin-bottom: 25px;
+                            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+                        }
+                        .match-title {
+                            font-size: 1.1em;
+                            font-weight: bold;
+                            text-align: center;
+                            color: #1e293b;
+                            margin-bottom: 12px;
+                        }
+                    </style>
+                """, unsafe_allow_html=True)
+
                 try:
                     matchs_potentiels = supabase.table("Matchs").select("*").neq("statut", "FT").execute().data
                     matchs_visibles = []
@@ -887,18 +908,15 @@ if st.session_state.onglet_actif == "🏉":
                         and st.session_state.get('mode_admin_pronos', False)
                     )
                     
-                    # Définition du fuseau horaire
                     paris_tz = pytz.timezone("Europe/Paris")
                     
                     if matchs_potentiels:
                         for m in matchs_potentiels:
                             try:
-                                # CORRECTION : Conversion propre de la date Supabase en heure de Paris
                                 date_clean = m['date_match'].replace("Z", "+00:00")
                                 dt_match_utc = datetime.fromisoformat(date_clean)
                                 dt_match_paris = dt_match_utc.astimezone(paris_tz)
                                 
-                                # Comparaison avec maintenant_paris (en rendant les deux dates naïves)
                                 if maintenant_paris.replace(tzinfo=None) < dt_match_paris.replace(tzinfo=None) or droits_admin_totalement_actifs:
                                     matchs_visibles.append(m)
                             except Exception:
@@ -915,7 +933,6 @@ if st.session_state.onglet_actif == "🏉":
                                 
                                 bouton_bloque = False
                                 try:
-                                    # CORRECTION : On réutilise la même logique de conversion ici pour l'affichage du statut
                                     date_clean = m['date_match'].replace("Z", "+00:00")
                                     dt_match_utc = datetime.fromisoformat(date_clean)
                                     dt_match_paris = dt_match_utc.astimezone(paris_tz)
@@ -947,16 +964,12 @@ if st.session_state.onglet_actif == "🏉":
                                     if prono_existant[0].get('ecart_prevu'):
                                         ecart_existant = prono_existant[0]['ecart_prevu']
                                 
-                                st.session_state[f"w_{m['id']}_{id_joueur_cible}"] = choix_actuel
-
-                                # --- GESTION DE L'ÉTAT LOCAL SANS DOUBLE RECHARGEMENT ---
                                 key_w = f"w_{m['id']}_{id_joueur_cible}"
                                 if key_w not in st.session_state:
                                     st.session_state[key_w] = choix_actuel
                                 else:
                                     choix_actuel = st.session_state[key_w]
 
-                                # Fonction déclenchée AVANT le rendu pour appliquer le changement de couleur instantanément
                                 def cb_clic_gagnant(match_id, equipe_choisie, eq_dom, eq_ext, u_id):
                                     st.session_state[f"w_{match_id}_{u_id}"] = equipe_choisie
                                     sauvegarder_prono_auto(match_id, eq_dom, eq_ext, u_id)
@@ -1008,7 +1021,7 @@ if st.session_state.onglet_actif == "🏉":
                                         on_click=cb_clic_gagnant,
                                         args=(m['id'], m['equipe_dom'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
                                     )
-                                        
+                                    
                                 with col_b:
                                     type_b = "primary" if choix_actuel == "Match Nul" else "secondary"
                                     st.button(
@@ -1020,7 +1033,7 @@ if st.session_state.onglet_actif == "🏉":
                                         on_click=cb_clic_gagnant,
                                         args=(m['id'], "Match Nul", m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
                                     )
-                                        
+                                    
                                 with col_c:
                                     type_c = "primary" if choix_actuel == m['equipe_ext'] else "secondary"
                                     st.button(
@@ -1050,8 +1063,20 @@ if st.session_state.onglet_actif == "🏉":
                                     disabled=bouton_bloque
                                 )
                                 
-                                if prono_existant:
-                                    st.success("✅ Pronostic enregistré")
+                                # --- GESTION DU MESSAGE D'ÉTAT DYNAMIQUE ---
+                                val_vainqueur = st.session_state.get(f"w_{m['id']}_{id_joueur_cible}", choix_actuel)
+                                val_ecart = st.session_state.get(f"m_{m['id']}_{id_joueur_cible}", ecart_existant)
+                                
+                                has_vainqueur = bool(val_vainqueur and val_vainqueur != "")
+                                has_ecart = bool(val_ecart and val_ecart != "...")
+                                
+                                if has_vainqueur and has_ecart:
+                                    st.markdown("<div style='color: #15803d; font-size: 0.9em; font-weight: bold; margin-top: 10px; text-align: center;'>✅ Pronostic complet enregistré</div>", unsafe_allow_html=True)
+                                elif has_vainqueur and not has_ecart:
+                                    st.markdown("<div style='color: #d97706; font-size: 0.9em; font-weight: bold; margin-top: 10px; text-align: center;'>⚠️ Vainqueur enregistré, n'oubliez pas l'écart</div>", unsafe_allow_html=True)
+                                elif not has_vainqueur and has_ecart:
+                                    st.markdown("<div style='color: #d97706; font-size: 0.9em; font-weight: bold; margin-top: 10px; text-align: center;'>⚠️ Écart enregistré, n'oubliez pas le vainqueur</div>", unsafe_allow_html=True)
+
                                 st.markdown('</div>', unsafe_allow_html=True)
                     else: 
                         st.info("Aucun match disponible à pronostiquer.")
