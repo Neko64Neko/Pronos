@@ -78,11 +78,9 @@ def run_calendar():
     if not events:
         print("Aucun match à venir trouvé dans les données.")
         return
-
-    # Préparation des données pour Supabase
+# Préparation des données pour Supabase
     all_matches = []
     for match in events:
-        # Conversion du timestamp Unix en format ISO pour Supabase
         start_timestamp = match.get('startTimestamp')
         date_match_iso = None
         if start_timestamp:
@@ -99,10 +97,10 @@ def run_calendar():
         }
         all_matches.append(match_data)
     
-    # Upsert en masse des matchs
+    # Upsert en masse des matchs avec affichage de l'erreur si elle existe
     if all_matches:
-        supabase.table("Matchs").upsert(all_matches, on_conflict="external_id").execute()
-        print(f"{len(all_matches)} matchs mis à jour/ajoutés au calendrier.")
-
-if __name__ == "__main__":
-    run_calendar()
+        try:
+            response_upsert = supabase.table("Matchs").upsert(all_matches, on_conflict="external_id").execute()
+            print(f"SUCCÈS : {len(all_matches)} matchs envoyés à Supabase.")
+        except Exception as e:
+            print(f"ERREUR CRITIQUE LORS DE L'INSERTION SUPABASE : {e}")
