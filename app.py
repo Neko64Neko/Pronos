@@ -874,10 +874,10 @@ if st.session_state.onglet_actif == "🏉":
                     st.error(f"Erreur lors du chargement des questions bonus : {e}")
                         
 # 7.2.2 - SECTION MATCHS OUVERTS
-                st.markdown("""<hr style="border: none; border-top: 0.5px solid #cbd5e1; margin: 25px 0 15px 0;">""", unsafe_allow_html=True)
+                st.markdown('<div style="height: 1px; background-color: #cbd5e1; margin: 25px 0 15px 0;"></div>', unsafe_allow_html=True)
                 st.subheader("🏉 Liste des Matchs")
 
-                # Injection du CSS avec des bordures plus fines (0.5px) pour un effet moins lourd
+                # Injection du CSS avec un titre d'équipe en couleur flashy/vibrante
                 st.markdown("""
                     <style>
                         .match-card {
@@ -889,10 +889,10 @@ if st.session_state.onglet_actif == "🏉":
                             box-shadow: 0 1px 2px rgba(0,0,0,0.02);
                         }
                         .match-title {
-                            font-size: 1.1em;
+                            font-size: 1.15em;
                             font-weight: bold;
                             text-align: center;
-                            color: #1e293b;
+                            color: #2563eb;
                             margin-bottom: 12px;
                         }
                     </style>
