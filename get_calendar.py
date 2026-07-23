@@ -23,6 +23,46 @@ def run_calendar():
     }
     
     response = requests.get(url, headers=headers, params=params)
+
+    # --- COMPTEUR API ROBUSTE (S'adapte à l'ID réel de la base) ---
+    try:
+        today_str = datetime.now().strftime("%Y-%m-%d")
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
+        # On récupère toute la table pour attraper la ligne existante (comme Streamlit avec data[0])
+        res = supabase.table("Configuration").select("*").execute()
+        
+        current_count = 0
+        current_logs = []
+        target_id = "default_config"  # Valeur de secours si la table est vide
+        
+        if res.data and len(res.data) > 0:
+            ligne_config = res.data[0]
+            target_id = ligne_config.get("id", "default_config") # On récupère le vrai ID de la base
+            saved_date = ligne_config.get("last_reset_date")
+            current_logs = ligne_config.get("api_request_logs", []) or []
+            
+            if saved_date != today_str:
+                current_count = 0
+            else:
+                current_count = ligne_config.get("api_request_count", 0) or 0
+        
+        new_count = current_count + 1
+        current_logs.insert(0, f"[{timestamp}] MAJ Calendrier (Automatique)") # Mettre "MAJ Live" pour le live
+        if len(current_logs) > 20:
+            current_logs = current_logs[:20]
+            
+        # On met à jour en utilisant le bon ID
+        supabase.table("Configuration").upsert({
+            "id": target_id,
+            "api_request_count": new_count,
+            "last_reset_date": today_str,
+            "api_request_logs": current_logs
+        }, on_conflict="id").execute()
+        
+        print(f"Suivi API mis à jour : {new_count} requêtes aujourd'hui.")
+    except Exception as e:
+        print(f"Erreur lors de la mise à jour automatique du compteur : {e}")
     
     # --- COMPTAGE IMMÉDIAT DE LA REQUÊTE API ---
     try:
