@@ -991,6 +991,11 @@ if st.session_state.onglet_actif == "🏉":
                                 def cb_clic_gagnant(match_id, equipe_choisie, eq_dom, eq_ext, u_id):
                                     st.session_state[f"w_{match_id}_{u_id}"] = equipe_choisie
                                     sauvegarder_prono_auto(match_id, eq_dom, eq_ext, u_id)
+                                    st.toast("Pronostic enregistré !", icon="🏉")
+
+                                def cb_changement_ecart(match_id, eq_dom, eq_ext, u_id):
+                                    sauvegarder_prono_auto(match_id, eq_dom, eq_ext, u_id)
+                                    st.toast("Pronostic enregistré !", icon="🏉")
 
                                 # Label personnalisé pour le vainqueur (couleur #64748b)
                                 st.markdown('<div style="font-size: 1.1em; font-weight: 600; color: #64748b; margin-bottom: 6px;">Sélectionner le Vainqueur :</div>', unsafe_allow_html=True)
@@ -1082,7 +1087,7 @@ if st.session_state.onglet_actif == "🏉":
                                     "Écart (pts)", 
                                     options=options_ecarts,
                                     key=key_m, 
-                                    on_change=sauvegarder_prono_auto, 
+                                    on_change=cb_changement_ecart, 
                                     args=(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible),
                                     disabled=bouton_bloque,
                                     label_visibility="collapsed"
