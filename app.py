@@ -678,7 +678,7 @@ else:
                 
                 if joueur['id'] == st.session_state.user_id:
                     style_ligne = "background-color: #cbd5e1; font-weight: bold; border-left: 5px solid #1e3a8a; color: #000000;"
-                    pseudo_affiche = f"{joueur['pseudo']} (Toi)"
+                    pseudo_affiche = f"{joueur['pseudo']} "
                 else:
                     style_ligne = "color: #2d3748;"
                     pseudo_affiche = joueur['pseudo']
@@ -1322,7 +1322,7 @@ elif st.session_state.onglet_actif == "📺":
                             
                             if est_mon_compte:
                                 style_ligne_joueur = "font-weight: bold; background-color: #e0f2fe; border-left: 4px solid #0284c7;"
-                                pseudo_final = f"{j['pseudo']} (Toi)"
+                                pseudo_final = f"{j['pseudo']}"
                             else:
                                 style_ligne_joueur = ""
                                 pseudo_final = j['pseudo']
@@ -1501,9 +1501,9 @@ elif st.session_state.onglet_actif == "📺":
                         # Optionnel et sympa : On montre quand même au joueur connecté sa propre réponse actuelle
                         ma_rep = dict_reponses.get((st.session_state.user_id, q['id']))
                         if ma_rep and ma_rep.strip() != "":
-                            st.markdown(f"👤 **{st.session_state.pseudo} (Toi)** : `{ma_rep}`")
+                            st.markdown(f"👤 **{st.session_state.pseudo} ** : `{ma_rep}`")
                         else:
-                            st.markdown(f"👤 **{st.session_state.pseudo} (Toi)** : <span style='color: #94a3b8; font-style: italic;'>❌ Tu n'as pas encore répondu</span>", unsafe_allow_html=True)
+                            st.markdown(f"👤 **{st.session_state.pseudo} ** : <span style='color: #94a3b8; font-style: italic;'>❌ Tu n'as pas encore répondu</span>", unsafe_allow_html=True)
                             
                     st.markdown("---")
             else:
