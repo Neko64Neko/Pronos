@@ -1135,21 +1135,23 @@ elif st.session_state.onglet_actif == "📅":
     try:
         config_supabase = supabase.table("Configuration").select("*").execute().data
         config_data = config_supabase[0] if config_supabase else {}
-        pts_gagnant_cfg = config_data.get('pts_gagnant', 2)
-        pts_ecart_cfg = config_data.get('pts_ecart', 3)
-        seuil_ose_cfg = config_data.get('seuil_poursentage_ose', 0.2)
-        mult_ose_cfg = config_data.get('multiplicateur_ose', 2)
-    except Exception as e:
-        pts_gagnant_cfg = 2
-        pts_ecart_cfg = 3
-        seuil_ose_cfg = 3
-        mult_ose_cfg = 2
+        pts_gagnant_cfg = float(config_data.get('pts_gagnant', 2))
+        pts_ecart_cfg = float(config_data.get('pts_ecart', 3))
+        seuil_ose_cfg = float(config_data.get('seuil_poursentage_ose', 0.2))
+        mult_ose_cfg = float(config_data.get('multiplicateur_ose', 2))
+    except Exception:
+        pts_gagnant_cfg = 2.0
+        pts_ecart_cfg = 3.0
+        seuil_ose_cfg = 0.2
+        mult_ose_cfg = 2.0
     
     with st.spinner("Mise à jour des scores et du classement..."):
         try:
             tous_les_joueurs = supabase.table("Joueurs").select("*").execute().data or []
             tous_matchs_bdd = supabase.table("Matchs").select("*").order("date_match", desc=True).execute().data or []
             tous_les_pronos = supabase.table("Pronostics").select("*").execute().data or []
+            questions_bonus = supabase.table("Questions_Bonus").select("*").execute().data or []
+            reponses_bonus = supabase.table("Réponses_Questions").select("*").execute().data or []
             
             paris_tz = pytz.timezone("Europe/Paris")
             
@@ -1174,72 +1176,98 @@ elif st.session_state.onglet_actif == "📅":
                 val_str = str(val).strip().lower()
                 return val_str in ["draw", "match nul", "nul", "n", "x", "egalite", "égalité"]
 
-            # --- CALCUL DU CLASSEMENT GÉNÉRAL DE TOUS LES JOUEURS ---
+            # --- CALCUL DU CLASSEMENT GÉNÉRAL EXACT (MATCHS + BONUS) ---
             scores_generaux = {j['id']: 0.0 for j in tous_les_joueurs}
 
-            if tous_matchs_bdd and tous_les_pronos and tous_les_joueurs:
-                pronos_par_match = {}
-                for pr in tous_les_pronos:
-                    m_id = pr.get('match_id')
-                    if m_id:
-                        if m_id not in pronos_par_match:
-                            pronos_par_match[m_id] = []
-                        pronos_par_match[m_id].append(pr)
-
-                for m in tous_matchs_bdd:
-                    sc_dom = m.get('score_dom')
-                    sc_ext = m.get('score_ext')
-                    if sc_dom is None or sc_ext is None:
-                        continue
+            if tous_les_joueurs:
+                # 1. Ajout des points bonus s'ils existent
+                dict_points_bonus = {}
+                for q in questions_bonus:
+                    q_id = q.get('id')
+                    pts_q = float(q.get('points_bonus') or q.get('points') or 0)
+                    rep_corr = str(q.get('reponse_correcte') or '').strip().lower()
+                    dict_points_bonus[q_id] = (pts_q, rep_corr)
                     
-                    m_id = m.get('id')
-                    pronos_ce_match = pronos_par_match.get(m_id, [])
+                dict_reponses_bonus = {}
+                for r in reponses_bonus:
+                    u_id = r.get('user_id')
+                    q_id = r.get('question_id')
+                    rep_j = str(r.get('reponse_joueur') or '').strip().lower()
+                    dict_reponses_bonus[(u_id, q_id)] = rep_j
                     
-                    vrai_gagnant_brut = "home" if sc_dom > sc_ext else ("away" if sc_dom < sc_ext else "draw")
-                    vrai_est_nul = est_un_nul(vrai_gagnant_brut) or (sc_dom == sc_ext)
-                    
-                    diff = abs(sc_dom - sc_ext)
-                    if diff <= 6: vraie_tranche = "1-6"
-                    elif diff <= 10: vraie_tranche = "7-10"
-                    elif diff <= 15: vraie_tranche = "11-15"
-                    elif diff <= 20: vraie_tranche = "16-20"
-                    elif diff <= 30: vraie_tranche = "21-30"
-                    elif diff <= 40: vraie_tranche = "31-40"
-                    elif diff <= 50: vraie_tranche = "41-50"
-                    else: vraie_tranche = "51+"
+                for j in tous_les_joueurs:
+                    j_id = j['id']
+                    pts_b_total = 0.0
+                    for q_id, (pts_q, rep_corr) in dict_points_bonus.items():
+                        rep_j = dict_reponses_bonus.get((j_id, q_id), "")
+                        if rep_corr and rep_j == rep_corr:
+                            pts_b_total += pts_q
+                    scores_generaux[j_id] += pts_b_total
 
-                    mises_gagnant = sum(
-                        1 for pr in pronos_ce_match 
-                        if (vrai_est_nul and est_un_nul(pr.get('gagnant_prevu'))) or (not vrai_est_nul and pr.get('gagnant_prevu') == vrai_gagnant_brut)
-                    )
+                # 2. Ajout des points des matchs (FT ou LIVE avec scores)
+                matchs_comptabilises = [m for m in tous_matchs_bdd if m.get('statut') in ["FT", "LIVE"]]
+                if matchs_comptabilises and tous_les_pronos:
+                    pronos_par_match = {}
+                    for pr in tous_les_pronos:
+                        m_id = pr.get('match_id')
+                        if m_id:
+                            if m_id not in pronos_par_match:
+                                pronos_par_match[m_id] = []
+                            pronos_par_match[m_id].append(pr)
 
-                    for pr in pronos_ce_match:
-                        j_id = pr.get('user_id')
-                        if j_id not in scores_generaux:
+                    for m in matchs_comptabilises:
+                        sc_dom = m.get('score_dom')
+                        sc_ext = m.get('score_ext')
+                        if sc_dom is None or sc_ext is None:
                             continue
                         
-                        g_prevu = pr.get('gagnant_prevu')
-                        ec_prevu = pr.get('ecart_prevu')
-                        p_est_nul = est_un_nul(g_prevu)
-                        a_bon_vainqueur = (vrai_est_nul and p_est_nul) or (not vrai_est_nul and g_prevu == vrai_gagnant_brut)
+                        m_id = m.get('id')
+                        pronos_ce_match = pronos_par_match.get(m_id, [])
+                        
+                        vrai_gagnant_brut = "home" if sc_dom > sc_ext else ("away" if sc_dom < sc_ext else "draw")
+                        vrai_est_nul = est_un_nul(vrai_gagnant_brut) or (sc_dom == sc_ext)
+                        
+                        diff = abs(sc_dom - sc_ext)
+                        if diff <= 6: vraie_tranche = "1-6"
+                        elif diff <= 10: vraie_tranche = "7-10"
+                        elif diff <= 15: vraie_tranche = "11-15"
+                        elif diff <= 20: vraie_tranche = "16-20"
+                        elif diff <= 30: vraie_tranche = "21-30"
+                        elif diff <= 40: vraie_tranche = "31-40"
+                        elif diff <= 50: vraie_tranche = "41-50"
+                        else: vraie_tranche = "51+"
 
-                        if a_bon_vainqueur:
-                            a_bon_ecart = True if vrai_est_nul else (ec_prevu == vraie_tranche)
-                            base_match = float(pts_gagnant_cfg)
-                            if a_bon_ecart:
-                                base_match += float(pts_ecart_cfg)
+                        mises_gagnant = sum(
+                            1 for pr in pronos_ce_match 
+                            if (vrai_est_nul and est_un_nul(pr.get('gagnant_prevu'))) or (not vrai_est_nul and pr.get('gagnant_prevu') == vrai_gagnant_brut)
+                        )
+
+                        for pr in pronos_ce_match:
+                            j_id = pr.get('user_id')
+                            if j_id not in scores_generaux:
+                                continue
                             
-                            is_ose = mises_gagnant <= int(float(seuil_ose_cfg))
-                            if is_ose:
-                                scores_generaux[j_id] += float(base_match) * float(mult_ose_cfg)
-                            else:
-                                scores_generaux[j_id] += float(base_match)
+                            g_prevu = pr.get('gagnant_prevu')
+                            ec_prevu = pr.get('ecart_prevu')
+                            p_est_nul = est_un_nul(g_prevu)
+                            a_bon_vainqueur = (vrai_est_nul and p_est_nul) or (not vrai_est_nul and g_prevu == vrai_gagnant_brut)
 
-            # Tri des joueurs par score décroissant (le 1er en haut, le dernier en bas)
+                            if a_bon_vainqueur:
+                                a_bon_ecart = True if vrai_est_nul else (ec_prevu == vraie_tranche)
+                                base_match = float(pts_gagnant_cfg)
+                                if a_bon_ecart:
+                                    base_match += float(pts_ecart_cfg)
+                                
+                                is_ose = mises_gagnant <= int(float(seuil_ose_cfg))
+                                if is_ose:
+                                    scores_generaux[j_id] += float(base_match) * float(mult_ose_cfg)
+                                else:
+                                    scores_generaux[j_id] += float(base_match)
+
+            # Tri strict : score décroissant (-score), puis pseudo croissant (A-Z) en cas d'égalité
             tous_les_joueurs_tries = sorted(
                 tous_les_joueurs, 
-                key=lambda j: (scores_generaux.get(j['id'], 0.0), j['pseudo']), 
-                reverse=True
+                key=lambda j: (-scores_generaux.get(j['id'], 0.0), j['pseudo'])
             )
             
             # --- SOUS-SECTION A : LES MATCHS ---
