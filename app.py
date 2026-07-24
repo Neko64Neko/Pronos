@@ -1155,11 +1155,12 @@ elif st.session_state.onglet_actif == "📅":
 
     # --- RÉCUPÉRATION DYNAMIQUE DE LA CONFIGURATION SUPABASE ---
     try:
-        config_supabase = supabase.table("Configuration").select("*").execute().data[0]
-        pts_gagnant_cfg = config_supabase.get('pts_gagnant', 2)
-        pts_ecart_cfg = config_supabase.get('pts_ecart', 3)
-        seuil_ose_cfg = config_supabase.get('seuil_poursentage_ose', 0.2)
-        mult_ose_cfg = config_supabase.get('multiplicateur_ose', 2)
+        config_supabase = supabase.table("Configuration").select("*").execute().data
+        config_data = config_supabase[0] if config_supabase else {}
+        pts_gagnant_cfg = config_data.get('pts_gagnant', 2)
+        pts_ecart_cfg = config_data.get('pts_ecart', 3)
+        seuil_ose_cfg = config_data.get('seuil_poursentage_ose', 0.2)
+        mult_ose_cfg = config_data.get('multiplicateur_ose', 2)
     except Exception as e:
         pts_gagnant_cfg = 2
         pts_ecart_cfg = 3
@@ -1168,9 +1169,9 @@ elif st.session_state.onglet_actif == "📅":
     
     with st.spinner("Mise à jour des scores et du classement..."):
         try:
-            tous_les_joueurs = supabase.table("Joueurs").select("*").execute().data
-            tous_matchs_bdd = supabase.table("Matchs").select("*").order("date_match", desc=True).execute().data
-            tous_les_pronos = supabase.table("Pronostics").select("*").execute().data
+            tous_les_joueurs = supabase.table("Joueurs").select("*").execute().data or []
+            tous_matchs_bdd = supabase.table("Matchs").select("*").order("date_match", desc=True).execute().data or []
+            tous_les_pronos = supabase.table("Pronostics").select("*").execute().data or []
             
             paris_tz = pytz.timezone("Europe/Paris")
             
@@ -1201,10 +1202,11 @@ elif st.session_state.onglet_actif == "📅":
             if tous_matchs_bdd and tous_les_pronos and tous_les_joueurs:
                 pronos_par_match = {}
                 for pr in tous_les_pronos:
-                    m_id = pr['match_id']
-                    if m_id not in pronos_par_match:
-                        pronos_par_match[m_id] = []
-                    pronos_par_match[m_id].append(pr)
+                    m_id = pr.get('match_id')
+                    if m_id:
+                        if m_id not in pronos_par_match:
+                            pronos_par_match[m_id] = []
+                        pronos_par_match[m_id].append(pr)
 
                 for m in tous_matchs_bdd:
                     sc_dom = m.get('score_dom')
@@ -1212,7 +1214,7 @@ elif st.session_state.onglet_actif == "📅":
                     if sc_dom is None or sc_ext is None:
                         continue
                     
-                    m_id = m['id']
+                    m_id = m.get('id')
                     pronos_ce_match = pronos_par_match.get(m_id, [])
                     
                     vrai_gagnant_brut = "home" if sc_dom > sc_ext else ("away" if sc_dom < sc_ext else "draw")
@@ -1267,12 +1269,12 @@ elif st.session_state.onglet_actif == "📅":
             if matchs and tous_les_joueurs_tries:
                 for m in matchs:
                     label_statut = ""
-                    if m['statut'] == 'LIVE':
+                    if m.get('statut') == 'LIVE':
                         label_statut = " 🔴 EN DIRECT (Virtuel)"
-                    elif m['statut'] == 'NS' and (m.get('score_dom') is None or m.get('score_ext') is None):
+                    elif m.get('statut') == 'NS' and (m.get('score_dom') is None or m.get('score_ext') is None):
                         label_statut = " ⏳ EN COURS (En attente du score)"
                     
-                    date_affichee = formater_date_paris(m['date_match'])
+                    date_affichee = formater_date_paris(m.get('date_match'))
                     
                     sc_dom = m.get('score_dom') if m.get('score_dom') is not None else 0
                     sc_ext = m.get('score_ext') if m.get('score_ext') is not None else 0
@@ -1289,8 +1291,8 @@ elif st.session_state.onglet_actif == "📅":
                     elif diff <= 50: vraie_tranche = "41-50"
                     else: vraie_tranche = "51+"
                         
-                    with st.expander(f"🏉 {m['equipe_dom']} {sc_dom} - {sc_ext} {m['equipe_ext']} | 📅{date_affichee}{label_statut}"):
-                        pronos = supabase.table("Pronostics").select("*").eq("match_id", m['id']).execute().data
+                    with st.expander(f"🏉 {m.get('equipe_dom')} {sc_dom} - {sc_ext} {m.get('equipe_ext')} | 📅{date_affichee}{label_statut}"):
+                        pronos = supabase.table("Pronostics").select("*").eq("match_id", m.get('id')).execute().data or []
                         dict_pronos = {p['user_id']: p for p in pronos} if pronos else {}
                         
                         vrai_est_nul = est_un_nul(vrai_gagnant_brut)
@@ -1310,9 +1312,8 @@ elif st.session_state.onglet_actif == "📅":
                         
                         for j in tous_les_joueurs_tries:
                             p = dict_pronos.get(j['id'])
-                            est_mon_compte = (j['id'] == st.session_state.user_id)
+                            est_mon_compte = (j['id'] == st.session_state.get('user_id'))
                             
-                            # Style distinctif pour votre ligne (fond bleu clair + bordure)
                             if est_mon_compte:
                                 style_ligne_joueur = "font-weight: bold; background-color: #e0f2fe; border-left: 4px solid #0284c7;"
                                 pseudo_final = f"{j['pseudo']} (Toi)"
@@ -1329,9 +1330,9 @@ elif st.session_state.onglet_actif == "📅":
                                     ligne_ecart_html = ""
                                 else:
                                     if g_prevu == "home":
-                                        nom_gagnant_prevu = m['equipe_dom']
+                                        nom_gagnant_prevu = m.get('equipe_dom')
                                     elif g_prevu == "away":
-                                        nom_gagnant_prevu = m['equipe_ext']
+                                        nom_gagnant_prevu = m.get('equipe_ext')
                                     else:
                                         nom_gagnant_prevu = str(g_prevu)
                                     
@@ -1347,7 +1348,7 @@ elif st.session_state.onglet_actif == "📅":
                                 color_txt = "#991b1b"
                                 texte_badge_resultat = "❌ Faux"
                                 
-                                if m['statut'] == 'NS' and m.get('score_dom') is None:
+                                if m.get('statut') == 'NS' and m.get('score_dom') is None:
                                     en_attente = True
                                     color_bg = "#ffedd5" 
                                     color_txt = "#9a3412"
