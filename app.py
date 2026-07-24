@@ -1255,11 +1255,11 @@ elif st.session_state.onglet_actif == "📅":
                                             base_match += pts_ecart_cfg
                                             color_bg = "#d1fae5"  # Vert clair (Bon écart)
                                             color_txt = "#065f46"
-                                            texte_badge_resultat = "🎯 Bon écart"
+                                            texte_badge_resultat = "⭐ Bon écart"
                                         else:
                                             color_bg = "#dbeafe"  # Bleu clair (Bon vainqueur)
                                             color_txt = "#1e40af"
-                                            texte_badge_resultat = "✅ Vainqueur ok"
+                                            texte_badge_resultat = "✅ Bon vainqueur"
                                         
                                         is_ose = (g_prevu == "home" and mises_home <= int(float(seuil_ose_cfg))) or \
                                                  (g_prevu == "away" and mises_away <= int(float(seuil_ose_cfg)))
