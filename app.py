@@ -1315,7 +1315,7 @@ elif st.session_state.onglet_actif == "📅":
                                 g_prevu = p.get('gagnant_prevu')
                                 ec_prevu = p.get('ecart_prevu')
                                 
-                                # Gestion de l'affichage du vainqueur et de l'écart à la ligne (absent si match nul)
+                                # Gestion de l'affichage épuré du vainqueur et de l'écart à la ligne
                                 if est_un_nul(g_prevu):
                                     nom_gagnant_prevu = "Match Nul"
                                     ligne_ecart_html = ""
@@ -1328,7 +1328,7 @@ elif st.session_state.onglet_actif == "📅":
                                         nom_gagnant_prevu = str(g_prevu)
                                     
                                     if ec_prevu is not None and str(ec_prevu).strip() != "":
-                                        ligne_ecart_html = f"<br><span style='font-size:11px; color:#555555;'>Écart : {ec_prevu} pts</span>"
+                                        ligne_ecart_html = f"<br><span style='font-size:11px; color:#555555;'>{ec_prevu}</span>"
                                     else:
                                         ligne_ecart_html = ""
                                 
