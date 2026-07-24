@@ -366,7 +366,7 @@ else:
         labels_menu = {
             "📊": "📊 Général",
             "🏉": "🏉 Pronos",
-            "📅": "📅 Scores",
+            "📺": "📺 Résultats",
             "⚙️": "⚙️ Admin"
         }
     else:
@@ -374,7 +374,7 @@ else:
         labels_menu = {
             "📊": "📊 Général",
             "🏉": "🏉 Pronos",
-            "📅": "📅 Scores"
+            "📺": "📺 Résultats"
         }
 
     st.markdown("""
@@ -1128,8 +1128,8 @@ if st.session_state.onglet_actif == "🏉":
 # =====================================================================
 # 8 - CONTENU DE L'ONGLET 3 : RÉSULTATS & DIRECT (AVEC MATCHS LIVE)
 # =====================================================================
-elif st.session_state.onglet_actif == "📅":
-    st.title("📅 Résultats & Matchs en Direct")
+elif st.session_state.onglet_actif == "📺":
+    st.title("📺 Résultats & Matchs en Direct")
 
     # --- RÉCUPÉRATION DYNAMIQUE DE LA CONFIGURATION SUPABASE ---
     try:
