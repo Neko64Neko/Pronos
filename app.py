@@ -435,39 +435,34 @@ else:
         st.error(f"Erreur de chargement : {e}")
 
 # =====================================================================
-    # 6 - CONTENU DE L'ONGLET 1 : CLASSEMENT GÉNÉRAL (LOGIQUE ET CLASSEMENT LIVE)
-    # =====================================================================
+# 6 - CONTENU DE L'ONGLET 1 : CLASSEMENT GÉNÉRAL (LOGIQUE ET CLASSEMENT LIVE)
+# =====================================================================
     if st.session_state.onglet_actif == "📊":
         st.markdown(f"### 🏉 Bienvenue sur ton tableau de bord, **{st.session_state.pseudo}** !")
-# --- RÉCUPÉRATION DYNAMIQUE DE LA CONFIGURATION SUPABASE ---
+        
+        # --- RÉCUPÉRATION DYNAMIQUE DE LA CONFIGURATION SUPABASE ---
         try:
-            # On utilise de préférence les valeurs déjà nettoyées et chargées dans le session_state au point 5.7
             pts_gagnant_cfg = float(st.session_state.get("pts_vainqueur", 1))
             pts_ecart_cfg = float(st.session_state.get("pts_ecart", 2))
-            seuil_ose_cfg = int(st.session_state.get("pct_ose", 3)) # C'est un entier (ex: 1)
+            seuil_ose_cfg = int(st.session_state.get("pct_ose", 3))
             mult_ose_cfg = float(st.session_state.get("mult_ose", 2))
         except Exception as e:
-            # Sécurité si le session_state n'était pas encore initialisé
             pts_gagnant_cfg = 1.0
             pts_ecart_cfg = 2.0
             seuil_ose_cfg = 3
             mult_ose_cfg = 2.0
-        
+         
         try:
-            # 1. Récupération des données brutes
             tous_les_joueurs = supabase.table("Joueurs").select("*").execute().data
             pronostics_tous = supabase.table("Pronostics").select("*").execute().data
-            # CRUCIAL : On prend les matchs terminés (FT) ET en cours (LIVE)
             matchs_comptabilises = supabase.table("Matchs").select("*").in_("statut", ["FT", "LIVE"]).execute().data
             questions_bonus = supabase.table("Questions_Bonus").select("*").execute().data
             reponses_bonus = supabase.table("Réponses_Questions").select("*").execute().data
 
-            # 2. Préparation des dictionnaires de correspondance pour optimiser le calcul
             dict_matchs = {m['id']: m for m in matchs_comptabilises}
             dict_reponses_bonus = {(r['user_id'], r['question_id']): r.get('reponse_joueur', '').strip().lower() for r in reponses_bonus}
             dict_points_bonus = {q['id']: (q.get('points_bonus') or q.get('points') or 0, str(q.get('reponse_correcte') or '').strip().lower()) for q in questions_bonus}
 
-            # Structure temporaire pour recalculer les scores en direct
             scores_calculateurs = {}
             for j in tous_les_joueurs:
                 scores_calculateurs[j['id']] = {
@@ -483,23 +478,20 @@ else:
             for p in pronostics_tous:
                 j_id = p['user_id']
                 m_id = p['match_id']
-                
+                 
                 if j_id not in scores_calculateurs or m_id not in dict_matchs:
                     continue
-                    
+                     
                 match = dict_matchs[m_id]
                 sc_dom = match.get('score_dom')
                 sc_ext = match.get('score_ext')
-                
-                # Sécurité si un match LIVE vient de débuter sans score encore saisi
+                 
                 if sc_dom is None or sc_ext is None:
                     continue
-                    
-                # Détermination du résultat à l'instant T
+                     
                 vrai_gagnant = "home" if sc_dom > sc_ext else ("away" if sc_dom < sc_ext else "draw")
                 vrai_ecart_points = abs(sc_dom - sc_ext)
-                
-                # Détermination de la tranche d'écart réelle
+                 
                 if vrai_ecart_points <= 6: vraie_tranche = "1-6"
                 elif vrai_ecart_points <= 10: vraie_tranche = "7-10"
                 elif vrai_ecart_points <= 15: vraie_tranche = "11-15"
@@ -509,58 +501,44 @@ else:
                 elif vrai_ecart_points <= 50: vraie_tranche = "41-50"
                 else: vraie_tranche = "51+"
 
-        # --- LOGIQUE DES PRONOS OSÉS (Vainqueur = Gardien du bonus) ---
                 pronos_ce_match = [pr for pr in pronostics_tous if pr['match_id'] == m_id]
-                
-                # Fonction ultra-robuste pour détecter un match nul peu importe le format
+                 
                 def est_un_nul(val):
                     if not val:
                         return False
                     val_str = str(val).strip().lower()
                     return val_str in ["draw", "match nul", "nul", "n", "x", "egalite", "égalité"]
         
-                # 1. Détection du match nul (par le texte OU directement par les scores s'ils existent)
                 vrai_est_nul = est_un_nul(vrai_gagnant)
-                if not vrai_est_nul and 'score_dom' in m and 'score_ext' in m:
-                    if m['score_dom'] is not None and m['score_ext'] is not None and m['score_dom'] == m['score_ext']:
+                
+                # CORRECTION ICI : Remplacement de m par match
+                if not vrai_est_nul and 'score_dom' in match and 'score_ext' in match:
+                    if match['score_dom'] is not None and match['score_ext'] is not None and match['score_dom'] == match['score_ext']:
                         vrai_est_nul = True
         
-                # Combien ont trouvé le bon vainqueur (pour un match nul, ce sont ceux qui ont prédit un nul)
                 mises_gagnant = sum(
                     1 for pr in pronos_ce_match 
                     if (vrai_est_nul and est_un_nul(pr.get('gagnant_prevu'))) or (not vrai_est_nul and pr.get('gagnant_prevu') == vrai_gagnant)
                 )
-                
+                 
                 points_ce_match = 0.0
-                
-                # Le joueur a-t-il trouvé le bon vainqueur ?
+                 
                 p_gagnant = p.get('gagnant_prevu')
                 p_est_nul = est_un_nul(p_gagnant)
                 a_bon_vainqueur = (vrai_est_nul and p_est_nul) or (not vrai_est_nul and p_gagnant == vrai_gagnant)
         
-                # 1. Le joueur doit avoir le bon vainqueur
                 if a_bon_vainqueur:
-                    
-                    # Pour un match nul, on valide D'OFFICE le bon écart (points complets vainqueur + écart)
                     a_bon_ecart = True if vrai_est_nul else (p.get('ecart_prevu') == vraie_tranche)
         
-                    # CAS A : Le vainqueur est OSÉ (Nombre de personnes <= seuil)
                     if mises_gagnant <= int(float(seuil_ose_cfg)):
-                        
-                        # Multiplicateur sur le vainqueur
                         points_ce_match += float(pts_gagnant_cfg) * float(mult_ose_cfg)
-                        
-                        # Multiplicateur sur l'écart (appliqué d'office si c'est un nul)
                         if a_bon_ecart:
                             points_ce_match += float(pts_ecart_cfg) * float(mult_ose_cfg)
-                            
-                    # CAS B : Le vainqueur est un FAVORI
                     else:
                         points_ce_match += float(pts_gagnant_cfg)
                         if a_bon_ecart:
                             points_ce_match += float(pts_ecart_cfg)
         
-                    # Ajout des points du match
                     scores_calculateurs[j_id]["score_live"] += points_ce_match
 
         
