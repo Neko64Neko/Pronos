@@ -874,9 +874,16 @@ if st.session_state.onglet_actif == "🏉":
                 st.markdown('<div style="height: 1px; background-color: #cbd5e1; margin: 25px auto 15px auto; width: calc(100% - 40px);"></div>', unsafe_allow_html=True)
                 st.subheader("🏉 Liste des Matchs")
 
-                # CSS global pour les titres et le séparateur propre uniquement
+                # CSS global pour épaissir le cadre, styliser les titres et le séparateur
                 st.markdown("""
                     <style>
+                        /* Épaississement du cadre natif et ajout d'espace en bas pour englober le message */
+                        [data-testid="stVerticalBlockBorderWrapper"] {
+                            border: 1.5px solid #cbd5e1 !important;
+                            border-radius: 12px !important;
+                            padding-bottom: 10px !important;
+                            box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+                        }
                         .match-title {
                             font-size: 1.35em;
                             font-weight: bold;
@@ -884,7 +891,7 @@ if st.session_state.onglet_actif == "🏉":
                             color: #2563eb;
                             margin-bottom: 12px;
                         }
-                        /* Séparateur à double ligne propre sans bloc parasite */
+                        /* Séparateur à double ligne propre */
                         hr.match-separator {
                             border: none !important;
                             border-top: 1px solid #cbd5e1 !important;
@@ -927,7 +934,6 @@ if st.session_state.onglet_actif == "🏉":
                         
                         total_matchs = len(matchs_visibles)
                         for index, m in enumerate(matchs_visibles):
-                            # Utilisation du conteneur natif Streamlit : zéro bug HTML et zéro bulle parasite
                             with st.container(border=True):
                                 st.markdown(f'<div class="match-title">{m["equipe_dom"]} vs {m["equipe_ext"]}</div>', unsafe_allow_html=True)
                                 
