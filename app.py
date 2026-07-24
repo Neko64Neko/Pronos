@@ -1161,7 +1161,6 @@ elif st.session_state.onglet_actif == "📅":
         seuil_ose_cfg = config_supabase.get('seuil_poursentage_ose', 0.2)
         mult_ose_cfg = config_supabase.get('multiplicateur_ose', 2)
     except Exception as e:
-        # Valeurs de secours au cas où la table est vide ou inaccessible
         pts_gagnant_cfg = 2
         pts_ecart_cfg = 3
         seuil_ose_cfg = 3
@@ -1173,18 +1172,15 @@ elif st.session_state.onglet_actif == "📅":
             tous_matchs_bdd = supabase.table("Matchs").select("*").order("date_match", desc=True).execute().data
             matchs = []
             
-            # Définition du fuseau horaire pour la comparaison
             paris_tz = pytz.timezone("Europe/Paris")
             
             if tous_matchs_bdd:
                 for m in tous_matchs_bdd:
                     try:
-                        # Conversion propre pour comparaison
                         date_clean = m['date_match'].replace("Z", "+00:00")
                         dt_match_utc = datetime.fromisoformat(date_clean)
                         dt_match_paris = dt_match_utc.astimezone(paris_tz)
                         
-                        # Comparaison avec maintenant_paris (qui doit être généré avec tzinfo)
                         if m['statut'] in ["FT", "LIVE"] or maintenant_paris.replace(tzinfo=None) >= dt_match_paris.replace(tzinfo=None):
                             matchs.append(m)
                     except Exception:
@@ -1201,7 +1197,6 @@ elif st.session_state.onglet_actif == "📅":
                     elif m['statut'] == 'NS' and (m.get('score_dom') is None or m.get('score_ext') is None):
                         label_statut = " ⏳ EN COURS (En attente du score)"
                     
-                    # Utilisation de la fonction formatrice pour l'affichage de la date
                     date_affichee = formater_date_paris(m['date_match'])
                     
                     sc_dom = m.get('score_dom') if m.get('score_dom') is not None else 0
@@ -1220,65 +1215,88 @@ elif st.session_state.onglet_actif == "📅":
                     else: vraie_tranche = "51+"
                         
                     with st.expander(f"🏉 {m['equipe_dom']} {sc_dom} - {sc_ext} {m['equipe_ext']} | 📅{date_affichee}{label_statut}"):
-                        # Récupération de tous les pronostics existants pour ce match précis
                         pronos = supabase.table("Pronostics").select("*").eq("match_id", m['id']).execute().data
-                        
-                        # Création d'un dictionnaire indexé par user_id pour retrouver instantanément un prono
                         dict_pronos = {p['user_id']: p for p in pronos} if pronos else {}
                         
-                        total_pronos_match = len(pronos) if pronos else 0
-                        mises_home = sum(1 for p in pronos if p['gagnant_prevu'] == "home") if pronos else 0
-                        mises_away = sum(1 for p in pronos if p['gagnant_prevu'] == "away") if pronos else 0
+                        # --- FONCTION DE NORMALISATION POUR LES NULS ---
+                        def est_un_nul(val):
+                            if not val:
+                                return False
+                            val_str = str(val).strip().lower()
+                            return val_str in ["draw", "match nul", "nul", "n", "x", "egalite", "égalité"]
+
+                        vrai_est_nul = est_un_nul(vrai_gagnant_brut)
+                        if not vrai_est_nul and sc_dom == sc_ext:
+                            vrai_est_nul = True
+
+                        pronos_ce_match = pronos if pronos else []
+                        
+                        # Combien ont trouvé le bon vainqueur globalement pour ce match
+                        mises_gagnant = sum(
+                            1 for pr in pronos_ce_match 
+                            if (vrai_est_nul and est_un_nul(pr.get('gagnant_prevu'))) or (not vrai_est_nul and pr.get('gagnant_prevu') == vrai_gagnant_brut)
+                        )
                         
                         st.markdown("**Pronostics des joueurs :**")
                         
-                        # Initialisation des lignes du tableau HTML
                         lignes_table_html = ""
                         
-                        # Boucle sur TOUS les joueurs pour construire les lignes du tableau
                         for j in tous_les_joueurs:
                             p = dict_pronos.get(j['id'])
                             
                             if p:
-                                g_prevu = p['gagnant_prevu']
-                                ec_prevu = p['ecart_prevu']
-                                nom_gagnant_prevu = m['equipe_dom'] if g_prevu == "home" else (m['equipe_ext'] if g_prevu == "away" else "Match Nul")
+                                g_prevu = p.get('gagnant_prevu')
+                                ec_prevu = p.get('ecart_prevu')
                                 
-                                pts = 0
+                                # Nom lisible du pronostic
+                                if est_un_nul(g_prevu):
+                                    nom_gagnant_prevu = "Match Nul"
+                                elif g_prevu == "home":
+                                    nom_gagnant_prevu = m['equipe_dom']
+                                elif g_prevu == "away":
+                                    nom_gagnant_prevu = m['equipe_ext']
+                                else:
+                                    nom_gagnant_prevu = str(g_prevu)
+                                
+                                pts = 0.0
                                 badge_ose = ""
                                 en_attente = False
-                                color_bg = "#fee2e2"    # Rouge clair par défaut (Erreur)
+                                color_bg = "#fee2e2"  
                                 color_txt = "#991b1b"
                                 texte_badge_resultat = "❌ Faux"
                                 
                                 if m['statut'] == 'NS' and m.get('score_dom') is None:
                                     en_attente = True
-                                    color_bg = "#ffedd5" # Orange clair (En attente)
+                                    color_bg = "#ffedd5" 
                                     color_txt = "#9a3412"
                                     texte_badge_resultat = "⏳ En attente"
                                 else:
-                                    if g_prevu == vrai_gagnant_brut:
-                                        base_match = pts_gagnant_cfg
-                                        is_ecart_exact = (ec_prevu == vraie_tranche and g_prevu != "draw")
+                                    p_est_nul = est_un_nul(g_prevu)
+                                    a_bon_vainqueur = (vrai_est_nul and p_est_nul) or (not vrai_est_nul and g_prevu == vrai_gagnant_brut)
+                                    
+                                    if a_bon_vainqueur:
+                                        # Match nul valide d'office l'écart, sinon on vérifie la tranche
+                                        a_bon_ecart = True if vrai_est_nul else (ec_prevu == vraie_tranche)
                                         
-                                        if is_ecart_exact:
-                                            base_match += pts_ecart_cfg
-                                            color_bg = "#d1fae5"  # Vert clair (Bon écart)
-                                            color_txt = "#065f46"
+                                        base_match = float(pts_gagnant_cfg)
+                                        if a_bon_ecart:
+                                            base_match += float(pts_ecart_cfg)
                                             texte_badge_resultat = "⭐ Bon écart"
+                                            color_bg = "#d1fae5"  
+                                            color_txt = "#065f46"
                                         else:
-                                            color_bg = "#dbeafe"  # Bleu clair (Bon vainqueur)
-                                            color_txt = "#1e40af"
                                             texte_badge_resultat = "✅ Bon vainqueur"
+                                            color_bg = "#dbeafe"  
+                                            color_txt = "#1e40af"
                                         
-                                        is_ose = (g_prevu == "home" and mises_home <= int(float(seuil_ose_cfg))) or \
-                                                 (g_prevu == "away" and mises_away <= int(float(seuil_ose_cfg)))
+                                        # Vérification si le pronostic est OSÉ
+                                        is_ose = mises_gagnant <= int(float(seuil_ose_cfg))
                                         
                                         if is_ose:
-                                            pts = float(base_match * mult_ose_cfg)
+                                            pts = float(base_match) * float(mult_ose_cfg)
                                             badge_ose = " 🔥 x2"
-                                            color_bg = "#fde047"  # Doré éclatant
-                                            color_txt = "#713f12"  # Or foncé / Marron pour un super contraste
+                                            color_bg = "#fde047"  
+                                            color_txt = "#713f12"  
                                             texte_badge_resultat += " [OSÉ]"
                                         else:
                                             pts = float(base_match)
@@ -1291,11 +1309,9 @@ elif st.session_state.onglet_actif == "📅":
                                     pts_affiche = int(pts) if isinstance(pts, float) and pts.is_integer() else pts
                                     texte_points = f"+{pts_affiche} pts"
                                 
-                                # Style pour mettre en valeur le joueur connecté
                                 style_ligne_joueur = "font-weight: bold; background-color: #f1f5f9;" if j['id'] == st.session_state.user_id else ""
                                 pseudo_final = f"{j['pseudo']} (Toi)" if j['id'] == st.session_state.user_id else j['pseudo']
 
-                                # Ajout de la ligne au tableau HTML avec police noire (#000000)
                                 lignes_table_html += f"""
                                 <tr style="{style_ligne_joueur} border-bottom: 1px solid #e2e8f0; color: #000000;">
                                     <td style="padding: 10px; font-size: 13px; color: #000000;">{pseudo_final}</td>
@@ -1309,7 +1325,6 @@ elif st.session_state.onglet_actif == "📅":
                                 </tr>
                                 """
                             else:
-                                # Le joueur n'a aucun prono
                                 style_ligne_joueur = "font-weight: bold; background-color: #f1f5f9;" if j['id'] == st.session_state.user_id else ""
                                 pseudo_final = f"{j['pseudo']} (Toi)" if j['id'] == st.session_state.user_id else j['pseudo']
                                 
@@ -1322,7 +1337,6 @@ elif st.session_state.onglet_actif == "📅":
                                 </tr>
                                 """
 
-                        # Rendu final du tableau HTML avec police noire globale (`color: #000000;`)
                         st.markdown(f"""
                         <div style="overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 8px; background-color: #ffffff; margin-top: 5px;">
                             <table style="width: 100%; border-collapse: collapse; font-family: sans-serif; text-align: left; color: #000000;">
