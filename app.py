@@ -512,11 +512,11 @@ else:
 # --- LOGIQUE DES PRONOS OSÉS (Vainqueur = Gardien du bonus) ---
                 pronos_ce_match = [pr for pr in pronostics_tous if pr['match_id'] == m_id]
                 
-                # Fonction utilitaire pour normaliser et détecter un match nul peu importe son format en base
+                # Fonction utilitaire pour normaliser et détecter un match nul peu importe son format
                 def est_un_nul(val):
                     if not val:
                         return False
-                    return str(val).strip().lower() in ["draw", "match nul", "nul"]
+                    return str(val).strip().lower() in ["draw", "match nul", "nul", "n"]
         
                 vrai_est_nul = est_un_nul(vrai_gagnant)
         
@@ -535,25 +535,29 @@ else:
                 # 1. Le joueur doit avoir le bon vainqueur
                 if a_bon_vainqueur:
                     
+                    # Pour un match nul, on considère qu'il a le bon écart automatiquement (ou qu'il n'y a pas d'écart à chercher)
+                    a_bon_ecart = vrai_est_nul or (p.get('ecart_prevu') == vraie_tranche)
+        
                     # CAS A : Le vainqueur est OSÉ (Nombre de personnes <= seuil)
                     if mises_gagnant <= int(float(seuil_ose_cfg)):
                         
                         # Multiplicateur sur le vainqueur
                         points_ce_match += float(pts_gagnant_cfg) * float(mult_ose_cfg)
                         
-                        # Si en plus il a le bon écart (uniquement si ce n'est pas un match nul)
-                        if p.get('ecart_prevu') == vraie_tranche and not vrai_est_nul:
+                        # Multiplicateur sur l'écart (appliqué si c'est un nul ou si la tranche est correcte)
+                        if a_bon_ecart:
                             points_ce_match += float(pts_ecart_cfg) * float(mult_ose_cfg)
                             
                     # CAS B : Le vainqueur est un FAVORI
                     else:
                         points_ce_match += float(pts_gagnant_cfg)
-                        if p.get('ecart_prevu') == vraie_tranche and not vrai_est_nul:
+                        if a_bon_ecart:
                             points_ce_match += float(pts_ecart_cfg)
         
                     # Ajout des points du match
                     scores_calculateurs[j_id]["score_live"] += points_ce_match
 
+        
 # 4. Calcul des points Questions Bonus (Barème défini à la création)
             for (j_id, q_id), rep_joueur in dict_reponses_bonus.items():
                 if j_id in scores_calculateurs and q_id in dict_points_bonus:
