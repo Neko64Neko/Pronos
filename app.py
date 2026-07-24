@@ -1166,14 +1166,15 @@ elif st.session_state.onglet_actif == "📅":
         seuil_ose_cfg = 3
         mult_ose_cfg = 2
     
-    with st.spinner("Mise à jour des scores..."):
+    with st.spinner("Mise à jour des scores et du classement..."):
         try:
-            tous_les_joueurs = supabase.table("Joueurs").select("*").order("pseudo").execute().data
+            tous_les_joueurs = supabase.table("Joueurs").select("*").execute().data
             tous_matchs_bdd = supabase.table("Matchs").select("*").order("date_match", desc=True).execute().data
-            matchs = []
+            tous_les_pronos = supabase.table("Pronostics").select("*").execute().data
             
             paris_tz = pytz.timezone("Europe/Paris")
             
+            matchs = []
             if tous_matchs_bdd:
                 for m in tous_matchs_bdd:
                     try:
@@ -1186,10 +1187,85 @@ elif st.session_state.onglet_actif == "📅":
                     except Exception:
                         if m['statut'] in ["FT", "LIVE"]:
                             matchs.append(m)
+
+            # --- FONCTION DE NORMALISATION POUR LES NULS ---
+            def est_un_nul(val):
+                if not val:
+                    return False
+                val_str = str(val).strip().lower()
+                return val_str in ["draw", "match nul", "nul", "n", "x", "egalite", "égalité"]
+
+            # --- CALCUL DU CLASSEMENT GÉNÉRAL DE TOUS LES JOUEURS ---
+            scores_generaux = {j['id']: 0.0 for j in tous_les_joueurs}
+
+            if tous_matchs_bdd and tous_les_pronos and tous_les_joueurs:
+                # Regroupement des pronos par match_id pour les calculs rapides
+                pronos_par_match = {}
+                for pr in tous_les_pronos:
+                    m_id = pr['match_id']
+                    if m_id not in pronos_par_match:
+                        pronos_par_match[m_id] = []
+                    pronos_par_match[m_id].append(pr)
+
+                for m in tous_matchs_bdd:
+                    sc_dom = m.get('score_dom')
+                    sc_ext = m.get('score_ext')
+                    if sc_dom is None or sc_ext is None:
+                        continue
+                    
+                    m_id = m['id']
+                    pronos_ce_match = pronos_par_match.get(m_id, [])
+                    
+                    vrai_gagnant_brut = "home" if sc_dom > sc_ext else ("away" if sc_dom < sc_ext else "draw")
+                    vrai_est_nul = est_un_nul(vrai_gagnant_brut) or (sc_dom == sc_ext)
+                    
+                    diff = abs(sc_dom - sc_ext)
+                    if diff <= 6: vraie_tranche = "1-6"
+                    elif diff <= 10: vraie_tranche = "7-10"
+                    elif diff <= 15: vraie_tranche = "11-15"
+                    elif diff <= 20: vraie_tranche = "16-20"
+                    elif diff <= 30: vraie_tranche = "21-30"
+                    elif diff <= 40: vraie_tranche = "31-40"
+                    elif diff <= 50: vraie_tranche = "41-50"
+                    else: vraie_tranche = "51+"
+
+                    mises_gagnant = sum(
+                        1 for pr in pronos_ce_match 
+                        if (vrai_est_nul and est_un_nul(pr.get('gagnant_prevu'))) or (not vrai_est_nul and pr.get('gagnant_prevu') == vrai_gagnant_brut)
+                    )
+
+                    for pr in pronos_ce_match:
+                        j_id = pr.get('user_id')
+                        if j_id not in scores_generaux:
+                            continue
+                        
+                        g_prevu = pr.get('gagnant_prevu')
+                        ec_prevu = pr.get('ecart_prevu')
+                        p_est_nul = est_un_nul(g_prevu)
+                        a_bon_vainqueur = (vrai_est_nul and p_est_nul) or (not vrai_est_nul and g_prevu == vrai_gagnant_brut)
+
+                        if a_bon_vainqueur:
+                            a_bon_ecart = True if vrai_est_nul else (ec_prevu == vraie_tranche)
+                            base_match = float(pts_gagnant_cfg)
+                            if a_bon_ecart:
+                                base_match += float(pts_ecart_cfg)
+                            
+                            is_ose = mises_gagnant <= int(float(seuil_ose_cfg))
+                            if is_ose:
+                                scores_generaux[j_id] += float(base_match) * float(mult_ose_cfg)
+                            else:
+                                scores_generaux[j_id] += float(base_match)
+
+            # Tri des joueurs par score décroissant (le 1er en haut, le dernier en bas)
+            tous_les_joueurs_tries = sorted(
+                tous_les_joueurs, 
+                key=lambda j: (scores_generaux.get(j['id'], 0.0), j['pseudo']), 
+                reverse=True
+            )
             
             # --- SOUS-SECTION A : LES MATCHS ---
             st.subheader("🏉 Matchs Clos / En cours")
-            if matchs and tous_les_joueurs:
+            if matchs and tous_les_joueurs_tries:
                 for m in matchs:
                     label_statut = ""
                     if m['statut'] == 'LIVE':
@@ -1218,37 +1294,29 @@ elif st.session_state.onglet_actif == "📅":
                         pronos = supabase.table("Pronostics").select("*").eq("match_id", m['id']).execute().data
                         dict_pronos = {p['user_id']: p for p in pronos} if pronos else {}
                         
-                        # --- FONCTION DE NORMALISATION POUR LES NULS ---
-                        def est_un_nul(val):
-                            if not val:
-                                return False
-                            val_str = str(val).strip().lower()
-                            return val_str in ["draw", "match nul", "nul", "n", "x", "egalite", "égalité"]
-
                         vrai_est_nul = est_un_nul(vrai_gagnant_brut)
                         if not vrai_est_nul and sc_dom == sc_ext:
                             vrai_est_nul = True
 
                         pronos_ce_match = pronos if pronos else []
                         
-                        # Combien ont trouvé le bon vainqueur globalement pour ce match
                         mises_gagnant = sum(
                             1 for pr in pronos_ce_match 
                             if (vrai_est_nul and est_un_nul(pr.get('gagnant_prevu'))) or (not vrai_est_nul and pr.get('gagnant_prevu') == vrai_gagnant_brut)
                         )
                         
-                        st.markdown("**Pronostics des joueurs :**")
+                        st.markdown("**Pronostics des joueurs (classés par ordre général) :**")
                         
                         lignes_table_html = ""
                         
-                        for j in tous_les_joueurs:
+                        # Utilisation de la liste triée par classement général
+                        for j in tous_les_joueurs_tries:
                             p = dict_pronos.get(j['id'])
                             
                             if p:
                                 g_prevu = p.get('gagnant_prevu')
                                 ec_prevu = p.get('ecart_prevu')
                                 
-                                # Nom lisible du pronostic
                                 if est_un_nul(g_prevu):
                                     nom_gagnant_prevu = "Match Nul"
                                 elif g_prevu == "home":
@@ -1275,7 +1343,6 @@ elif st.session_state.onglet_actif == "📅":
                                     a_bon_vainqueur = (vrai_est_nul and p_est_nul) or (not vrai_est_nul and g_prevu == vrai_gagnant_brut)
                                     
                                     if a_bon_vainqueur:
-                                        # Match nul valide d'office l'écart, sinon on vérifie la tranche
                                         a_bon_ecart = True if vrai_est_nul else (ec_prevu == vraie_tranche)
                                         
                                         base_match = float(pts_gagnant_cfg)
@@ -1289,7 +1356,6 @@ elif st.session_state.onglet_actif == "📅":
                                             color_bg = "#dbeafe"  
                                             color_txt = "#1e40af"
                                         
-                                        # Vérification si le pronostic est OSÉ
                                         is_ose = mises_gagnant <= int(float(seuil_ose_cfg))
                                         
                                         if is_ose:
