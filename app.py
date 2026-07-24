@@ -509,34 +509,40 @@ else:
                 elif vrai_ecart_points <= 50: vraie_tranche = "41-50"
                 else: vraie_tranche = "51+"
 
-# --- LOGIQUE DES PRONOS OSÉS (Vainqueur = Gardien du bonus) ---
+        # --- LOGIQUE DES PRONOS OSÉS (Vainqueur = Gardien du bonus) ---
                 pronos_ce_match = [pr for pr in pronostics_tous if pr['match_id'] == m_id]
                 
-                # Fonction utilitaire pour normaliser et détecter un match nul peu importe son format
+                # Fonction ultra-robuste pour détecter un match nul peu importe le format
                 def est_un_nul(val):
                     if not val:
                         return False
-                    return str(val).strip().lower() in ["draw", "match nul", "nul", "n"]
+                    val_str = str(val).strip().lower()
+                    return val_str in ["draw", "match nul", "nul", "n", "x", "egalite", "égalité"]
         
+                # 1. Détection du match nul (par le texte OU directement par les scores s'ils existent)
                 vrai_est_nul = est_un_nul(vrai_gagnant)
+                if not vrai_est_nul and 'score_dom' in m and 'score_ext' in m:
+                    if m['score_dom'] is not None and m['score_ext'] is not None and m['score_dom'] == m['score_ext']:
+                        vrai_est_nul = True
         
-                # Combien ont trouvé le bon vainqueur (en gérant les variantes de match nul)
+                # Combien ont trouvé le bon vainqueur (pour un match nul, ce sont ceux qui ont prédit un nul)
                 mises_gagnant = sum(
                     1 for pr in pronos_ce_match 
-                    if (est_un_nul(pr.get('gagnant_prevu')) and vrai_est_nul) or (pr.get('gagnant_prevu') == vrai_gagnant)
+                    if (vrai_est_nul and est_un_nul(pr.get('gagnant_prevu'))) or (not vrai_est_nul and pr.get('gagnant_prevu') == vrai_gagnant)
                 )
                 
                 points_ce_match = 0.0
                 
                 # Le joueur a-t-il trouvé le bon vainqueur ?
-                p_est_nul = est_un_nul(p.get('gagnant_prevu'))
-                a_bon_vainqueur = (p_est_nul and vrai_est_nul) or (p.get('gagnant_prevu') == vrai_gagnant)
+                p_gagnant = p.get('gagnant_prevu')
+                p_est_nul = est_un_nul(p_gagnant)
+                a_bon_vainqueur = (vrai_est_nul and p_est_nul) or (not vrai_est_nul and p_gagnant == vrai_gagnant)
         
                 # 1. Le joueur doit avoir le bon vainqueur
                 if a_bon_vainqueur:
                     
-                    # Pour un match nul, on considère qu'il a le bon écart automatiquement (ou qu'il n'y a pas d'écart à chercher)
-                    a_bon_ecart = vrai_est_nul or (p.get('ecart_prevu') == vraie_tranche)
+                    # Pour un match nul, on valide D'OFFICE le bon écart (points complets vainqueur + écart)
+                    a_bon_ecart = True if vrai_est_nul else (p.get('ecart_prevu') == vraie_tranche)
         
                     # CAS A : Le vainqueur est OSÉ (Nombre de personnes <= seuil)
                     if mises_gagnant <= int(float(seuil_ose_cfg)):
@@ -544,7 +550,7 @@ else:
                         # Multiplicateur sur le vainqueur
                         points_ce_match += float(pts_gagnant_cfg) * float(mult_ose_cfg)
                         
-                        # Multiplicateur sur l'écart (appliqué si c'est un nul ou si la tranche est correcte)
+                        # Multiplicateur sur l'écart (appliqué d'office si c'est un nul)
                         if a_bon_ecart:
                             points_ce_match += float(pts_ecart_cfg) * float(mult_ose_cfg)
                             
