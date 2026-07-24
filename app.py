@@ -646,7 +646,7 @@ else:
                     <span style="display:block; font-size:10px; color:#627d98;">/{len(tous_les_joueurs_ordonnes)}</span>
                 </div>
                 <div style="background-color: #ffffff; border-radius: 10px; padding: 8px; min-width: 90px; max-width: 110px; flex: 1; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;">
-                    <span style="color: #627d98; font-size: 11px; font-weight: bold; display:block; margin-bottom:2px;">🎯 Score LIVE</span>
+                    <span style="color: #627d98; font-size: 11px; font-weight: bold; display:block; margin-bottom:2px;">🎯 Points </span>
                     <span style="color:#1e3a8a; font-size: 26px; font-weight: 900;">{score_affiche}</span>
                     <span style="display:block; font-size:10px; color:#627d98;">pts</span>
                 </div>
@@ -655,7 +655,7 @@ else:
                     <span style="color: #43a047; font-size: 32px; font-weight: 900;">{stats_joueur_connecte["vainqueurs"]}</span>
                 </div>
                 <div style="background-color: #ffffff; border-radius: 10px; padding: 8px; min-width: 100px; max-width: 120px; flex: 1; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;">
-                    <span style="color: #0a3613; font-size: 11px; font-weight: bold; display:block; margin-bottom:2px;">⭐ + Écart</span>
+                    <span style="color: #0a3613; font-size: 11px; font-weight: bold; display:block; margin-bottom:2px;">⭐ Bon Écart</span>
                     <span style="color: #0a3613; font-size: 32px; font-weight: 900;">{stats_joueur_connecte["ecarts"]}</span>
                 </div>
                 <div style="background-color: #ffffff; border-radius: 10px; padding: 8px; min-width: 100px; max-width: 120px; flex: 1; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;">
@@ -667,7 +667,7 @@ else:
         """.replace("\n", ""), unsafe_allow_html=True)
 
         # --- TABLEAU DU CLASSEMENT GÉNÉRAL GÉNÉRÉ EN DIRECT ---
-        st.subheader(" 🔴 Classement Général Virtuel (En Direct)")
+        st.subheader(" 🏆 Classement")
         if tous_les_joueurs_ordonnes:
             lignes_html = ""
             for index, joueur in enumerate(tous_les_joueurs_ordonnes):
@@ -693,7 +693,7 @@ else:
                         <tr style="border-bottom: 2px solid #cbd5e1; color: #64748b; font-size: 14px;">
                             <th style="padding: 10px; text-align: left; color: #64748b;">Position</th>
                             <th style="padding: 10px; text-align: left; color: #64748b;">Joueur</th>
-                            <th style="padding: 10px; text-align: right; color: #64748b;">Score LIVE</th>
+                            <th style="padding: 10px; text-align: right; color: #64748b;">Points</th>
                         </tr>
                     </thead>
                     <tbody>{lignes_html}</tbody>
