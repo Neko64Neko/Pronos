@@ -1310,12 +1310,20 @@ elif st.session_state.onglet_actif == "📅":
                         
                         for j in tous_les_joueurs_tries:
                             p = dict_pronos.get(j['id'])
+                            est_mon_compte = (j['id'] == st.session_state.user_id)
+                            
+                            # Style distinctif pour votre ligne (fond bleu clair + bordure)
+                            if est_mon_compte:
+                                style_ligne_joueur = "font-weight: bold; background-color: #e0f2fe; border-left: 4px solid #0284c7;"
+                                pseudo_final = f"{j['pseudo']} (Toi)"
+                            else:
+                                style_ligne_joueur = ""
+                                pseudo_final = j['pseudo']
                             
                             if p:
                                 g_prevu = p.get('gagnant_prevu')
                                 ec_prevu = p.get('ecart_prevu')
                                 
-                                # Gestion de l'affichage épuré du vainqueur et de l'écart à la ligne
                                 if est_un_nul(g_prevu):
                                     nom_gagnant_prevu = "Match Nul"
                                     ligne_ecart_html = ""
@@ -1382,9 +1390,6 @@ elif st.session_state.onglet_actif == "📅":
                                 else:
                                     pts_affiche = int(pts) if isinstance(pts, float) and pts.is_integer() else pts
                                     texte_points = f"+{pts_affiche} pts"
-                                
-                                style_ligne_joueur = "font-weight: bold; background-color: #f8fafc;" if j['id'] == st.session_state.user_id else ""
-                                pseudo_final = f"{j['pseudo']} (Toi)" if j['id'] == st.session_state.user_id else j['pseudo']
 
                                 lignes_table_html += f"""
                                 <tr style="{style_ligne_joueur} border-bottom: 1px solid #f1f5f9; color: #000000;">
@@ -1403,9 +1408,6 @@ elif st.session_state.onglet_actif == "📅":
                                 </tr>
                                 """
                             else:
-                                style_ligne_joueur = "font-weight: bold; background-color: #f8fafc;" if j['id'] == st.session_state.user_id else ""
-                                pseudo_final = f"{j['pseudo']} (Toi)" if j['id'] == st.session_state.user_id else j['pseudo']
-                                
                                 lignes_table_html += f"""
                                 <tr style="{style_ligne_joueur} border-bottom: 1px solid #f1f5f9; color: #000000;">
                                     <td style="padding: 10px; font-size: 13px; color: #000000;">{pseudo_final}</td>
