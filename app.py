@@ -362,7 +362,7 @@ else:
         )
     
     if st.session_state.is_admin:
-        options_menu = ["📊", "🏉", "📅", "⚙️"]
+        options_menu = ["📊", "🏉", "📺", "⚙️"]
         labels_menu = {
             "📊": "📊 Général",
             "🏉": "🏉 Pronos",
@@ -370,7 +370,7 @@ else:
             "⚙️": "⚙️ Admin"
         }
     else:
-        options_menu = ["📊", "🏉", "📅"]
+        options_menu = ["📊", "🏉", "📺"]
         labels_menu = {
             "📊": "📊 Général",
             "🏉": "🏉 Pronos",
