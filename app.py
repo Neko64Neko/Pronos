@@ -1199,7 +1199,6 @@ elif st.session_state.onglet_actif == "📅":
             scores_generaux = {j['id']: 0.0 for j in tous_les_joueurs}
 
             if tous_matchs_bdd and tous_les_pronos and tous_les_joueurs:
-                # Regroupement des pronos par match_id pour les calculs rapides
                 pronos_par_match = {}
                 for pr in tous_les_pronos:
                     m_id = pr['match_id']
@@ -1309,7 +1308,6 @@ elif st.session_state.onglet_actif == "📅":
                         
                         lignes_table_html = ""
                         
-                        # Utilisation de la liste triée par classement général
                         for j in tous_les_joueurs_tries:
                             p = dict_pronos.get(j['id'])
                             
@@ -1317,14 +1315,22 @@ elif st.session_state.onglet_actif == "📅":
                                 g_prevu = p.get('gagnant_prevu')
                                 ec_prevu = p.get('ecart_prevu')
                                 
+                                # Gestion de l'affichage du vainqueur et de l'écart à la ligne (absent si match nul)
                                 if est_un_nul(g_prevu):
                                     nom_gagnant_prevu = "Match Nul"
-                                elif g_prevu == "home":
-                                    nom_gagnant_prevu = m['equipe_dom']
-                                elif g_prevu == "away":
-                                    nom_gagnant_prevu = m['equipe_ext']
+                                    ligne_ecart_html = ""
                                 else:
-                                    nom_gagnant_prevu = str(g_prevu)
+                                    if g_prevu == "home":
+                                        nom_gagnant_prevu = m['equipe_dom']
+                                    elif g_prevu == "away":
+                                        nom_gagnant_prevu = m['equipe_ext']
+                                    else:
+                                        nom_gagnant_prevu = str(g_prevu)
+                                    
+                                    if ec_prevu is not None and str(ec_prevu).strip() != "":
+                                        ligne_ecart_html = f"<br><span style='font-size:11px; color:#555555;'>Écart : {ec_prevu} pts</span>"
+                                    else:
+                                        ligne_ecart_html = ""
                                 
                                 pts = 0.0
                                 badge_ose = ""
@@ -1371,35 +1377,45 @@ elif st.session_state.onglet_actif == "📅":
                                 
                                 if en_attente:
                                     texte_points = "-"
+                                    color_bg = "#f1f5f9"
+                                    color_txt = "#64748b"
                                 else:
                                     pts_affiche = int(pts) if isinstance(pts, float) and pts.is_integer() else pts
                                     texte_points = f"+{pts_affiche} pts"
                                 
-                                style_ligne_joueur = "font-weight: bold; background-color: #f1f5f9;" if j['id'] == st.session_state.user_id else ""
+                                style_ligne_joueur = "font-weight: bold; background-color: #f8fafc;" if j['id'] == st.session_state.user_id else ""
                                 pseudo_final = f"{j['pseudo']} (Toi)" if j['id'] == st.session_state.user_id else j['pseudo']
 
                                 lignes_table_html += f"""
-                                <tr style="{style_ligne_joueur} border-bottom: 1px solid #e2e8f0; color: #000000;">
+                                <tr style="{style_ligne_joueur} border-bottom: 1px solid #f1f5f9; color: #000000;">
                                     <td style="padding: 10px; font-size: 13px; color: #000000;">{pseudo_final}</td>
-                                    <td style="padding: 10px; font-size: 13px; color: #000000;"><b>{nom_gagnant_prevu}</b> <span style="font-size:11px; color:#333333;">({ec_prevu} pts)</span>{badge_ose}</td>
+                                    <td style="padding: 10px; font-size: 13px; color: #000000;"><b>{nom_gagnant_prevu}</b>{badge_ose}{ligne_ecart_html}</td>
                                     <td style="padding: 10px; text-align: center;">
-                                        <span style="background-color: {color_bg}; color: {color_txt}; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; display: inline-block;">
+                                        <span style="color: {color_txt}; font-size: 11px; font-weight: bold;">
                                             {texte_badge_resultat}
                                         </span>
                                     </td>
-                                    <td style="padding: 10px; text-align: right; font-weight: bold; color: {color_txt if not en_attente else '#000000'}; font-size: 13px;">{texte_points}</td>
+                                    <td style="padding: 10px; text-align: right;">
+                                        <span style="background-color: {color_bg}; color: {color_txt}; padding: 4px 10px; border-radius: 12px; font-size: 13px; font-weight: bold; display: inline-block;">
+                                            {texte_points}
+                                        </span>
+                                    </td>
                                 </tr>
                                 """
                             else:
-                                style_ligne_joueur = "font-weight: bold; background-color: #f1f5f9;" if j['id'] == st.session_state.user_id else ""
+                                style_ligne_joueur = "font-weight: bold; background-color: #f8fafc;" if j['id'] == st.session_state.user_id else ""
                                 pseudo_final = f"{j['pseudo']} (Toi)" if j['id'] == st.session_state.user_id else j['pseudo']
                                 
                                 lignes_table_html += f"""
-                                <tr style="{style_ligne_joueur} border-bottom: 1px solid #e2e8f0; color: #000000;">
+                                <tr style="{style_ligne_joueur} border-bottom: 1px solid #f1f5f9; color: #000000;">
                                     <td style="padding: 10px; font-size: 13px; color: #000000;">{pseudo_final}</td>
                                     <td style="padding: 10px; font-size: 13px; font-style: italic; color: #555555;">Aucun pronostic</td>
-                                    <td style="padding: 10px; text-align: center;"><span style="background-color: #f1f5f9; color: #64748b; padding: 3px 8px; border-radius: 12px; font-size: 11px;">❌ Absent</span></td>
-                                    <td style="padding: 10px; text-align: right; font-size: 13px; color: #000000;">0 pt</td>
+                                    <td style="padding: 10px; text-align: center; font-size: 11px; color: #64748b;">❌ Absent</td>
+                                    <td style="padding: 10px; text-align: right;">
+                                        <span style="background-color: #f1f5f9; color: #64748b; padding: 4px 10px; border-radius: 12px; font-size: 13px; font-weight: bold; display: inline-block;">
+                                            0 pt
+                                        </span>
+                                    </td>
                                 </tr>
                                 """
 
