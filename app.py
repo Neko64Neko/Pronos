@@ -512,31 +512,45 @@ else:
 # --- LOGIQUE DES PRONOS OSÉS (Vainqueur = Gardien du bonus) ---
                 pronos_ce_match = [pr for pr in pronostics_tous if pr['match_id'] == m_id]
                 
-                # Combien ont trouvé le bon vainqueur ?
-                mises_gagnant = sum(1 for pr in pronos_ce_match if pr['gagnant_prevu'] == vrai_gagnant)
+                # Fonction utilitaire pour normaliser et détecter un match nul peu importe son format en base
+                def est_un_nul(val):
+                    if not val:
+                        return False
+                    return str(val).strip().lower() in ["draw", "match nul", "nul"]
+        
+                vrai_est_nul = est_un_nul(vrai_gagnant)
+        
+                # Combien ont trouvé le bon vainqueur (en gérant les variantes de match nul)
+                mises_gagnant = sum(
+                    1 for pr in pronos_ce_match 
+                    if (est_un_nul(pr.get('gagnant_prevu')) and vrai_est_nul) or (pr.get('gagnant_prevu') == vrai_gagnant)
+                )
                 
                 points_ce_match = 0.0
                 
+                # Le joueur a-t-il trouvé le bon vainqueur ?
+                p_est_nul = est_un_nul(p.get('gagnant_prevu'))
+                a_bon_vainqueur = (p_est_nul and vrai_est_nul) or (p.get('gagnant_prevu') == vrai_gagnant)
+        
                 # 1. Le joueur doit avoir le bon vainqueur
-                if p['gagnant_prevu'] == vrai_gagnant:
+                if a_bon_vainqueur:
                     
                     # CAS A : Le vainqueur est OSÉ (Nombre de personnes <= seuil)
-                    # On force le int() ici pour être certain de la comparaison
                     if mises_gagnant <= int(float(seuil_ose_cfg)):
                         
                         # Multiplicateur sur le vainqueur
                         points_ce_match += float(pts_gagnant_cfg) * float(mult_ose_cfg)
                         
-                        # Si en plus il a le bon écart -> Multiplicateur AUSSI sur l'écart
-                        if p['ecart_prevu'] == vraie_tranche and vrai_gagnant != "draw":
+                        # Si en plus il a le bon écart (uniquement si ce n'est pas un match nul)
+                        if p.get('ecart_prevu') == vraie_tranche and not vrai_est_nul:
                             points_ce_match += float(pts_ecart_cfg) * float(mult_ose_cfg)
                             
                     # CAS B : Le vainqueur est un FAVORI
                     else:
                         points_ce_match += float(pts_gagnant_cfg)
-                        if p['ecart_prevu'] == vraie_tranche and vrai_gagnant != "draw":
+                        if p.get('ecart_prevu') == vraie_tranche and not vrai_est_nul:
                             points_ce_match += float(pts_ecart_cfg)
-
+        
                     # Ajout des points du match
                     scores_calculateurs[j_id]["score_live"] += points_ce_match
 
