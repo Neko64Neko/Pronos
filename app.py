@@ -684,19 +684,12 @@ else:
                 sc_j = joueur["score_live"]
                 sc_j_affiche = int(sc_j) if isinstance(sc_j, float) and sc_j.is_integer() else sc_j
                 
-                # Tous les alignements sont passés à center
-                lignes_html += f'<tr style="{style_ligne} border-bottom: 1px solid #e2e8f0;"><td style="padding: 12px; text-align: center; color: inherit;">{prefixe_rang}</td><td style="padding: 12px; text-align: center; color: inherit;">{pseudo_affiche}</td><td style="padding: 12px; text-align: center; font-weight: bold; color: #000000;">{sc_j_affiche}</td></tr>'
+                # Alignements : Position (droite), Joueur (gauche), Points (centre)
+                lignes_html += f'<tr style="{style_ligne} border-bottom: 1px solid #e2e8f0;"><td style="padding: 12px; text-align: right; color: inherit;">{prefixe_rang}</td><td style="padding: 12px; text-align: left; color: inherit;">{pseudo_affiche}</td><td style="padding: 12px; text-align: center; font-weight: bold; color: #000000;">{sc_j_affiche}</td></tr>'
             
             st.markdown(f"""
             <div style="background-color: #f8fafc; border-radius: 12px; padding: 15px; border: 1px solid #e2e8f0;">
                 <table style="width: 100%; border-collapse: collapse; font-family: sans-serif; color: #2d3748;">
-                    <thead>
-                        <tr style="border-bottom: 2px solid #cbd5e1; color: #64748b; font-size: 14px;">
-                            <th style="padding: 10px; text-align: center; color: #64748b;">Position</th>
-                            <th style="padding: 10px; text-align: center; color: #64748b;">Joueur</th>
-                            <th style="padding: 10px; text-align: center; color: #64748b;">Points</th>
-                        </tr>
-                    </thead>
                     <tbody>{lignes_html}</tbody>
                 </table>
             </div>
