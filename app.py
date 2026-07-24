@@ -871,7 +871,6 @@ if st.session_state.onglet_actif == "🏉":
                 # CSS global pour épaissir le cadre, styliser les titres et le séparateur
                 st.markdown("""
                     <style>
-                        /* Épaississement du cadre natif et ajout d'espace en bas pour englober le message */
                         [data-testid="stVerticalBlockBorderWrapper"] {
                             border: 1.5px solid #cbd5e1 !important;
                             border-radius: 12px !important;
@@ -924,7 +923,7 @@ if st.session_state.onglet_actif == "🏉":
                                     matchs_visibles.append(m)
 
                     if matchs_visibles:
-                        matchs_visibles = sorted(matchs_visibles, key=lambda x: x['date_match'] if x.get('date_match') is not None else "9999-12-31")
+                        matchs_visibles = sorted(matchs_visibles, key=lambda x: x['date_match'] if x.get('date_match'] is not None else "9999-12-31")
                         
                         total_matchs = len(matchs_visibles)
                         for index, m in enumerate(matchs_visibles):
@@ -1060,8 +1059,14 @@ if st.session_state.onglet_actif == "🏉":
                                 if key_m not in st.session_state:
                                     st.session_state[key_m] = ecart_existant if ecart_existant in TRANCHES_ECARTS else "..."
 
-                                # Label personnalisé pour l'écart
-                                st.markdown('<div style="font-size: 1.1em; font-weight: 600; color: #64748b; margin-bottom: 2px;">Écart (pts) :</div>', unsafe_allow_html=True)
+                                val_vainqueur = st.session_state.get(f"w_{m['id']}_{id_joueur_cible}", choix_actuel)
+                                est_match_nul = (val_vainqueur == "Match Nul")
+
+                                # Label personnalisé pour l'écart (s'adapte si c'est un match nul)
+                                if est_match_nul:
+                                    st.markdown('<div style="font-size: 1.1em; font-weight: 600; color: #94a3b8; margin-bottom: 2px;">Écart (pts) : <span style="font-size: 0.85em; font-weight: normal; font-style: italic;">(Non requis pour un match nul)</span></div>', unsafe_allow_html=True)
+                                else:
+                                    st.markdown('<div style="font-size: 1.1em; font-weight: 600; color: #64748b; margin-bottom: 2px;">Écart (pts) :</div>', unsafe_allow_html=True)
                                 
                                 st.select_slider(
                                     "Écart (pts)", 
@@ -1069,16 +1074,20 @@ if st.session_state.onglet_actif == "🏉":
                                     key=key_m, 
                                     on_change=cb_changement_ecart, 
                                     args=(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible),
-                                    disabled=bouton_bloque,
+                                    disabled=bouton_bloque or est_match_nul,
                                     label_visibility="collapsed"
                                 )
                                 
                                 # --- GESTION DU MESSAGE D'ÉTAT DYNAMIQUE ---
-                                val_vainqueur = st.session_state.get(f"w_{m['id']}_{id_joueur_cible}", choix_actuel)
                                 val_ecart = st.session_state.get(key_m, ecart_existant)
                                 
                                 has_vainqueur = bool(val_vainqueur and val_vainqueur != "")
-                                has_ecart = bool(val_ecart and val_ecart != "...")
+                                
+                                # Si c'est un match nul, le pronostic est complet automatiquement
+                                if est_match_nul:
+                                    has_ecart = True
+                                else:
+                                    has_ecart = bool(val_ecart and val_ecart != "...")
                                 
                                 if has_vainqueur and has_ecart:
                                     st.markdown(
