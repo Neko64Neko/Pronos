@@ -132,8 +132,8 @@ def run_calendar():
         return
 
     # --- REMPLISSAGE AUTOMATIQUE DES ÉQUIPES DANS SUPABASE --- 1 FOIS ---
-    nb = peupler_table_equipes_automatiquement(events, supabase)
-    print(f"SUCCÈS : {nb} équipes ont été synchronisées dans Supabase !")
+    # nb = peupler_table_equipes_automatiquement(events, supabase)
+    # print(f"SUCCÈS : {nb} équipes ont été synchronisées dans Supabase !")
 
     all_matches = []
     for match in events:
