@@ -884,6 +884,23 @@ if st.session_state.onglet_actif == "🏉":
                         st.caption("Aucune question bonus pour le moment.")
                 except Exception as e:
                     st.error(f"Erreur lors du chargement des questions bonus : {e}")
+
+            # Gestion du clic sur les boutons personnalisés via les query params
+                if "match_action" in st.query_params:
+                    try:
+                        m_id = st.query_params.get("m_id")
+                        choix = st.query_params.get("choix")
+                        u_id = st.query_params.get("u_id", id_joueur_cible)
+                        eq_d = st.query_params.get("eq_d", "")
+                        eq_e = st.query_params.get("eq_e", "")
+                        
+                        if m_id and choix:
+                            st.session_state[f"w_{m_id}_{u_id}"] = choix
+                            sauvegarder_prono_auto(m_id, eq_d, eq_e, u_id)
+                            st.query_params.clear()
+                            st.rerun()
+                    except Exception:
+                        pass
                         
             # 7.2.2 - SECTION MATCHS OUVERTS
                 st.markdown('<div style="height: 1px; background-color: #cbd5e1; margin: 25px auto 15px auto; width: calc(100% - 40px);"></div>', unsafe_allow_html=True)
