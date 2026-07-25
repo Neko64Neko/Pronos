@@ -928,10 +928,14 @@ if st.session_state.onglet_actif == "🏉":
                             font-size: 11px;
                             font-weight: 600;
                             cursor: pointer;
-                            text-decoration: none !important;
+                            appearance: none;
+                            -webkit-appearance: none;
                             transition: all 0.2s ease;
                             box-sizing: border-box;
                             box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+                            outline: none;
+                        }
+                        .custom-team-btn:focus {
                             outline: none;
                         }
                         .custom-team-btn.unselected {
@@ -1110,43 +1114,44 @@ if st.session_state.onglet_actif == "🏉":
                                     class_ext += " disabled"
                                     class_nul += " disabled"
             
-                                def get_url_link(choix_val):
-                                    params = {
-                                        "match_action": "1",
-                                        "m_id": m['id'],
-                                        "choix": choix_val,
-                                        "u_id": id_joueur_cible,
-                                        "eq_d": m['equipe_dom'],
-                                        "eq_e": m['equipe_ext']
-                                    }
-                                    return f"?{urllib.parse.urlencode(params)}"
+                                def get_js_click(choix_val):
+                                    return f"""
+                                        const p = new URLSearchParams(window.parent.location.search);
+                                        p.set('match_action', '1');
+                                        p.set('m_id', '{m['id']}');
+                                        p.set('choix', `{choix_val}`);
+                                        p.set('u_id', '{id_joueur_cible}');
+                                        p.set('eq_d', `{m['equipe_dom']}`);
+                                        p.set('eq_e', `{m['equipe_ext']}`);
+                                        window.parent.location.href = window.parent.location.pathname + '?' + p.toString();
+                                    """
             
                                 # 1. BOUTON DOMICILE
                                 with col_a:
                                     img_html_dom = f'<img src="{logo_dom}">' if logo_dom else ''
                                     st.markdown(f'''
-                                        <a href="{get_url_link(m['equipe_dom'])}" class="custom-team-btn {class_dom}">
+                                        <button onclick="{get_js_click(m['equipe_dom'])}" class="custom-team-btn {class_dom}">
                                             {img_html_dom}
                                             <span>{m['equipe_dom']}</span>
-                                        </a>
+                                        </button>
                                     ''', unsafe_allow_html=True)
                                     
                                 # 2. BOUTON MATCH NUL
                                 with col_b:
                                     st.markdown(f'''
-                                        <a href="{get_url_link("Match Nul")}" class="custom-team-btn {class_nul}">
+                                        <button onclick="{get_js_click("Match Nul")}" class="custom-team-btn {class_nul}">
                                             <span>🤝 Nul</span>
-                                        </a>
+                                        </button>
                                     ''', unsafe_allow_html=True)
                                     
                                 # 3. BOUTON EXTÉRIEUR
                                 with col_c:
                                     img_html_ext = f'<img src="{logo_ext}">' if logo_ext else ''
                                     st.markdown(f'''
-                                        <a href="{get_url_link(m['equipe_ext'])}" class="custom-team-btn {class_ext}">
+                                        <button onclick="{get_js_click(m['equipe_ext'])}" class="custom-team-btn {class_ext}">
                                             {img_html_ext}
                                             <span>{m['equipe_ext']}</span>
-                                        </a>
+                                        </button>
                                     ''', unsafe_allow_html=True)
             
                                 st.markdown('</div>', unsafe_allow_html=True)
