@@ -64,24 +64,27 @@ if st.session_state.user_id is None:
 
 #1.4 - GESTION DES LOGOS
 def obtenir_logo(nom_equipe):
-    """
-    Récupère le logo de l'équipe depuis la table Supabase.
-    """
     if not nom_equipe:
         return "🛡️"
         
     try:
-        # Teste avec "Equipes", vérifie si ta table s'écrit bien comme ça (ou "equipes")
-        reponse = supabase.table("Equipes").select("logo").eq("nom", nom_equipe).execute()
+        # Nettoyage des espaces invisibles potentiels
+        nom_propre = nom_equipe.strip()
+        
+        reponse = supabase.table("Equipes").select("logo").eq("nom", nom_propre).execute()
+        
+        # --- LIGNE DE DEBUG TEMPORAIRE ---
+        # Décommente la ligne ci-dessous si tu veux voir ce que Supabase renvoie dans ton app :
+        # st.write(f"Équipe cherchée : '{nom_propre}' | Réponse Supabase : {reponse.data}")
         
         if reponse.data and len(reponse.data) > 0:
             logo = reponse.data[0].get("logo")
             if logo:
                 return logo
+                
     except Exception as e:
-        # Affiche l'erreur dans la console pour comprendre si ça vient de la table ou de la colonne
-        print(f"Erreur logo pour '{nom_equipe}' : {e}")
-    
+        st.error(f"Erreur Supabase pour '{nom_equipe}' : {e}")
+        
     return "🛡️"
 # =====================================================================
 # 2 - SYSTEME DE SCRAPING GRATUIT ET AUTOMATIQUE
