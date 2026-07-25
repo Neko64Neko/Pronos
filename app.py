@@ -885,7 +885,6 @@ if st.session_state.onglet_actif == "🏉":
                 except Exception as e:
                     st.error(f"Erreur lors du chargement des questions bonus : {e}")
                         
-            # 7.2.2 - SECTION MATCHS OUVERTS
             # Gestion du clic sur les boutons personnalisés via les query params
                 if "match_action" in st.query_params:
                     try:
@@ -907,7 +906,7 @@ if st.session_state.onglet_actif == "🏉":
                 st.markdown('<div style="height: 1px; background-color: #cbd5e1; margin: 25px auto 15px auto; width: calc(100% - 40px);"></div>', unsafe_allow_html=True)
                 st.subheader("🏉 Liste des Matchs")
             
-                # CSS global avec adaptation automatique au mode sombre/clair de Streamlit
+                # CSS global avec adaptation automatique et robuste au mode clair / sombre de Streamlit
                 st.markdown("""
                     <style>
                         [data-testid="stVerticalBlockBorderWrapper"] {
@@ -916,7 +915,7 @@ if st.session_state.onglet_actif == "🏉":
                             padding-bottom: 10px !important;
                             box-shadow: 0 1px 2px rgba(0,0,0,0.02);
                         }
-                        /* Bouton personnalisé unifié (s'adapte au thème clair / sombre) */
+                        /* Bouton personnalisé unifié s'adaptant dynamiquement au thème */
                         .custom-team-btn {
                             display: flex;
                             align-items: center;
@@ -935,9 +934,10 @@ if st.session_state.onglet_actif == "🏉":
                             box-sizing: border-box;
                             box-shadow: 0 1px 2px rgba(0,0,0,0.05);
                         }
+                        /* Bouton non sélectionné (S'adapte au mode clair ou sombre) */
                         .custom-team-btn.unselected {
-                            background-color: var(--secondary-background-color, #f8fafc);
-                            color: var(--text-color, #1e293b);
+                            background-color: var(--secondaryBackgroundColor, var(--secondary-background-color, #ffffff));
+                            color: var(--textColor, var(--text-color, #1e293b));
                             border: 1.5px solid rgba(128, 128, 128, 0.35);
                         }
                         .custom-team-btn.unselected:hover {
@@ -945,6 +945,7 @@ if st.session_state.onglet_actif == "🏉":
                             color: #2563eb;
                             background-color: rgba(37, 99, 235, 0.08);
                         }
+                        /* Bouton sélectionné (Reste en bleu vif avec texte blanc) */
                         .custom-team-btn.selected {
                             background-color: #2563eb;
                             color: #ffffff;
