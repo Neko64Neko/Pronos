@@ -958,20 +958,19 @@ if st.session_state.onglet_actif == "🏉":
                         for index, m in enumerate(matchs_visibles):
                             with st.container(border=True):
                                 
-                                # --- RÉCUPÉRATION DES URLS DE LOGOS ---
+                                # --- RÉCUPÉRATION DES LOGOS (ENCODÉS EN BASE64) ---
                                 logo_dom = obtenir_logo(m["equipe_dom"])
                                 logo_ext = obtenir_logo(m["equipe_ext"])
                                 
-                                # --- TITRE DU MATCH AVEC IMAGES HTML (SUPPORT SVG/PNG) ---
+                                # --- GESTION DE L'AFFICHAGE DES LOGOS DANS LE TITRE ---
+                                html_logo_dom = f'<img src="{logo_dom}" width="24" height="24" style="object-fit:contain; vertical-align:middle;"> ' if logo_dom else ''
+                                html_logo_ext = f' <img src="{logo_ext}" width="24" height="24" style="object-fit:contain; vertical-align:middle;">' if logo_ext else ''
+            
                                 st.markdown(
                                     f'<div class="match-title">'
-                                    f'<span style="display:inline-flex; align-items:center; gap:6px;">'
-                                    f'<img src="{logo_dom}" width="24" height="24" style="object-fit:contain;"> {m["equipe_dom"]}'
-                                    f'</span>'
-                                    f' <span style="color: #94a3b8; font-weight: normal; margin: 0 4px;">vs</span> '
-                                    f'<span style="display:inline-flex; align-items:center; gap:6px;">'
-                                    f'{m["equipe_ext"]} <img src="{logo_ext}" width="24" height="24" style="object-fit:contain;">'
-                                    f'</span>'
+                                    f'<span>{html_logo_dom}{m["equipe_dom"]}</span>'
+                                    f' <span style="color: #94a3b8; font-weight: normal; margin: 0 6px;">vs</span> '
+                                    f'<span>{m["equipe_ext"]}{html_logo_ext}</span>'
                                     f'</div>',
                                     unsafe_allow_html=True
                                 )
