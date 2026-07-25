@@ -5,11 +5,9 @@ from supabase import create_client
 
 def get_secret(key):
     """Récupère un secret depuis os.environ ou st.secrets de manière transparente"""
-    # 1. Essayer os.environ (pour GitHub Actions et variables d'environnement)
     val = os.environ.get(key)
     if val:
         return val
-    # 2. Essayer st.secrets (pour Streamlit Cloud)
     try:
         import streamlit as st
         if hasattr(st, "secrets") and key in st.secrets:
@@ -18,14 +16,13 @@ def get_secret(key):
         pass
     return None
 
-def peupler_table_equipes_automatiquement(events_api): #POUR AJOUTER LOGO EQUIPE EN AUTO
+def peupler_table_equipes_automatiquement(events_api, supabase): 
     """
     Parcourt la liste des événements de l'API, extrait les équipes uniques 
     et les insère dans la table 'Equipes' de Supabase.
     """
     equipes_collectees = {}
 
-    # 1. Extraction des équipes uniques depuis les matchs de l'API
     for event in events_api:
         for type_equipe in ['homeTeam', 'awayTeam']:
             team_data = event.get(type_equipe)
@@ -34,7 +31,6 @@ def peupler_table_equipes_automatiquement(events_api): #POUR AJOUTER LOGO EQUIPE
                 team_name = team_data.get('name')
                 
                 if team_id and team_name:
-                    # On évite les doublons si l'équipe joue plusieurs matchs
                     if team_id not in equipes_collectees:
                         logo_url = f"https://api.sofascore.com/api/v1/team/{team_id}/image"
                         equipes_collectees[team_id] = {
@@ -43,21 +39,19 @@ def peupler_table_equipes_automatiquement(events_api): #POUR AJOUTER LOGO EQUIPE
                             "logo_url": logo_url
                         }
 
-    # 2. Enregistrement dans Supabase (Upsert pour éviter les erreurs de doublons)
     nb_ajoutes = 0
     for team_id, data in equipes_collectees.items():
         try:
             supabase.table("Equipes").upsert(data).execute()
             nb_ajoutes += 1
         except Exception as e:
-            print(freur pour l'équipe {data['nom']} : {e}")
+            print(f"Erreur pour l'équipe {data['nom']} : {e}")
 
     return nb_ajoutes
 
 def run_calendar():
     print("--- LE SCRIPT CALENDRIER COMMENCE ---")
     
-    # Récupération universelle des secrets
     SUPABASE_URL = get_secret("SUPABASE_URL")
     SUPABASE_KEY = get_secret("SUPABASE_KEY")
     RAPIDAPI_KEY = get_secret("RAPIDAPI_KEY")
@@ -133,13 +127,13 @@ def run_calendar():
 
     events = data if isinstance(data, list) else data.get('events', [])
 
-    # SEULEMENT 1 FOIS POUR REMPLISSAGE EQUIPE AUTO :
-    nb = peupler_table_equipes_automatiquement(vos_donnees_api_brutes)
-    st.success(f"{nb} équipes ont été synchronisées dans Supabase !")
-
     if not events:
         print("Aucun match à venir trouvé dans les données.")
         return
+
+    # --- REMPLISSAGE AUTOMATIQUE DES ÉQUIPES DANS SUPABASE --- 1 FOIS ---
+    nb = peupler_table_equipes_automatiquement(events, supabase)
+    print(f"SUCCÈS : {nb} équipes ont été synchronisées dans Supabase !")
 
     all_matches = []
     for match in events:
