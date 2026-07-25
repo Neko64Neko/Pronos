@@ -72,7 +72,7 @@ def obtenir_logo(nom_equipe):
         # Ajuste "Equipes", "nom" et "logo" si tes noms de tables/colonnes dans Supabase sont différents
         reponse = supabase.table("Equipes").select("logo").eq("nom", nom_equipe).execute()
         if reponse.data and len(reponse.data) > 0:
-            return reponse.data[0].get("logo", "🛡️")
+            return reponse.data[0].get("logo_url", "🛡️")
     except Exception:
         pass
     
