@@ -1116,14 +1116,14 @@ if st.session_state.onglet_actif == "🏉":
             
                                 def get_js_click(choix_val):
                                     return f"""
-                                        const p = new URLSearchParams(window.location.search);
+                                        const p = new URLSearchParams(window.parent.location.search);
                                         p.set('match_action', '1');
                                         p.set('m_id', '{m['id']}');
                                         p.set('choix', `{choix_val}`);
                                         p.set('u_id', '{id_joueur_cible}');
                                         p.set('eq_d', `{m['equipe_dom']}`);
                                         p.set('eq_e', `{m['equipe_ext']}`);
-                                        window.location.search = p.toString();
+                                        window.parent.location.search = p.toString();
                                     """
             
                                 # 1. BOUTON DOMICILE
