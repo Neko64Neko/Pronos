@@ -946,7 +946,7 @@ if st.session_state.onglet_actif == "🏉":
                                 logo_dom = obtenir_logo(m["equipe_dom"])
                                 logo_ext = obtenir_logo(m["equipe_ext"])
                                 
-                                # --- TITRE DU MATCH : [LOGO 1] [ÉQUIPE 1] VS [ÉQUIPE 2] [LOGO 2] ---
+                                # --- TITRE DU MATCH ---
                                 col_titre_g, col_titre_c, col_titre_d = st.columns([5, 1, 5])
                                 
                                 with col_titre_g:
@@ -1034,12 +1034,12 @@ if st.session_state.onglet_actif == "🏉":
                                 st.markdown('<div class="zone-matchs">', unsafe_allow_html=True)
                                 col_a, col_b, col_c = st.columns(3)
                                 
-                                # 1. BOUTON DOMICILE (AVEC LOGO À GAUCHE)
+                                # 1. BOUTON DOMICILE (AVEC LOGO ALIGNÉ À GAUCHE DU BOUTON)
                                 with col_a:
-                                    sub_a_logo, sub_a_btn = st.columns([1, 5])
+                                    sub_a_logo, sub_a_btn = st.columns([1, 4], vertical_alignment="center")
                                     with sub_a_logo:
                                         if logo_dom:
-                                            st.markdown(f'<div style="padding-top: 6px; text-align: right;"><img src="{logo_dom}" width="18" height="18" style="object-fit:contain;"></div>', unsafe_allow_html=True)
+                                            st.markdown(f'<div style="text-align: right;"><img src="{logo_dom}" width="18" height="18" style="object-fit:contain; vertical-align:middle;"></div>', unsafe_allow_html=True)
                                     with sub_a_btn:
                                         type_a = "primary" if choix_actuel == m['equipe_dom'] else "secondary"
                                         st.button(
@@ -1065,12 +1065,12 @@ if st.session_state.onglet_actif == "🏉":
                                         args=(m['id'], "Match Nul", m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
                                     )
                                     
-                                # 3. BOUTON EXTÉRIEUR (AVEC LOGO À GAUCHE)
+                                # 3. BOUTON EXTÉRIEUR (AVEC LOGO ALIGNÉ À GAUCHE DU BOUTON)
                                 with col_c:
-                                    sub_c_logo, sub_c_btn = st.columns([1, 5])
+                                    sub_c_logo, sub_c_btn = st.columns([1, 4], vertical_alignment="center")
                                     with sub_c_logo:
                                         if logo_ext:
-                                            st.markdown(f'<div style="padding-top: 6px; text-align: right;"><img src="{logo_ext}" width="18" height="18" style="object-fit:contain;"></div>', unsafe_allow_html=True)
+                                            st.markdown(f'<div style="text-align: right;"><img src="{logo_ext}" width="18" height="18" style="object-fit:contain; vertical-align:middle;"></div>', unsafe_allow_html=True)
                                     with sub_c_btn:
                                         type_c = "primary" if choix_actuel == m['equipe_ext'] else "secondary"
                                         st.button(
