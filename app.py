@@ -74,12 +74,18 @@ def obtenir_logo(nom_equipe):
         if reponse.data and len(reponse.data) > 0:
             url = reponse.data[0].get("logo_url")
             if url and url.startswith("http"):
-                # Télécharge l'image et l'encode en Base64 (zéro problème de CORS)
-                response = requests.get(url, timeout=5)
-                if response.status_code == 200:
-                    content_type = response.headers.get("content-type", "image/png")
-                    encoded = base64.b64encode(response.content).decode("utf-8")
-                    return f"data:{content_type};base64,{encoded}"
+                try:
+                    # Tentative d'encodage en Base64
+                    response = requests.get(url, timeout=3)
+                    if response.status_code == 200:
+                        content_type = response.headers.get("content-type", "image/png")
+                        encoded = base64.b64encode(response.content).decode("utf-8")
+                        return f"data:{content_type};base64,{encoded}"
+                except Exception:
+                    pass
+                
+                # Fallback : si le téléchargement échoue, on renvoie l'URL brute
+                return url
     except Exception as e:
         print(f"Erreur logo pour '{nom_equipe}' : {e}")
         
