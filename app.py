@@ -11,6 +11,7 @@ import pytz
 from streamlit_autorefresh import st_autorefresh
 from get_calendar import run_calendar
 from get_live import run_update
+import urllib.parse
 
 # 1 - PARAMETRES ET CONNEXION
 import streamlit.components.v1 as components
@@ -885,10 +886,27 @@ if st.session_state.onglet_actif == "🏉":
                     st.error(f"Erreur lors du chargement des questions bonus : {e}")
                         
             # 7.2.2 - SECTION MATCHS OUVERTS
+            # Gestion du clic sur les boutons personnalisés via les query params
+                if "match_action" in st.query_params:
+                    try:
+                        m_id = st.query_params.get("m_id")
+                        choix = st.query_params.get("choix")
+                        u_id = st.query_params.get("u_id", id_joueur_cible)
+                        eq_d = st.query_params.get("eq_d", "")
+                        eq_e = st.query_params.get("eq_e", "")
+                        
+                        if m_id and choix:
+                            st.session_state[f"w_{m_id}_{u_id}"] = choix
+                            sauvegarder_prono_auto(m_id, eq_d, eq_e, u_id)
+                            st.query_params.clear()
+                            st.rerun()
+                    except Exception:
+                        pass
+            
                 st.markdown('<div style="height: 1px; background-color: #cbd5e1; margin: 25px auto 15px auto; width: calc(100% - 40px);"></div>', unsafe_allow_html=True)
                 st.subheader("🏉 Liste des Matchs")
             
-                # CSS global pour épaissir le cadre et styliser le séparateur
+                # CSS global pour le cadre, les séparateurs et le style unifié des boutons (Logo + Texte intégrés)
                 st.markdown("""
                     <style>
                         [data-testid="stVerticalBlockBorderWrapper"] {
@@ -896,6 +914,56 @@ if st.session_state.onglet_actif == "🏉":
                             border-radius: 12px !important;
                             padding-bottom: 10px !important;
                             box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+                        }
+                        /* Bouton personnalisé unifié (Logo + Équipe dans le même bouton) */
+                        .custom-team-btn {
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            gap: 6px;
+                            width: 100%;
+                            height: 38px;
+                            padding: 0 8px;
+                            border-radius: 8px;
+                            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                            font-size: 11px;
+                            font-weight: 600;
+                            cursor: pointer;
+                            text-decoration: none;
+                            transition: all 0.2s ease;
+                            box-sizing: border-box;
+                            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+                        }
+                        .custom-team-btn.unselected {
+                            background-color: #f8fafc;
+                            color: #1e293b;
+                            border: 1.5px solid #cbd5e1;
+                        }
+                        .custom-team-btn.unselected:hover {
+                            border-color: #2563eb;
+                            color: #2563eb;
+                            background-color: #eff6ff;
+                        }
+                        .custom-team-btn.selected {
+                            background-color: #2563eb;
+                            color: #ffffff;
+                            border: 1.5px solid #2563eb;
+                        }
+                        .custom-team-btn img {
+                            width: 18px;
+                            height: 18px;
+                            object-fit: contain;
+                            flex-shrink: 0;
+                        }
+                        .custom-team-btn span {
+                            overflow: hidden;
+                            text-overflow: ellipsis;
+                            white-space: nowrap;
+                        }
+                        .custom-team-btn.disabled {
+                            opacity: 0.6;
+                            cursor: not-allowed;
+                            pointer-events: none;
                         }
                         /* Séparateur à double ligne propre */
                         hr.match-separator {
@@ -999,10 +1067,6 @@ if st.session_state.onglet_actif == "🏉":
                                 else:
                                     choix_actuel = st.session_state[key_w]
             
-                                def cb_clic_gagnant(match_id, equipe_choisie, eq_dom, eq_ext, u_id):
-                                    st.session_state[f"w_{match_id}_{u_id}"] = equipe_choisie
-                                    sauvegarder_prono_auto(match_id, eq_dom, eq_ext, u_id)
-            
                                 def cb_changement_ecart(match_id, eq_dom, eq_ext, u_id):
                                     sauvegarder_prono_auto(match_id, eq_dom, eq_ext, u_id)
             
@@ -1024,64 +1088,63 @@ if st.session_state.onglet_actif == "🏉":
                                             min-width: 0 !important;
                                             flex: 1 1 0% !important;
                                         }
-                                        .zone-matchs button {
-                                            width: 100% !important;
-                                            font-size: 11px !important;
-                                        }
                                     </style>
                                 """, unsafe_allow_html=True)
                                 
                                 st.markdown('<div class="zone-matchs">', unsafe_allow_html=True)
                                 col_a, col_b, col_c = st.columns(3)
                                 
-                                # 1. BOUTON DOMICILE (AVEC LOGO ALIGNÉ À GAUCHE DU BOUTON)
+                                is_dom_selected = (choix_actuel == m['equipe_dom'])
+                                is_ext_selected = (choix_actuel == m['equipe_ext'])
+                                is_nul_selected = (choix_actuel == "Match Nul")
+            
+                                class_dom = "selected" if is_dom_selected else "unselected"
+                                class_ext = "selected" if is_ext_selected else "unselected"
+                                class_nul = "selected" if is_nul_selected else "unselected"
+            
+                                if bouton_bloque:
+                                    class_dom += " disabled"
+                                    class_ext += " disabled"
+                                    class_nul += " disabled"
+            
+                                def get_url(choix_val):
+                                    params = {
+                                        "match_action": "1",
+                                        "m_id": str(m['id']),
+                                        "choix": choix_val,
+                                        "u_id": str(id_joueur_cible),
+                                        "eq_d": m['equipe_dom'],
+                                        "eq_e": m['equipe_ext']
+                                    }
+                                    return f"?{urllib.parse.urlencode(params)}"
+            
+                                # 1. BOUTON DOMICILE (AVEC LOGO INTÉGRÉ À GAUCHE DU NOM)
                                 with col_a:
-                                    sub_a_logo, sub_a_btn = st.columns([1, 4], vertical_alignment="center")
-                                    with sub_a_logo:
-                                        if logo_dom:
-                                            st.markdown(f'<div style="text-align: right;"><img src="{logo_dom}" width="18" height="18" style="object-fit:contain; vertical-align:middle;"></div>', unsafe_allow_html=True)
-                                    with sub_a_btn:
-                                        type_a = "primary" if choix_actuel == m['equipe_dom'] else "secondary"
-                                        st.button(
-                                            m['equipe_dom'], 
-                                            key=f"btn_dom_{m['id']}_{id_joueur_cible}", 
-                                            type=type_a, 
-                                            use_container_width=True, 
-                                            disabled=bouton_bloque,
-                                            on_click=cb_clic_gagnant,
-                                            args=(m['id'], m['equipe_dom'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
-                                        )
+                                    img_html_dom = f'<img src="{logo_dom}">' if logo_dom else ''
+                                    st.markdown(f'''
+                                        <a href="{get_url(m['equipe_dom'])}" class="custom-team-btn {class_dom}">
+                                            {img_html_dom}
+                                            <span>{m['equipe_dom']}</span>
+                                        </a>
+                                    ''', unsafe_allow_html=True)
                                     
                                 # 2. BOUTON MATCH NUL
                                 with col_b:
-                                    type_b = "primary" if choix_actuel == "Match Nul" else "secondary"
-                                    st.button(
-                                        "🤝 Nul", 
-                                        key=f"btn_nul_{m['id']}_{id_joueur_cible}", 
-                                        type=type_b, 
-                                        use_container_width=True, 
-                                        disabled=bouton_bloque,
-                                        on_click=cb_clic_gagnant,
-                                        args=(m['id'], "Match Nul", m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
-                                    )
+                                    st.markdown(f'''
+                                        <a href="{get_url("Match Nul")}" class="custom-team-btn {class_nul}">
+                                            <span>🤝 Nul</span>
+                                        </a>
+                                    ''', unsafe_allow_html=True)
                                     
-                                # 3. BOUTON EXTÉRIEUR (AVEC LOGO ALIGNÉ À GAUCHE DU BOUTON)
+                                # 3. BOUTON EXTÉRIEUR (AVEC LOGO INTÉGRÉ À GAUCHE DU NOM)
                                 with col_c:
-                                    sub_c_logo, sub_c_btn = st.columns([1, 4], vertical_alignment="center")
-                                    with sub_c_logo:
-                                        if logo_ext:
-                                            st.markdown(f'<div style="text-align: right;"><img src="{logo_ext}" width="18" height="18" style="object-fit:contain; vertical-align:middle;"></div>', unsafe_allow_html=True)
-                                    with sub_c_btn:
-                                        type_c = "primary" if choix_actuel == m['equipe_ext'] else "secondary"
-                                        st.button(
-                                            m['equipe_ext'], 
-                                            key=f"btn_ext_{m['id']}_{id_joueur_cible}", 
-                                            type=type_c, 
-                                            use_container_width=True, 
-                                            disabled=bouton_bloque,
-                                            on_click=cb_clic_gagnant,
-                                            args=(m['id'], m['equipe_ext'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
-                                        )
+                                    img_html_ext = f'<img src="{logo_ext}">' if logo_ext else ''
+                                    st.markdown(f'''
+                                        <a href="{get_url(m['equipe_ext'])}" class="custom-team-btn {class_ext}">
+                                            {img_html_ext}
+                                            <span>{m['equipe_ext']}</span>
+                                        </a>
+                                    ''', unsafe_allow_html=True)
             
                                 st.markdown('</div>', unsafe_allow_html=True)
                                 st.markdown("<br>", unsafe_allow_html=True)
