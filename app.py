@@ -906,7 +906,7 @@ if st.session_state.onglet_actif == "🏉":
                 st.markdown('<div style="height: 1px; background-color: #cbd5e1; margin: 25px auto 15px auto; width: calc(100% - 40px);"></div>', unsafe_allow_html=True)
                 st.subheader("🏉 Liste des Matchs")
             
-                # CSS global avec adaptation automatique et robuste au mode clair / sombre de Streamlit
+                # CSS global : fond neutre adaptatif et suppression totale des aspects liens hypertextes
                 st.markdown("""
                     <style>
                         [data-testid="stVerticalBlockBorderWrapper"] {
@@ -915,7 +915,7 @@ if st.session_state.onglet_actif == "🏉":
                             padding-bottom: 10px !important;
                             box-shadow: 0 1px 2px rgba(0,0,0,0.02);
                         }
-                        /* Bouton personnalisé unifié s'adaptant dynamiquement au thème */
+                        /* Bouton personnalisé unifié (Fond neutre compatible clair/sombre et sans soulignement de lien) */
                         .custom-team-btn {
                             display: flex;
                             align-items: center;
@@ -929,26 +929,32 @@ if st.session_state.onglet_actif == "🏉":
                             font-size: 11px;
                             font-weight: 600;
                             cursor: pointer;
-                            text-decoration: none;
+                            text-decoration: none !important;
                             transition: all 0.2s ease;
                             box-sizing: border-box;
                             box-shadow: 0 1px 2px rgba(0,0,0,0.05);
                         }
-                        /* Bouton non sélectionné (S'adapte au mode clair ou sombre) */
+                        .custom-team-btn:link, 
+                        .custom-team-btn:visited, 
+                        .custom-team-btn:hover, 
+                        .custom-team-btn:active {
+                            text-decoration: none !important;
+                        }
+                        /* Bouton non sélectionné */
                         .custom-team-btn.unselected {
-                            background-color: var(--secondaryBackgroundColor, var(--secondary-background-color, #ffffff));
-                            color: var(--textColor, var(--text-color, #1e293b));
+                            background-color: rgba(128, 128, 128, 0.12);
+                            color: inherit !important;
                             border: 1.5px solid rgba(128, 128, 128, 0.35);
                         }
                         .custom-team-btn.unselected:hover {
                             border-color: #2563eb;
-                            color: #2563eb;
+                            color: #2563eb !important;
                             background-color: rgba(37, 99, 235, 0.08);
                         }
-                        /* Bouton sélectionné (Reste en bleu vif avec texte blanc) */
+                        /* Bouton sélectionné */
                         .custom-team-btn.selected {
                             background-color: #2563eb;
-                            color: #ffffff;
+                            color: #ffffff !important;
                             border: 1.5px solid #2563eb;
                         }
                         .custom-team-btn img {
