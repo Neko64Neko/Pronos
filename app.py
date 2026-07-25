@@ -904,6 +904,10 @@ if st.session_state.onglet_actif == "🏉":
                             text-align: center;
                             color: #2563eb;
                             margin-bottom: 12px;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            gap: 12px;
                         }
                         /* Séparateur à double ligne propre */
                         hr.match-separator {
@@ -950,19 +954,19 @@ if st.session_state.onglet_actif == "🏉":
                         for index, m in enumerate(matchs_visibles):
                             with st.container(border=True):
                                 
-                                # --- RÉCUPÉRATION DES LOGOS ---
+                                # --- RÉCUPÉRATION DES URLS DE LOGOS ---
                                 logo_dom = obtenir_logo(m["equipe_dom"])
                                 logo_ext = obtenir_logo(m["equipe_ext"])
                                 
-                                # --- TITRE DU MATCH AVEC LOGOS ---
+                                # --- TITRE DU MATCH AVEC VRAIES IMAGES HTML ---
                                 st.markdown(
                                     f'<div class="match-title">'
                                     f'<span style="display:inline-flex; align-items:center; gap:8px;">'
-                                    f'{logo_dom} {m["equipe_dom"]}'
+                                    f'<img src="{logo_dom}" width="28" height="28" style="object-fit:contain;"> {m["equipe_dom"]}'
                                     f'</span>'
-                                    f' <span style="color: #94a3b8; font-weight: normal; margin: 0 8px;">vs</span> '
+                                    f' <span style="color: #94a3b8; font-weight: normal; margin: 0 4px;">vs</span> '
                                     f'<span style="display:inline-flex; align-items:center; gap:8px;">'
-                                    f'{m["equipe_ext"]} {logo_ext}'
+                                    f'{m["equipe_ext"]} <img src="{logo_ext}" width="28" height="28" style="object-fit:contain;">'
                                     f'</span>'
                                     f'</div>',
                                     unsafe_allow_html=True
@@ -1054,7 +1058,7 @@ if st.session_state.onglet_actif == "🏉":
                                 with col_a:
                                     type_a = "primary" if choix_actuel == m['equipe_dom'] else "secondary"
                                     st.button(
-                                        f"{logo_dom} {m['equipe_dom']}", 
+                                        m['equipe_dom'], # Bouton texte simple (les logos sont dans le titre)
                                         key=f"btn_dom_{m['id']}_{id_joueur_cible}", 
                                         type=type_a, 
                                         use_container_width=True, 
@@ -1078,7 +1082,7 @@ if st.session_state.onglet_actif == "🏉":
                                 with col_c:
                                     type_c = "primary" if choix_actuel == m['equipe_ext'] else "secondary"
                                     st.button(
-                                        f"{m['equipe_ext']} {logo_ext}", 
+                                        m['equipe_ext'], # Bouton texte simple
                                         key=f"btn_ext_{m['id']}_{id_joueur_cible}", 
                                         type=type_c, 
                                         use_container_width=True, 
@@ -1100,7 +1104,7 @@ if st.session_state.onglet_actif == "🏉":
                                 val_vainqueur = st.session_state.get(f"w_{m['id']}_{id_joueur_cible}", choix_actuel)
                                 est_match_nul = (val_vainqueur == "Match Nul")
             
-                                # Label personnalisé pour l'écart (s'adapte si c'est un match nul)
+                                # Label personnalisé pour l'écart
                                 if est_match_nul:
                                     st.markdown('<div style="font-size: 1.1em; font-weight: 600; color: #94a3b8; margin-bottom: 2px;">Écart (pts) : <span style="font-size: 0.85em; font-weight: normal; font-style: italic;">(Non requis pour un match nul)</span></div>', unsafe_allow_html=True)
                                 else:
@@ -1121,7 +1125,6 @@ if st.session_state.onglet_actif == "🏉":
                                 
                                 has_vainqueur = bool(val_vainqueur and val_vainqueur != "")
                                 
-                                # Si c'est un match nul, le pronostic est complet automatiquement
                                 if est_match_nul:
                                     has_ecart = True
                                 else:
@@ -1149,7 +1152,7 @@ if st.session_state.onglet_actif == "🏉":
                                         unsafe_allow_html=True
                                     )
             
-                                # --- SÉPARATEUR PROPRE ENTRE LES MATCHS (sauf pour le dernier) ---
+                                # --- SÉPARATEUR PROPRE ENTRE LES MATCHS ---
                                 if index < total_matchs - 1:
                                     st.markdown('<hr class="match-separator">', unsafe_allow_html=True)
                     else: 
