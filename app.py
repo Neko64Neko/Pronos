@@ -888,7 +888,7 @@ if st.session_state.onglet_actif == "🏉":
                 st.markdown('<div style="height: 1px; background-color: #cbd5e1; margin: 25px auto 15px auto; width: calc(100% - 40px);"></div>', unsafe_allow_html=True)
                 st.subheader("🏉 Liste des Matchs")
             
-                # CSS global pour épaissir le cadre et styliser le séparateur
+                # CSS global pour les cartes, les séparateurs et l'intégration du logo DANS le bouton
                 st.markdown("""
                     <style>
                         [data-testid="stVerticalBlockBorderWrapper"] {
@@ -896,6 +896,33 @@ if st.session_state.onglet_actif == "🏉":
                             border-radius: 12px !important;
                             padding-bottom: 10px !important;
                             box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+                        }
+                        /* Style du conteneur unifié (Logo + Bouton fusionnés) */
+                        .team-btn-box {
+                            display: flex;
+                            align-items: center;
+                            border-radius: 8px;
+                            padding: 0px 8px;
+                            width: 100%;
+                            height: 42px;
+                            transition: all 0.2s ease;
+                        }
+                        /* Rend le bouton Streamlit transparent pour qu'il fusionne avec le conteneur du logo */
+                        .team-btn-box button {
+                            background-color: transparent !important;
+                            border: none !important;
+                            box-shadow: none !important;
+                            width: 100% !important;
+                            text-align: left !important;
+                            padding: 0 !important;
+                            margin: 0 !important;
+                        }
+                        .team-btn-box button p {
+                            font-weight: 600 !important;
+                            font-size: 12px !important;
+                            overflow: hidden !important;
+                            text-overflow: ellipsis !important;
+                            white-space: nowrap !important;
                         }
                         /* Séparateur à double ligne propre */
                         hr.match-separator {
@@ -946,7 +973,7 @@ if st.session_state.onglet_actif == "🏉":
                                 logo_dom = obtenir_logo(m["equipe_dom"])
                                 logo_ext = obtenir_logo(m["equipe_ext"])
                                 
-                                # --- TITRE DU MATCH : [LOGO 1] [ÉQUIPE 1] VS [ÉQUIPE 2] [LOGO 2] ---
+                                # --- TITRE DU MATCH ---
                                 col_titre_g, col_titre_c, col_titre_d = st.columns([5, 1, 5])
                                 
                                 with col_titre_g:
@@ -1024,73 +1051,72 @@ if st.session_state.onglet_actif == "🏉":
                                             min-width: 0 !important;
                                             flex: 1 1 0% !important;
                                         }
-                                        .zone-matchs [data-testid="stHorizontalBlock"] button {
-                                            width: 100% !important;
-                                            max-width: 100% !important;
-                                            min-width: 0 !important;
-                                            padding: 4px 4px !important;
-                                            overflow: hidden !important;
-                                        }
-                                        .zone-matchs [data-testid="stHorizontalBlock"] button p {
-                                            overflow: hidden !important;
-                                            text-overflow: ellipsis !important;
-                                            white-space: nowrap !important;
-                                            font-size: 11px !important;
-                                        }
                                     </style>
                                 """, unsafe_allow_html=True)
                                 
                                 st.markdown('<div class="zone-matchs">', unsafe_allow_html=True)
                                 col_a, col_b, col_c = st.columns(3)
                                 
-                                # BOUTON DOMICILE AVEC LOGO À GAUCHE
+                                # --- ÉTAT DES SÉLECTIONS POUR COULEURS ---
+                                is_dom_selected = (choix_actuel == m['equipe_dom'])
+                                is_ext_selected = (choix_actuel == m['equipe_ext'])
+                                is_nul_selected = (choix_actuel == "Match Nul")
+            
+                                bg_dom = "#eff6ff" if is_dom_selected else "#f8fafc"
+                                border_dom = "#2563eb" if is_dom_selected else "#cbd5e1"
+                                
+                                bg_ext = "#eff6ff" if is_ext_selected else "#f8fafc"
+                                border_ext = "#2563eb" if is_ext_selected else "#cbd5e1"
+                                
+                                bg_nul = "#eff6ff" if is_nul_selected else "#f8fafc"
+                                border_nul = "#2563eb" if is_nul_selected else "#cbd5e1"
+            
+                                # BOUTON DOMICILE AVEC LOGO INTÉGRÉ À GAUCHE
                                 with col_a:
-                                    sub_a_logo, sub_a_btn = st.columns([1, 5])
-                                    with sub_a_logo:
-                                        if logo_dom:
-                                            st.markdown(f'<div style="padding-top: 6px;"><img src="{logo_dom}" width="18" height="18" style="object-fit:contain;"></div>', unsafe_allow_html=True)
-                                    with sub_a_btn:
-                                        type_a = "primary" if choix_actuel == m['equipe_dom'] else "secondary"
-                                        st.button(
-                                            m['equipe_dom'], 
-                                            key=f"btn_dom_{m['id']}_{id_joueur_cible}", 
-                                            type=type_a, 
-                                            use_container_width=True, 
-                                            disabled=bouton_bloque,
-                                            on_click=cb_clic_gagnant,
-                                            args=(m['id'], m['equipe_dom'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
-                                        )
+                                    st.markdown(f'''
+                                        <div class="team-btn-box" style="background-color: {bg_dom}; border: 1.5px solid {border_dom};">
+                                            <img src="{logo_dom}" width="20" height="20" style="object-fit:contain; margin-right: 6px; flex-shrink: 0;">
+                                    ''', unsafe_allow_html=True)
+                                    st.button(
+                                        m['equipe_dom'], 
+                                        key=f"btn_dom_{m['id']}_{id_joueur_cible}", 
+                                        use_container_width=True, 
+                                        disabled=bouton_bloque,
+                                        on_click=cb_clic_gagnant,
+                                        args=(m['id'], m['equipe_dom'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
+                                    )
+                                    st.markdown('</div>', unsafe_allow_html=True)
                                     
                                 # BOUTON MATCH NUL
                                 with col_b:
-                                    type_b = "primary" if choix_actuel == "Match Nul" else "secondary"
+                                    st.markdown(f'''
+                                        <div class="team-btn-box" style="background-color: {bg_nul}; border: 1.5px solid {border_nul}; justify-content: center;">
+                                    ''', unsafe_allow_html=True)
                                     st.button(
                                         "🤝 Nul", 
                                         key=f"btn_nul_{m['id']}_{id_joueur_cible}", 
-                                        type=type_b, 
                                         use_container_width=True, 
                                         disabled=bouton_bloque,
                                         on_click=cb_clic_gagnant,
                                         args=(m['id'], "Match Nul", m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
                                     )
+                                    st.markdown('</div>', unsafe_allow_html=True)
                                     
-                                # BOUTON EXTÉRIEUR AVEC LOGO À GAUCHE
+                                # BOUTON EXTÉRIEUR AVEC LOGO INTÉGRÉ À GAUCHE
                                 with col_c:
-                                    sub_c_logo, sub_c_btn = st.columns([1, 5])
-                                    with sub_c_logo:
-                                        if logo_ext:
-                                            st.markdown(f'<div style="padding-top: 6px;"><img src="{logo_ext}" width="18" height="18" style="object-fit:contain;"></div>', unsafe_allow_html=True)
-                                    with sub_c_btn:
-                                        type_c = "primary" if choix_actuel == m['equipe_ext'] else "secondary"
-                                        st.button(
-                                            m['equipe_ext'], 
-                                            key=f"btn_ext_{m['id']}_{id_joueur_cible}", 
-                                            type=type_c, 
-                                            use_container_width=True, 
-                                            disabled=bouton_bloque,
-                                            on_click=cb_clic_gagnant,
-                                            args=(m['id'], m['equipe_ext'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
-                                        )
+                                    st.markdown(f'''
+                                        <div class="team-btn-box" style="background-color: {bg_ext}; border: 1.5px solid {border_ext};">
+                                            <img src="{logo_ext}" width="20" height="20" style="object-fit:contain; margin-right: 6px; flex-shrink: 0;">
+                                    ''', unsafe_allow_html=True)
+                                    st.button(
+                                        m['equipe_ext'], 
+                                        key=f"btn_ext_{m['id']}_{id_joueur_cible}", 
+                                        use_container_width=True, 
+                                        disabled=bouton_bloque,
+                                        on_click=cb_clic_gagnant,
+                                        args=(m['id'], m['equipe_ext'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
+                                    )
+                                    st.markdown('</div>', unsafe_allow_html=True)
             
                                 st.markdown('</div>', unsafe_allow_html=True)
                                 st.markdown("<br>", unsafe_allow_html=True)
