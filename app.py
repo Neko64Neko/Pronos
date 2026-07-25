@@ -885,28 +885,11 @@ if st.session_state.onglet_actif == "🏉":
                 except Exception as e:
                     st.error(f"Erreur lors du chargement des questions bonus : {e}")
                         
-            # Gestion du clic sur les boutons personnalisés via les query params
-                if "match_action" in st.query_params:
-                    try:
-                        m_id = st.query_params.get("m_id")
-                        choix = st.query_params.get("choix")
-                        u_id = st.query_params.get("u_id", id_joueur_cible)
-                        eq_d = st.query_params.get("eq_d", "")
-                        eq_e = st.query_params.get("eq_e", "")
-                        
-                        if m_id and choix:
-                            st.session_state[f"w_{m_id}_{u_id}"] = choix
-                            sauvegarder_prono_auto(m_id, eq_d, eq_e, u_id)
-                            st.query_params.clear()
-                            st.rerun()
-                    except Exception:
-                        pass
-            
-                # 7.2.2 - SECTION MATCHS OUVERTS
+            # 7.2.2 - SECTION MATCHS OUVERTS
                 st.markdown('<div style="height: 1px; background-color: #cbd5e1; margin: 25px auto 15px auto; width: calc(100% - 40px);"></div>', unsafe_allow_html=True)
                 st.subheader("🏉 Liste des Matchs")
             
-                # CSS global : comportement de bouton pur et fond adaptatif
+                # CSS global pour le conteneur des matchs et les séparateurs
                 st.markdown("""
                     <style>
                         [data-testid="stVerticalBlockBorderWrapper"] {
@@ -914,60 +897,6 @@ if st.session_state.onglet_actif == "🏉":
                             border-radius: 12px !important;
                             padding-bottom: 10px !important;
                             box-shadow: 0 1px 2px rgba(0,0,0,0.02);
-                        }
-                        .custom-team-btn {
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-                            gap: 6px;
-                            width: 100%;
-                            height: 38px;
-                            padding: 0 8px;
-                            border-radius: 8px;
-                            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-                            font-size: 11px;
-                            font-weight: 600;
-                            cursor: pointer;
-                            appearance: none;
-                            -webkit-appearance: none;
-                            transition: all 0.2s ease;
-                            box-sizing: border-box;
-                            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-                            outline: none;
-                        }
-                        .custom-team-btn:focus {
-                            outline: none;
-                        }
-                        .custom-team-btn.unselected {
-                            background-color: rgba(128, 128, 128, 0.12);
-                            color: inherit !important;
-                            border: 1.5px solid rgba(128, 128, 128, 0.35);
-                        }
-                        .custom-team-btn.unselected:hover {
-                            border-color: #2563eb;
-                            color: #2563eb !important;
-                            background-color: rgba(37, 99, 235, 0.08);
-                        }
-                        .custom-team-btn.selected {
-                            background-color: #2563eb;
-                            color: #ffffff !important;
-                            border: 1.5px solid #2563eb;
-                        }
-                        .custom-team-btn img {
-                            width: 18px;
-                            height: 18px;
-                            object-fit: contain;
-                            flex-shrink: 0;
-                        }
-                        .custom-team-btn span {
-                            overflow: hidden;
-                            text-overflow: ellipsis;
-                            white-space: nowrap;
-                        }
-                        .custom-team-btn.disabled {
-                            opacity: 0.6;
-                            cursor: not-allowed;
-                            pointer-events: none;
                         }
                         hr.match-separator {
                             border: none !important;
@@ -1056,7 +985,7 @@ if st.session_state.onglet_actif == "🏉":
                                     pass
             
                                 prono_donnees = dict_tous_pronos.get(m['id'])
-                                choix_actuel = ""
+                                choix_actuel = None
                                 ecart_existant = "..."
                                 
                                 if prono_donnees:
@@ -1071,8 +1000,9 @@ if st.session_state.onglet_actif == "🏉":
                                 key_w = f"w_{m['id']}_{id_joueur_cible}"
                                 if key_w not in st.session_state:
                                     st.session_state[key_w] = choix_actuel
-                                else:
-                                    choix_actuel = st.session_state[key_w]
+            
+                                def cb_changement_vainqueur(match_id, eq_dom, eq_ext, u_id):
+                                    sauvegarder_prono_auto(match_id, eq_dom, eq_ext, u_id)
             
                                 def cb_changement_ecart(match_id, eq_dom, eq_ext, u_id):
                                     sauvegarder_prono_auto(match_id, eq_dom, eq_ext, u_id)
@@ -1080,81 +1010,19 @@ if st.session_state.onglet_actif == "🏉":
                                 # Label personnalisé pour le vainqueur
                                 st.markdown('<div style="font-size: 1.1em; font-weight: 600; color: #64748b; margin-bottom: 6px;">Sélectionner le Vainqueur :</div>', unsafe_allow_html=True)
                                 
-                                st.markdown("""
-                                    <style>
-                                        .zone-matchs [data-testid="stHorizontalBlock"] {
-                                            flex-wrap: nowrap !important;
-                                            gap: 4px !important;
-                                            width: 100% !important;
-                                            overflow: hidden !important;
-                                            display: flex !important;
-                                            flex-direction: row !important;
-                                        }
-                                        .zone-matchs [data-testid="stHorizontalBlock"] > div {
-                                            width: calc(33.33% - 4px) !important;
-                                            min-width: 0 !important;
-                                            flex: 1 1 0% !important;
-                                        }
-                                    </style>
-                                """, unsafe_allow_html=True)
+                                options_vainqueur = [m['equipe_dom'], "Match Nul", m['equipe_ext']]
                                 
-                                st.markdown('<div class="zone-matchs">', unsafe_allow_html=True)
-                                col_a, col_b, col_c = st.columns(3)
+                                # Utilisation du composant natif stable et réactif
+                                st.segmented_control(
+                                    "Sélectionner le Vainqueur",
+                                    options=options_vainqueur,
+                                    key=key_w,
+                                    on_change=cb_changement_vainqueur,
+                                    args=(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible),
+                                    disabled=bouton_bloque,
+                                    label_visibility="collapsed"
+                                )
                                 
-                                is_dom_selected = (choix_actuel == m['equipe_dom'])
-                                is_ext_selected = (choix_actuel == m['equipe_ext'])
-                                is_nul_selected = (choix_actuel == "Match Nul")
-            
-                                class_dom = "selected" if is_dom_selected else "unselected"
-                                class_ext = "selected" if is_ext_selected else "unselected"
-                                class_nul = "selected" if is_nul_selected else "unselected"
-            
-                                if bouton_bloque:
-                                    class_dom += " disabled"
-                                    class_ext += " disabled"
-                                    class_nul += " disabled"
-            
-                                def get_js_click(choix_val):
-                                    return f"""
-                                        const p = new URLSearchParams(window.parent.location.search);
-                                        p.set('match_action', '1');
-                                        p.set('m_id', '{m['id']}');
-                                        p.set('choix', `{choix_val}`);
-                                        p.set('u_id', '{id_joueur_cible}');
-                                        p.set('eq_d', `{m['equipe_dom']}`);
-                                        p.set('eq_e', `{m['equipe_ext']}`);
-                                        window.parent.location.search = p.toString();
-                                    """
-            
-                                # 1. BOUTON DOMICILE
-                                with col_a:
-                                    img_html_dom = f'<img src="{logo_dom}">' if logo_dom else ''
-                                    st.markdown(f'''
-                                        <button onclick="{get_js_click(m['equipe_dom'])}" class="custom-team-btn {class_dom}">
-                                            {img_html_dom}
-                                            <span>{m['equipe_dom']}</span>
-                                        </button>
-                                    ''', unsafe_allow_html=True)
-                                    
-                                # 2. BOUTON MATCH NUL
-                                with col_b:
-                                    st.markdown(f'''
-                                        <button onclick="{get_js_click("Match Nul")}" class="custom-team-btn {class_nul}">
-                                            <span>🤝 Nul</span>
-                                        </button>
-                                    ''', unsafe_allow_html=True)
-                                    
-                                # 3. BOUTON EXTÉRIEUR
-                                with col_c:
-                                    img_html_ext = f'<img src="{logo_ext}">' if logo_ext else ''
-                                    st.markdown(f'''
-                                        <button onclick="{get_js_click(m['equipe_ext'])}" class="custom-team-btn {class_ext}">
-                                            {img_html_ext}
-                                            <span>{m['equipe_ext']}</span>
-                                        </button>
-                                    ''', unsafe_allow_html=True)
-            
-                                st.markdown('</div>', unsafe_allow_html=True)
                                 st.markdown("<br>", unsafe_allow_html=True)
                                 
                                 # --- SÉLECTEUR D'ÉCARTS ---
@@ -1164,7 +1032,7 @@ if st.session_state.onglet_actif == "🏉":
                                 if key_m not in st.session_state:
                                     st.session_state[key_m] = ecart_existant if ecart_existant in TRANCHES_ECARTS else "..."
             
-                                val_vainqueur = st.session_state.get(f"w_{m['id']}_{id_joueur_cible}", choix_actuel)
+                                val_vainqueur = st.session_state.get(key_w)
                                 est_match_nul = (val_vainqueur == "Match Nul")
             
                                 if est_match_nul:
