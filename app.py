@@ -888,7 +888,7 @@ if st.session_state.onglet_actif == "🏉":
                 st.markdown('<div style="height: 1px; background-color: #cbd5e1; margin: 25px auto 15px auto; width: calc(100% - 40px);"></div>', unsafe_allow_html=True)
                 st.subheader("🏉 Liste des Matchs")
             
-                # CSS global pour épaissir le cadre, styliser les titres et le séparateur
+                # CSS global pour épaissir le cadre et styliser le séparateur
                 st.markdown("""
                     <style>
                         [data-testid="stVerticalBlockBorderWrapper"] {
@@ -896,17 +896,6 @@ if st.session_state.onglet_actif == "🏉":
                             border-radius: 12px !important;
                             padding-bottom: 10px !important;
                             box-shadow: 0 1px 2px rgba(0,0,0,0.02);
-                        }
-                        .match-title {
-                            font-size: 1.25em;
-                            font-weight: bold;
-                            text-align: center;
-                            color: #2563eb;
-                            margin-bottom: 12px;
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-                            gap: 8px;
                         }
                         /* Séparateur à double ligne propre */
                         hr.match-separator {
@@ -953,22 +942,23 @@ if st.session_state.onglet_actif == "🏉":
                         for index, m in enumerate(matchs_visibles):
                             with st.container(border=True):
                                 
-                                # --- RÉCUPÉRATION DES LOGOS (ENCODÉS EN BASE64) ---
+                                # --- RÉCUPÉRATION DES LOGOS ---
                                 logo_dom = obtenir_logo(m["equipe_dom"])
                                 logo_ext = obtenir_logo(m["equipe_ext"])
                                 
-                                # --- GESTION DE L'AFFICHAGE DES LOGOS DANS LE TITRE ---
-                                html_logo_dom = f'<img src="{logo_dom}" width="24" height="24" style="object-fit:contain; vertical-align:middle;"> ' if logo_dom else ''
-                                html_logo_ext = f' <img src="{logo_ext}" width="24" height="24" style="object-fit:contain; vertical-align:middle;">' if logo_ext else ''
-            
-                                st.markdown(
-                                    f'<div class="match-title">'
-                                    f'<span>{html_logo_dom}{m["equipe_dom"]}</span>'
-                                    f' <span style="color: #94a3b8; font-weight: normal; margin: 0 6px;">vs</span> '
-                                    f'<span>{m["equipe_ext"]}{html_logo_ext}</span>'
-                                    f'</div>',
-                                    unsafe_allow_html=True
-                                )
+                                # --- TITRE DU MATCH : [LOGO 1] [ÉQUIPE 1] VS [ÉQUIPE 2] [LOGO 2] ---
+                                col_titre_g, col_titre_c, col_titre_d = st.columns([5, 1, 5])
+                                
+                                with col_titre_g:
+                                    img_h_html = f'<img src="{logo_dom}" width="24" height="24" style="object-fit:contain; vertical-align:middle;"> ' if logo_dom else ''
+                                    st.markdown(f'<div style="text-align: right; font-weight: bold; font-size: 1.2em; color: #2563eb; padding-top: 4px;">{img_h_html}{m["equipe_dom"]}</div>', unsafe_allow_html=True)
+                                        
+                                with col_titre_c:
+                                    st.markdown('<div style="text-align: center; font-weight: normal; font-size: 1.2em; color: #94a3b8; padding-top: 4px;">vs</div>', unsafe_allow_html=True)
+                                    
+                                with col_titre_d:
+                                    img_a_html = f' <img src="{logo_ext}" width="24" height="24" style="object-fit:contain; vertical-align:middle;">' if logo_ext else ''
+                                    st.markdown(f'<div style="text-align: left; font-weight: bold; font-size: 1.2em; color: #2563eb; padding-top: 4px;">{m["equipe_ext"]}{img_a_html}</div>', unsafe_allow_html=True)
                                 
                                 bouton_bloque = False
                                 try:
@@ -1053,18 +1043,25 @@ if st.session_state.onglet_actif == "🏉":
                                 st.markdown('<div class="zone-matchs">', unsafe_allow_html=True)
                                 col_a, col_b, col_c = st.columns(3)
                                 
+                                # BOUTON DOMICILE AVEC LOGO À GAUCHE
                                 with col_a:
-                                    type_a = "primary" if choix_actuel == m['equipe_dom'] else "secondary"
-                                    st.button(
-                                        m['equipe_dom'], 
-                                        key=f"btn_dom_{m['id']}_{id_joueur_cible}", 
-                                        type=type_a, 
-                                        use_container_width=True, 
-                                        disabled=bouton_bloque,
-                                        on_click=cb_clic_gagnant,
-                                        args=(m['id'], m['equipe_dom'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
-                                    )
+                                    sub_a_logo, sub_a_btn = st.columns([1, 5])
+                                    with sub_a_logo:
+                                        if logo_dom:
+                                            st.markdown(f'<div style="padding-top: 6px;"><img src="{logo_dom}" width="18" height="18" style="object-fit:contain;"></div>', unsafe_allow_html=True)
+                                    with sub_a_btn:
+                                        type_a = "primary" if choix_actuel == m['equipe_dom'] else "secondary"
+                                        st.button(
+                                            m['equipe_dom'], 
+                                            key=f"btn_dom_{m['id']}_{id_joueur_cible}", 
+                                            type=type_a, 
+                                            use_container_width=True, 
+                                            disabled=bouton_bloque,
+                                            on_click=cb_clic_gagnant,
+                                            args=(m['id'], m['equipe_dom'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
+                                        )
                                     
+                                # BOUTON MATCH NUL
                                 with col_b:
                                     type_b = "primary" if choix_actuel == "Match Nul" else "secondary"
                                     st.button(
@@ -1077,17 +1074,23 @@ if st.session_state.onglet_actif == "🏉":
                                         args=(m['id'], "Match Nul", m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
                                     )
                                     
+                                # BOUTON EXTÉRIEUR AVEC LOGO À GAUCHE
                                 with col_c:
-                                    type_c = "primary" if choix_actuel == m['equipe_ext'] else "secondary"
-                                    st.button(
-                                        m['equipe_ext'], 
-                                        key=f"btn_ext_{m['id']}_{id_joueur_cible}", 
-                                        type=type_c, 
-                                        use_container_width=True, 
-                                        disabled=bouton_bloque,
-                                        on_click=cb_clic_gagnant,
-                                        args=(m['id'], m['equipe_ext'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
-                                    )
+                                    sub_c_logo, sub_c_btn = st.columns([1, 5])
+                                    with sub_c_logo:
+                                        if logo_ext:
+                                            st.markdown(f'<div style="padding-top: 6px;"><img src="{logo_ext}" width="18" height="18" style="object-fit:contain;"></div>', unsafe_allow_html=True)
+                                    with sub_c_btn:
+                                        type_c = "primary" if choix_actuel == m['equipe_ext'] else "secondary"
+                                        st.button(
+                                            m['equipe_ext'], 
+                                            key=f"btn_ext_{m['id']}_{id_joueur_cible}", 
+                                            type=type_c, 
+                                            use_container_width=True, 
+                                            disabled=bouton_bloque,
+                                            on_click=cb_clic_gagnant,
+                                            args=(m['id'], m['equipe_ext'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
+                                        )
             
                                 st.markdown('</div>', unsafe_allow_html=True)
                                 st.markdown("<br>", unsafe_allow_html=True)
