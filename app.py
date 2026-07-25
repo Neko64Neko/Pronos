@@ -1009,7 +1009,7 @@ if st.session_state.onglet_actif == "🏉":
                     if matchs_visibles:
                         matchs_visibles = sorted(matchs_visibles, key=lambda x: x['date_match'] if x.get('date_match') is not None else "9999-12-31")
                         
-                        # --- OPTIMISATION PERF : CHARGEMENT GLOBAL DES PRONOS EN 1 SEULE REQUÊTE ---
+                        # Chargement global des pronos en 1 seule requête pour la performance
                         tous_pronos_bruts = supabase.table("Pronostics").select("*").eq("user_id", id_joueur_cible).execute().data
                         dict_tous_pronos = {p['match_id']: p for p in tous_pronos_bruts} if tous_pronos_bruts else {}
                         
@@ -1055,7 +1055,6 @@ if st.session_state.onglet_actif == "🏉":
                                 except Exception:
                                     pass
             
-                                # --- UTILISATION DU DICTIONNAIRE EN MÉMOIRE (INSTANTANÉ) ---
                                 prono_donnees = dict_tous_pronos.get(m['id'])
                                 choix_actuel = ""
                                 ecart_existant = "..."
@@ -1157,7 +1156,7 @@ if st.session_state.onglet_actif == "🏉":
                                 st.markdown('</div>', unsafe_allow_html=True)
                                 st.markdown("<br>", unsafe_allow_html=True)
                                 
-                                # --- SÉLECTEUR D'ÉCARTS ---
+                                # --- SÉLECTEUR D'ÉCARTS (MENU DÉROULANT / SELECTBOX) ---
                                 key_m = f"m_{m['id']}_{id_joueur_cible}"
                                 options_ecarts = ["..."] + TRANCHES_ECARTS
                                 
@@ -1172,7 +1171,7 @@ if st.session_state.onglet_actif == "🏉":
                                 else:
                                     st.markdown('<div style="font-size: 1.1em; font-weight: 600; color: #64748b; margin-bottom: 2px;">Écart (pts) :</div>', unsafe_allow_html=True)
                                 
-                                st.select_slider(
+                                st.selectbox(
                                     "Écart (pts)", 
                                     options=options_ecarts,
                                     key=key_m, 
