@@ -898,6 +898,17 @@ if st.session_state.onglet_actif == "🏉":
                             padding-bottom: 10px !important;
                             box-shadow: 0 1px 2px rgba(0,0,0,0.02);
                         }
+                        .match-title {
+                            font-size: 1.25em;
+                            font-weight: bold;
+                            text-align: center;
+                            color: #2563eb;
+                            margin-bottom: 12px;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            gap: 8px;
+                        }
                         /* Séparateur à double ligne propre */
                         hr.match-separator {
                             border: none !important;
@@ -937,7 +948,7 @@ if st.session_state.onglet_actif == "🏉":
                                     matchs_visibles.append(m)
             
                     if matchs_visibles:
-                        matchs_visibles = sorted(matchs_visibles, key=lambda x: x['date_match'] if x.get('date_match') is not None else "9999-12-31")
+                        matchs_visibles = sorted(matchs_visibles, key=lambda x: x['date_match'] if x.get('date_match'] is not None else "9999-12-31")
                         
                         total_matchs = len(matchs_visibles)
                         for index, m in enumerate(matchs_visibles):
@@ -947,27 +958,19 @@ if st.session_state.onglet_actif == "🏉":
                                 logo_dom = obtenir_logo(m["equipe_dom"])
                                 logo_ext = obtenir_logo(m["equipe_ext"])
                                 
-                                # --- TITRE DU MATCH AVEC COLONNES ET ST.IMAGE ---
-                                col_titre_g, col_titre_c, col_titre_d = st.columns([4, 1, 4])
-                                
-                                with col_titre_g:
-                                    sub_g1, sub_g2 = st.columns([1, 4])
-                                    with sub_g1:
-                                        if logo_dom:
-                                            st.image(logo_dom, width=28)
-                                    with sub_g2:
-                                        st.markdown(f'<div style="text-align: right; font-weight: bold; font-size: 1.2em; color: #2563eb; padding-top: 4px;">{m["equipe_dom"]}</div>', unsafe_allow_html=True)
-                                        
-                                with col_titre_c:
-                                    st.markdown('<div style="text-align: center; font-weight: normal; font-size: 1.2em; color: #94a3b8; padding-top: 4px;">vs</div>', unsafe_allow_html=True)
-                                    
-                                with col_titre_d:
-                                    sub_d1, sub_d2 = st.columns([4, 1])
-                                    with sub_d1:
-                                        st.markdown(f'<div style="text-align: left; font-weight: bold; font-size: 1.2em; color: #2563eb; padding-top: 4px;">{m["equipe_ext"]}</div>', unsafe_allow_html=True)
-                                    with sub_d2:
-                                        if logo_ext:
-                                            st.image(logo_ext, width=28)
+                                # --- TITRE DU MATCH AVEC IMAGES HTML (SUPPORT SVG/PNG) ---
+                                st.markdown(
+                                    f'<div class="match-title">'
+                                    f'<span style="display:inline-flex; align-items:center; gap:6px;">'
+                                    f'<img src="{logo_dom}" width="24" height="24" style="object-fit:contain;"> {m["equipe_dom"]}'
+                                    f'</span>'
+                                    f' <span style="color: #94a3b8; font-weight: normal; margin: 0 4px;">vs</span> '
+                                    f'<span style="display:inline-flex; align-items:center; gap:6px;">'
+                                    f'{m["equipe_ext"]} <img src="{logo_ext}" width="24" height="24" style="object-fit:contain;">'
+                                    f'</span>'
+                                    f'</div>',
+                                    unsafe_allow_html=True
+                                )
                                 
                                 bouton_bloque = False
                                 try:
