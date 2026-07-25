@@ -126,5 +126,41 @@ def run_calendar():
         except Exception as e_upsert:
             print(f"ERREUR LORS DE L'INSERTION SUPABASE : {e_upsert}")
 
+def peupler_table_equipes_automatiquement(events_api): #POUR AJOUTER LOGO EQUIPE EN AUTO
+    """
+    Parcourt la liste des événements de l'API, extrait les équipes uniques 
+    et les insère dans la table 'Equipes' de Supabase.
+    """
+    equipes_collectees = {}
+
+    # 1. Extraction des équipes uniques depuis les matchs de l'API
+    for event in events_api:
+        for type_equipe in ['homeTeam', 'awayTeam']:
+            team_data = event.get(type_equipe)
+            if team_data:
+                team_id = team_data.get('id')
+                team_name = team_data.get('name')
+                
+                if team_id and team_name:
+                    # On évite les doublons si l'équipe joue plusieurs matchs
+                    if team_id not in equipes_collectees:
+                        logo_url = f"https://api.sofascore.com/api/v1/team/{team_id}/image"
+                        equipes_collectees[team_id] = {
+                            "id": team_id,
+                            "nom": team_name,
+                            "logo_url": logo_url
+                        }
+
+    # 2. Enregistrement dans Supabase (Upsert pour éviter les erreurs de doublons)
+    nb_ajoutes = 0
+    for team_id, data in equipes_collectees.items():
+        try:
+            supabase.table("Equipes").upsert(data).execute()
+            nb_ajoutes += 1
+        except Exception as e:
+            print(freur pour l'équipe {data['nom']} : {e}")
+
+    return nb_ajoutes
+
 if __name__ == "__main__":
     run_calendar()
