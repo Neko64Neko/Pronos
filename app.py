@@ -2,6 +2,7 @@ import streamlit as st
 from supabase import create_client
 from datetime import datetime, timedelta, timezone
 import requests
+import base64
 from bs4 import BeautifulSoup
 import time
 import random
@@ -65,21 +66,24 @@ if st.session_state.user_id is None:
 #1.4 - GESTION DES LOGOS
 def obtenir_logo(nom_equipe):
     if not nom_equipe:
-        return "🛡️"
-        
+        return ""
     try:
         nom_propre = nom_equipe.strip()
-        # On interroge bien la colonne "logo_url"
         reponse = supabase.table("Equipes").select("logo_url").eq("nom", nom_propre).execute()
         
         if reponse.data and len(reponse.data) > 0:
-            logo = reponse.data[0].get("logo_url")
-            if logo:
-                return logo
+            url = reponse.data[0].get("logo_url")
+            if url and url.startswith("http"):
+                # Télécharge l'image et l'encode en Base64 (zéro problème de CORS)
+                response = requests.get(url, timeout=5)
+                if response.status_code == 200:
+                    content_type = response.headers.get("content-type", "image/png")
+                    encoded = base64.b64encode(response.content).decode("utf-8")
+                    return f"data:{content_type};base64,{encoded}"
     except Exception as e:
         print(f"Erreur logo pour '{nom_equipe}' : {e}")
         
-    return "🛡️"
+    return ""
 # =====================================================================
 # 2 - SYSTEME DE SCRAPING GRATUIT ET AUTOMATIQUE
 # =====================================================================
