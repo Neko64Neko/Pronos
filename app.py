@@ -68,22 +68,16 @@ def obtenir_logo(nom_equipe):
         return "🛡️"
         
     try:
-        # Nettoyage des espaces invisibles potentiels
         nom_propre = nom_equipe.strip()
-        
-        reponse = supabase.table("Equipes").select("logo").eq("nom", nom_propre).execute()
-        
-        # --- LIGNE DE DEBUG TEMPORAIRE ---
-        # Décommente la ligne ci-dessous si tu veux voir ce que Supabase renvoie dans ton app :
-        # st.write(f"Équipe cherchée : '{nom_propre}' | Réponse Supabase : {reponse.data}")
+        # On interroge bien la colonne "logo_url"
+        reponse = supabase.table("Equipes").select("logo_url").eq("nom", nom_propre).execute()
         
         if reponse.data and len(reponse.data) > 0:
-            logo = reponse.data[0].get("logo")
+            logo = reponse.data[0].get("logo_url")
             if logo:
                 return logo
-                
     except Exception as e:
-        st.error(f"Erreur Supabase pour '{nom_equipe}' : {e}")
+        print(f"Erreur logo pour '{nom_equipe}' : {e}")
         
     return "🛡️"
 # =====================================================================
