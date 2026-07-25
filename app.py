@@ -936,7 +936,7 @@ if st.session_state.onglet_actif == "🏉":
                                     matchs_visibles.append(m)
             
                     if matchs_visibles:
-                        matchs_visibles = sorted(matchs_visibles, key=lambda x: x['date_match'] if x.get('date_match'] is not None else "9999-12-31")
+                        matchs_visibles = sorted(matchs_visibles, key=lambda x: x['date_match'] if x.get('date_match') is not None else "9999-12-31")
                         
                         # Chargement global des pronos en 1 seule requête pour la performance
                         tous_pronos_bruts = supabase.table("Pronostics").select("*").eq("user_id", id_joueur_cible).execute().data
