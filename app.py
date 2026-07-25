@@ -866,10 +866,10 @@ if st.session_state.onglet_actif == "🏉":
                 except Exception as e:
                     st.error(f"Erreur lors du chargement des questions bonus : {e}")
                         
-# 7.2.2 - SECTION MATCHS OUVERTS
+            # 7.2.2 - SECTION MATCHS OUVERTS
                 st.markdown('<div style="height: 1px; background-color: #cbd5e1; margin: 25px auto 15px auto; width: calc(100% - 40px);"></div>', unsafe_allow_html=True)
                 st.subheader("🏉 Liste des Matchs")
-
+            
                 # CSS global pour épaissir le cadre, styliser les titres et le séparateur
                 st.markdown("""
                     <style>
@@ -898,7 +898,7 @@ if st.session_state.onglet_actif == "🏉":
                         }
                     </style>
                 """, unsafe_allow_html=True)
-
+            
                 try:
                     matchs_potentiels = supabase.table("Matchs").select("*").neq("statut", "FT").execute().data
                     matchs_visibles = []
@@ -923,14 +923,31 @@ if st.session_state.onglet_actif == "🏉":
                             except Exception:
                                 if m['statut'] == "NS" or droits_admin_totalement_actifs:
                                     matchs_visibles.append(m)
-
+            
                     if matchs_visibles:
                         matchs_visibles = sorted(matchs_visibles, key=lambda x: x['date_match'] if x.get('date_match') is not None else "9999-12-31")
                         
                         total_matchs = len(matchs_visibles)
                         for index, m in enumerate(matchs_visibles):
                             with st.container(border=True):
-                                st.markdown(f'<div class="match-title">{m["equipe_dom"]} vs {m["equipe_ext"]}</div>', unsafe_allow_html=True)
+                                
+                                # --- RÉCUPÉRATION DES LOGOS ---
+                                logo_dom = obtenir_logo(m["equipe_dom"])
+                                logo_ext = obtenir_logo(m["equipe_ext"])
+                                
+                                # --- TITRE DU MATCH AVEC LOGOS ---
+                                st.markdown(
+                                    f'<div class="match-title">'
+                                    f'<span style="display:inline-flex; align-items:center; gap:8px;">'
+                                    f'{logo_dom} {m["equipe_dom"]}'
+                                    f'</span>'
+                                    f' <span style="color: #94a3b8; font-weight: normal; margin: 0 8px;">vs</span> '
+                                    f'<span style="display:inline-flex; align-items:center; gap:8px;">'
+                                    f'{m["equipe_ext"]} {logo_ext}'
+                                    f'</span>'
+                                    f'</div>',
+                                    unsafe_allow_html=True
+                                )
                                 
                                 bouton_bloque = False
                                 try:
@@ -951,7 +968,7 @@ if st.session_state.onglet_actif == "🏉":
                                         st.markdown(f"<div style='text-align: center; color: #64748b; font-size: 0.9em; margin-bottom: 10px;'>📅 Match prévu le {date_affiche}</div>", unsafe_allow_html=True)
                                 except Exception:
                                     pass
-
+            
                                 prono_existant = supabase.table("Pronostics").select("*").eq("user_id", id_joueur_cible).eq("match_id", m['id']).execute().data
                                 choix_actuel = ""
                                 ecart_existant = "..."
@@ -970,14 +987,14 @@ if st.session_state.onglet_actif == "🏉":
                                     st.session_state[key_w] = choix_actuel
                                 else:
                                     choix_actuel = st.session_state[key_w]
-
+            
                                 def cb_clic_gagnant(match_id, equipe_choisie, eq_dom, eq_ext, u_id):
                                     st.session_state[f"w_{match_id}_{u_id}"] = equipe_choisie
                                     sauvegarder_prono_auto(match_id, eq_dom, eq_ext, u_id)
-
+            
                                 def cb_changement_ecart(match_id, eq_dom, eq_ext, u_id):
                                     sauvegarder_prono_auto(match_id, eq_dom, eq_ext, u_id)
-
+            
                                 # Label personnalisé pour le vainqueur
                                 st.markdown('<div style="font-size: 1.1em; font-weight: 600; color: #64748b; margin-bottom: 6px;">Sélectionner le Vainqueur :</div>', unsafe_allow_html=True)
                                 
@@ -1018,7 +1035,7 @@ if st.session_state.onglet_actif == "🏉":
                                 with col_a:
                                     type_a = "primary" if choix_actuel == m['equipe_dom'] else "secondary"
                                     st.button(
-                                        f"🏉 {m['equipe_dom']}", 
+                                        f"{logo_dom} {m['equipe_dom']}", 
                                         key=f"btn_dom_{m['id']}_{id_joueur_cible}", 
                                         type=type_a, 
                                         use_container_width=True, 
@@ -1042,7 +1059,7 @@ if st.session_state.onglet_actif == "🏉":
                                 with col_c:
                                     type_c = "primary" if choix_actuel == m['equipe_ext'] else "secondary"
                                     st.button(
-                                        f"🏉 {m['equipe_ext']}", 
+                                        f"{m['equipe_ext']} {logo_ext}", 
                                         key=f"btn_ext_{m['id']}_{id_joueur_cible}", 
                                         type=type_c, 
                                         use_container_width=True, 
@@ -1050,7 +1067,7 @@ if st.session_state.onglet_actif == "🏉":
                                         on_click=cb_clic_gagnant,
                                         args=(m['id'], m['equipe_ext'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
                                     )
-
+            
                                 st.markdown('</div>', unsafe_allow_html=True)
                                 st.markdown("<br>", unsafe_allow_html=True)
                                 
@@ -1060,10 +1077,10 @@ if st.session_state.onglet_actif == "🏉":
                                 
                                 if key_m not in st.session_state:
                                     st.session_state[key_m] = ecart_existant if ecart_existant in TRANCHES_ECARTS else "..."
-
+            
                                 val_vainqueur = st.session_state.get(f"w_{m['id']}_{id_joueur_cible}", choix_actuel)
                                 est_match_nul = (val_vainqueur == "Match Nul")
-
+            
                                 # Label personnalisé pour l'écart (s'adapte si c'est un match nul)
                                 if est_match_nul:
                                     st.markdown('<div style="font-size: 1.1em; font-weight: 600; color: #94a3b8; margin-bottom: 2px;">Écart (pts) : <span style="font-size: 0.85em; font-weight: normal; font-style: italic;">(Non requis pour un match nul)</span></div>', unsafe_allow_html=True)
@@ -1112,10 +1129,10 @@ if st.session_state.onglet_actif == "🏉":
                                         "</div>", 
                                         unsafe_allow_html=True
                                     )
-
-                            # --- SÉPARATEUR PROPRE ENTRE LES MATCHS (sauf pour le dernier) ---
-                            if index < total_matchs - 1:
-                                st.markdown('<hr class="match-separator">', unsafe_allow_html=True)
+            
+                                # --- SÉPARATEUR PROPRE ENTRE LES MATCHS (sauf pour le dernier) ---
+                                if index < total_matchs - 1:
+                                    st.markdown('<hr class="match-separator">', unsafe_allow_html=True)
                     else: 
                         st.info("Aucun match disponible à pronostiquer.")
                 except Exception as e: 
