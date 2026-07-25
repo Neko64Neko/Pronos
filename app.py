@@ -906,7 +906,7 @@ if st.session_state.onglet_actif == "🏉":
                 st.markdown('<div style="height: 1px; background-color: #cbd5e1; margin: 25px auto 15px auto; width: calc(100% - 40px);"></div>', unsafe_allow_html=True)
                 st.subheader("🏉 Liste des Matchs")
             
-                # CSS global : comportement de bouton pur (sans effet de lien hypertexte) et fond adaptatif
+                # CSS global : comportement de bouton pur et fond adaptatif
                 st.markdown("""
                     <style>
                         [data-testid="stVerticalBlockBorderWrapper"] {
@@ -915,7 +915,6 @@ if st.session_state.onglet_actif == "🏉":
                             padding-bottom: 10px !important;
                             box-shadow: 0 1px 2px rgba(0,0,0,0.02);
                         }
-                        /* Bouton personnalisé unifié transformé en vrai bouton HTML interactif */
                         .custom-team-btn {
                             display: flex;
                             align-items: center;
@@ -939,7 +938,6 @@ if st.session_state.onglet_actif == "🏉":
                         .custom-team-btn:focus {
                             outline: none;
                         }
-                        /* Bouton non sélectionné */
                         .custom-team-btn.unselected {
                             background-color: rgba(128, 128, 128, 0.12);
                             color: inherit !important;
@@ -950,7 +948,6 @@ if st.session_state.onglet_actif == "🏉":
                             color: #2563eb !important;
                             background-color: rgba(37, 99, 235, 0.08);
                         }
-                        /* Bouton sélectionné */
                         .custom-team-btn.selected {
                             background-color: #2563eb;
                             color: #ffffff !important;
@@ -972,7 +969,6 @@ if st.session_state.onglet_actif == "🏉":
                             cursor: not-allowed;
                             pointer-events: none;
                         }
-                        /* Séparateur à double ligne propre */
                         hr.match-separator {
                             border: none !important;
                             border-top: 1px solid #cbd5e1 !important;
@@ -1012,6 +1008,10 @@ if st.session_state.onglet_actif == "🏉":
             
                     if matchs_visibles:
                         matchs_visibles = sorted(matchs_visibles, key=lambda x: x['date_match'] if x.get('date_match') is not None else "9999-12-31")
+                        
+                        # --- OPTIMISATION PERF : CHARGEMENT GLOBAL DES PRONOS EN 1 SEULE REQUÊTE ---
+                        tous_pronos_bruts = supabase.table("Pronostics").select("*").eq("user_id", id_joueur_cible).execute().data
+                        dict_tous_pronos = {p['match_id']: p for p in tous_pronos_bruts} if tous_pronos_bruts else {}
                         
                         total_matchs = len(matchs_visibles)
                         for index, m in enumerate(matchs_visibles):
@@ -1055,18 +1055,19 @@ if st.session_state.onglet_actif == "🏉":
                                 except Exception:
                                     pass
             
-                                prono_existant = supabase.table("Pronostics").select("*").eq("user_id", id_joueur_cible).eq("match_id", m['id']).execute().data
+                                # --- UTILISATION DU DICTIONNAIRE EN MÉMOIRE (INSTANTANÉ) ---
+                                prono_donnees = dict_tous_pronos.get(m['id'])
                                 choix_actuel = ""
                                 ecart_existant = "..."
                                 
-                                if prono_existant:
-                                    g_prevu = prono_existant[0]['gagnant_prevu']
+                                if prono_donnees:
+                                    g_prevu = prono_donnees['gagnant_prevu']
                                     if g_prevu == "home": choix_actuel = m['equipe_dom']
                                     elif g_prevu == "away": choix_actuel = m['equipe_ext']
                                     elif g_prevu == "draw": choix_actuel = "Match Nul"
                                     
-                                    if prono_existant[0].get('ecart_prevu'):
-                                        ecart_existant = prono_existant[0]['ecart_prevu']
+                                    if prono_donnees.get('ecart_prevu'):
+                                        ecart_existant = prono_donnees['ecart_prevu']
                                 
                                 key_w = f"w_{m['id']}_{id_joueur_cible}"
                                 if key_w not in st.session_state:
@@ -1125,7 +1126,7 @@ if st.session_state.onglet_actif == "🏉":
                                     }
                                     return f"?{urllib.parse.urlencode(params)}"
             
-                                # 1. BOUTON DOMICILE (VRAI BOUTON HTML INTERACTIF)
+                                # 1. BOUTON DOMICILE
                                 with col_a:
                                     img_html_dom = f'<img src="{logo_dom}">' if logo_dom else ''
                                     st.markdown(f'''
@@ -1135,7 +1136,7 @@ if st.session_state.onglet_actif == "🏉":
                                         </button>
                                     ''', unsafe_allow_html=True)
                                     
-                                # 2. BOUTON MATCH NUL (VRAI BOUTON HTML INTERACTIF)
+                                # 2. BOUTON MATCH NUL
                                 with col_b:
                                     st.markdown(f'''
                                         <button onclick="window.location.href='{get_url("Match Nul")}'" class="custom-team-btn {class_nul}">
@@ -1143,7 +1144,7 @@ if st.session_state.onglet_actif == "🏉":
                                         </button>
                                     ''', unsafe_allow_html=True)
                                     
-                                # 3. BOUTON EXTÉRIEUR (VRAI BOUTON HTML INTERACTIF)
+                                # 3. BOUTON EXTÉRIEUR
                                 with col_c:
                                     img_html_ext = f'<img src="{logo_ext}">' if logo_ext else ''
                                     st.markdown(f'''
