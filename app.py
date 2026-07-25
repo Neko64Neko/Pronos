@@ -64,7 +64,6 @@ if st.session_state.user_id is None:
             cookie_manager.delete("top14_user_id")
 
 #1.4 - GESTION DES LOGOS
-@st.cache_data(ttl=86400) # On met en cache 24h pour ne pas spammer leur API
 def obtenir_logo(nom_equipe):
     if not nom_equipe:
         return ""
@@ -75,28 +74,9 @@ def obtenir_logo(nom_equipe):
         if reponse.data and len(reponse.data) > 0:
             url = reponse.data[0].get("logo_url")
             if url and url.startswith("http"):
-                
-                # --- EN-TÊTES ANTI-BLOCAGE POUR SOFASCORE ---
-                headers = {
-                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                    "Referer": "https://www.sofascore.com/"
-                }
-                
-                response = requests.get(url, headers=headers, timeout=5)
-                
-                if response.status_code == 200:
-                    # Sofascore renvoie souvent du SVG ou du PNG
-                    content_type = response.headers.get("content-type", "image/png")
-                    if "text" in content_type or not content_type:
-                        content_type = "image/svg+xml" if ".svg" in url else "image/png"
-                        
-                    encoded = base64.b64encode(response.content).decode("utf-8")
-                    return f"data:{content_type};base64,{encoded}"
-                else:
-                    print(f"Sofascore a bloqué l'image pour {nom_propre} (Code {response.status_code})")
-                    
+                return url # On renvoie directement l'URL publique Supabase
     except Exception as e:
-        print(f"Erreur logo Sofascore pour '{nom_equipe}' : {e}")
+        print(f"Erreur logo pour '{nom_equipe}' : {e}")
         
     return ""
 # =====================================================================
