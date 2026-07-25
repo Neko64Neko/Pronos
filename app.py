@@ -885,17 +885,18 @@ if st.session_state.onglet_actif == "🏉":
                 except Exception as e:
                     st.error(f"Erreur lors du chargement des questions bonus : {e}")
                         
-            # Gestion du clic sur les boutons personnalisés via les query params (harmonisée avec id_joueur_cible)
+            # Gestion du clic sur les boutons personnalisés via les query params
                 if "match_action" in st.query_params:
                     try:
                         m_id = st.query_params.get("m_id")
                         choix = st.query_params.get("choix")
+                        u_id = st.query_params.get("u_id", id_joueur_cible)
                         eq_d = st.query_params.get("eq_d", "")
                         eq_e = st.query_params.get("eq_e", "")
                         
                         if m_id and choix:
-                            st.session_state[f"w_{m_id}_{id_joueur_cible}"] = choix
-                            sauvegarder_prono_auto(m_id, eq_d, eq_e, id_joueur_cible)
+                            st.session_state[f"w_{m_id}_{u_id}"] = choix
+                            sauvegarder_prono_auto(m_id, eq_d, eq_e, u_id)
                             st.query_params.clear()
                             st.rerun()
                     except Exception:
@@ -1113,21 +1114,23 @@ if st.session_state.onglet_actif == "🏉":
                                     class_ext += " disabled"
                                     class_nul += " disabled"
             
-                                def get_url(choix_val):
-                                    params = {
-                                        "match_action": "1",
-                                        "m_id": str(m['id']),
-                                        "choix": choix_val,
-                                        "eq_d": m['equipe_dom'],
-                                        "eq_e": m['equipe_ext']
-                                    }
-                                    return f"?{urllib.parse.urlencode(params)}"
+                                def get_js_click(choix_val):
+                                    return f"""
+                                        const p = new URLSearchParams(window.location.search);
+                                        p.set('match_action', '1');
+                                        p.set('m_id', '{m['id']}');
+                                        p.set('choix', `{choix_val}`);
+                                        p.set('u_id', '{id_joueur_cible}');
+                                        p.set('eq_d', `{m['equipe_dom']}`);
+                                        p.set('eq_e', `{m['equipe_ext']}`);
+                                        window.location.search = p.toString();
+                                    """
             
                                 # 1. BOUTON DOMICILE
                                 with col_a:
                                     img_html_dom = f'<img src="{logo_dom}">' if logo_dom else ''
                                     st.markdown(f'''
-                                        <button onclick="window.location.href='{get_url(m['equipe_dom'])}'" class="custom-team-btn {class_dom}">
+                                        <button onclick="{get_js_click(m['equipe_dom'])}" class="custom-team-btn {class_dom}">
                                             {img_html_dom}
                                             <span>{m['equipe_dom']}</span>
                                         </button>
@@ -1136,7 +1139,7 @@ if st.session_state.onglet_actif == "🏉":
                                 # 2. BOUTON MATCH NUL
                                 with col_b:
                                     st.markdown(f'''
-                                        <button onclick="window.location.href='{get_url("Match Nul")}'" class="custom-team-btn {class_nul}">
+                                        <button onclick="{get_js_click("Match Nul")}" class="custom-team-btn {class_nul}">
                                             <span>🤝 Nul</span>
                                         </button>
                                     ''', unsafe_allow_html=True)
@@ -1145,7 +1148,7 @@ if st.session_state.onglet_actif == "🏉":
                                 with col_c:
                                     img_html_ext = f'<img src="{logo_ext}">' if logo_ext else ''
                                     st.markdown(f'''
-                                        <button onclick="window.location.href='{get_url(m['equipe_ext'])}'" class="custom-team-btn {class_ext}">
+                                        <button onclick="{get_js_click(m['equipe_ext'])}" class="custom-team-btn {class_ext}">
                                             {img_html_ext}
                                             <span>{m['equipe_ext']}</span>
                                         </button>
