@@ -61,6 +61,23 @@ if st.session_state.user_id is None:
                 # Pas besoin de set_session, on gère l'auth manuellement avec cet ID
         except:
             cookie_manager.delete("top14_user_id")
+
+#1.4 - GESTION DES LOGOS
+@st.cache_data(ttl=600)
+def obtenir_logo(nom_equipe):
+    """
+    Récupère le logo de l'équipe depuis la table Supabase.
+    """
+    try:
+        # Ajuste "Equipes", "nom" et "logo" si tes noms de tables/colonnes dans Supabase sont différents
+        reponse = supabase.table("Equipes").select("logo").eq("nom", nom_equipe).execute()
+        if reponse.data and len(reponse.data) > 0:
+            return reponse.data[0].get("logo", "🛡️")
+    except Exception:
+        pass
+    
+    # Valeur par défaut si l'équipe n'est pas trouvée ou en cas d'erreur
+    return "🛡️"
 # =====================================================================
 # 2 - SYSTEME DE SCRAPING GRATUIT ET AUTOMATIQUE
 # =====================================================================
