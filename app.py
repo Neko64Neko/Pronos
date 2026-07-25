@@ -64,6 +64,7 @@ if st.session_state.user_id is None:
             cookie_manager.delete("top14_user_id")
 
 #1.4 - GESTION DES LOGOS
+@st.cache_data(ttl=3600)
 def obtenir_logo(nom_equipe):
     if not nom_equipe:
         return ""
@@ -74,21 +75,28 @@ def obtenir_logo(nom_equipe):
         if reponse.data and len(reponse.data) > 0:
             url = reponse.data[0].get("logo_url")
             if url and url.startswith("http"):
-                try:
-                    # Tentative d'encodage en Base64
-                    response = requests.get(url, timeout=3)
-                    if response.status_code == 200:
-                        content_type = response.headers.get("content-type", "image/png")
-                        encoded = base64.b64encode(response.content).decode("utf-8")
-                        return f"data:{content_type};base64,{encoded}"
-                except Exception:
-                    pass
+                # Ajout d'un User-Agent pour simuler un vrai navigateur et éviter les blocages
+                headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+                response = requests.get(url, headers=headers, timeout=5)
                 
-                # Fallback : si le téléchargement échoue, on renvoie l'URL brute
-                return url
+                if response.status_code == 200:
+                    content_type = response.headers.get("content-type", "image/png")
+                    
+                    # Correction si le serveur renvoie un type générique pour une image
+                    if "text" in content_type or not content_type:
+                        if url.endswith(".svg"):
+                            content_type = "image/svg+xml"
+                        elif url.endswith(".png"):
+                            content_type = "image/png"
+                        elif url.endswith(".jpg") or url.endswith(".jpeg"):
+                            content_type = "image/jpeg"
+                            
+                    encoded = base64.b64encode(response.content).decode("utf-8")
+                    return f"data:{content_type};base64,{encoded}"
     except Exception as e:
         print(f"Erreur logo pour '{nom_equipe}' : {e}")
         
+    # Si ça échoue, on retourne du vide pour ne PAS afficher de carré cassé
     return ""
 # =====================================================================
 # 2 - SYSTEME DE SCRAPING GRATUIT ET AUTOMATIQUE
