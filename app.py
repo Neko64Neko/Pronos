@@ -906,7 +906,7 @@ if st.session_state.onglet_actif == "🏉":
                 st.markdown('<div style="height: 1px; background-color: #cbd5e1; margin: 25px auto 15px auto; width: calc(100% - 40px);"></div>', unsafe_allow_html=True)
                 st.subheader("🏉 Liste des Matchs")
             
-                # CSS global : fond neutre adaptatif et suppression totale des aspects liens hypertextes
+                # CSS global : comportement de bouton pur (sans effet de lien hypertexte) et fond adaptatif
                 st.markdown("""
                     <style>
                         [data-testid="stVerticalBlockBorderWrapper"] {
@@ -915,7 +915,7 @@ if st.session_state.onglet_actif == "🏉":
                             padding-bottom: 10px !important;
                             box-shadow: 0 1px 2px rgba(0,0,0,0.02);
                         }
-                        /* Bouton personnalisé unifié (Fond neutre compatible clair/sombre et sans soulignement de lien) */
+                        /* Bouton personnalisé unifié transformé en vrai bouton HTML interactif */
                         .custom-team-btn {
                             display: flex;
                             align-items: center;
@@ -929,16 +929,15 @@ if st.session_state.onglet_actif == "🏉":
                             font-size: 11px;
                             font-weight: 600;
                             cursor: pointer;
-                            text-decoration: none !important;
+                            appearance: none;
+                            -webkit-appearance: none;
                             transition: all 0.2s ease;
                             box-sizing: border-box;
                             box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+                            outline: none;
                         }
-                        .custom-team-btn:link, 
-                        .custom-team-btn:visited, 
-                        .custom-team-btn:hover, 
-                        .custom-team-btn:active {
-                            text-decoration: none !important;
+                        .custom-team-btn:focus {
+                            outline: none;
                         }
                         /* Bouton non sélectionné */
                         .custom-team-btn.unselected {
@@ -1126,32 +1125,32 @@ if st.session_state.onglet_actif == "🏉":
                                     }
                                     return f"?{urllib.parse.urlencode(params)}"
             
-                                # 1. BOUTON DOMICILE (AVEC LOGO INTÉGRÉ À GAUCHE DU NOM)
+                                # 1. BOUTON DOMICILE (VRAI BOUTON HTML INTERACTIF)
                                 with col_a:
                                     img_html_dom = f'<img src="{logo_dom}">' if logo_dom else ''
                                     st.markdown(f'''
-                                        <a href="{get_url(m['equipe_dom'])}" class="custom-team-btn {class_dom}">
+                                        <button onclick="window.location.href='{get_url(m['equipe_dom'])}'" class="custom-team-btn {class_dom}">
                                             {img_html_dom}
                                             <span>{m['equipe_dom']}</span>
-                                        </a>
+                                        </button>
                                     ''', unsafe_allow_html=True)
                                     
-                                # 2. BOUTON MATCH NUL
+                                # 2. BOUTON MATCH NUL (VRAI BOUTON HTML INTERACTIF)
                                 with col_b:
                                     st.markdown(f'''
-                                        <a href="{get_url("Match Nul")}" class="custom-team-btn {class_nul}">
+                                        <button onclick="window.location.href='{get_url("Match Nul")}'" class="custom-team-btn {class_nul}">
                                             <span>🤝 Nul</span>
-                                        </a>
+                                        </button>
                                     ''', unsafe_allow_html=True)
                                     
-                                # 3. BOUTON EXTÉRIEUR (AVEC LOGO INTÉGRÉ À GAUCHE DU NOM)
+                                # 3. BOUTON EXTÉRIEUR (VRAI BOUTON HTML INTERACTIF)
                                 with col_c:
                                     img_html_ext = f'<img src="{logo_ext}">' if logo_ext else ''
                                     st.markdown(f'''
-                                        <a href="{get_url(m['equipe_ext'])}" class="custom-team-btn {class_ext}">
+                                        <button onclick="window.location.href='{get_url(m['equipe_ext'])}'" class="custom-team-btn {class_ext}">
                                             {img_html_ext}
                                             <span>{m['equipe_ext']}</span>
-                                        </a>
+                                        </button>
                                     ''', unsafe_allow_html=True)
             
                                 st.markdown('</div>', unsafe_allow_html=True)
