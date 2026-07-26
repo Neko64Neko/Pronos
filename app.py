@@ -1180,14 +1180,15 @@ elif st.session_state.onglet_actif == "📺":
             reponses_bonus = supabase.table("Réponses_Questions").select("*").execute().data or []
             tous_equipes = supabase.table("Equipes").select("*").execute().data or []
             
-            # --- DICTIONNAIRES DE CORRESPONDANCE (NOM API -> NOM COURT / LOGO) ---
+            # --- DICTIONNAIRES DE CORRESPONDANCE (LOGO_URL CIBLÉ) ---
             dict_noms_courts = {}
             dict_logos = {}
             for eq in tous_equipes:
                 nom_api = eq.get('nom') or eq.get('nom_api')
                 if nom_api:
-                    dict_noms_courts[nom_api] = eq.get('nom_court', nom_api)
-                    dict_logos[nom_api] = eq.get('logo', '')
+                    clean_key = str(nom_api).strip().lower()
+                    dict_noms_courts[clean_key] = eq.get('nom_court', nom_api)
+                    dict_logos[clean_key] = eq.get('logo_url', '')
             
             paris_tz = pytz.timezone("Europe/Paris")
             
@@ -1321,11 +1322,24 @@ elif st.session_state.onglet_actif == "📺":
                     sc_dom = m.get('score_dom') if m.get('score_dom') is not None else 0
                     sc_ext = m.get('score_ext') if m.get('score_ext') is not None else 0
                     
-                    # Récupération des noms courts pour l'expander
+                    # Récupération des noms courts et logos pour l'expander
                     nom_dom_api = m.get('equipe_dom')
                     nom_ext_api = m.get('equipe_ext')
-                    dom_court = dict_noms_courts.get(nom_dom_api, nom_dom_api)
-                    ext_court = dict_noms_courts.get(nom_ext_api, nom_ext_api)
+                    
+                    key_dom = str(nom_dom_api).strip().lower()
+                    key_ext = str(nom_ext_api).strip().lower()
+                    
+                    dom_court = dict_noms_courts.get(key_dom, nom_dom_api)
+                    ext_court = dict_noms_courts.get(key_ext, nom_ext_api)
+                    
+                    dom_logo = dict_logos.get(key_dom, "")
+                    ext_logo = dict_logos.get(key_ext, "")
+                    
+                    # Construction du titre de l'expander avec les logos si disponibles
+                    dom_exp_html = f'<img src="{dom_logo}" width="22" height="22" style="object-fit:contain; vertical-align:middle; margin-right:4px;"> ' if dom_logo else ""
+                    ext_exp_html = f' <img src="{ext_logo}" width="22" height="22" style="object-fit:contain; vertical-align:middle; margin-left:4px;"' if ext_logo else ""
+                    
+                    expander_title_markdown = f"🏉 {dom_exp_html}**{dom_court}** {sc_dom} - {sc_ext} **{ext_court}**{ext_exp_html} | 📅 {date_affichee}{label_statut}"
                     
                     vrai_gagnant_brut = "home" if sc_dom > sc_ext else ("away" if sc_dom < sc_ext else "draw")
                     diff = abs(sc_dom - sc_ext)
@@ -1339,7 +1353,7 @@ elif st.session_state.onglet_actif == "📺":
                     elif diff <= 50: vraie_tranche = "41-50"
                     else: vraie_tranche = "51+"
                         
-                    with st.expander(f"🏉 {dom_court} {sc_dom} - {sc_ext} {ext_court} | 📅{date_affichee}{label_statut}"):
+                    with st.expander(expander_title_markdown, expanded=False):
                         pronos = supabase.table("Pronostics").select("*").eq("match_id", m.get('id')).execute().data or []
                         dict_pronos = {p['user_id']: p for p in pronos} if pronos else {}
                         
@@ -1384,9 +1398,9 @@ elif st.session_state.onglet_actif == "📺":
                                     else:
                                         nom_equipe_api = str(g_prevu)
                                     
-                                    # Récupération du nom court et du logo
-                                    nom_court_equipe = dict_noms_courts.get(nom_equipe_api, nom_equipe_api)
-                                    logo_url = dict_logos.get(nom_equipe_api, "")
+                                    clean_eq_key = str(nom_equipe_api).strip().lower()
+                                    nom_court_equipe = dict_noms_courts.get(clean_eq_key, nom_equipe_api)
+                                    logo_url = dict_logos.get(clean_eq_key, "")
                                     
                                     if logo_url:
                                         affichage_pronostic = f'<span style="display:inline-flex; align-items:center; gap:6px;"><img src="{logo_url}" width="20" height="20" style="object-fit:contain; vertical-align:middle;"> <b>{nom_court_equipe}</b></span>'
