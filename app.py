@@ -908,7 +908,7 @@ if st.session_state.onglet_actif == "🏉":
                 st.markdown('<div style="height: 1px; background-color: #cbd5e1; margin: 25px auto 15px auto; width: calc(100% - 40px);"></div>', unsafe_allow_html=True)
                 st.subheader("🏉 Liste des Matchs")
             
-                # CSS global : bulles sur une ligne avec adaptation responsive pour le format portrait mobile
+                # CSS global : bulles et espacement sécurisé pour le format portrait mobile
                 st.markdown("""
                     <style>
                         [data-testid="stVerticalBlockBorderWrapper"] {
@@ -922,16 +922,15 @@ if st.session_state.onglet_actif == "🏉":
                             border-radius: 25px !important;
                             width: 100% !important;
                             font-weight: 600 !important;
-                            min-height: 40px !important;
-                            font-size: 0.85em !important;
+                            min-height: 42px !important;
+                            font-size: 0.9em !important;
                             padding: 0px 4px !important;
                         }
                         /* Adaptation automatique pour les écrans étroits (smartphones en format portrait) */
                         @media (max-width: 640px) {
                             div.stButton > button {
-                                font-size: 0.72em !important;
-                                min-height: 38px !important;
-                                padding: 0px 2px !important;
+                                font-size: 0.8em !important;
+                                min-height: 40px !important;
                             }
                         }
                         hr.match-separator {
@@ -1053,30 +1052,34 @@ if st.session_state.onglet_actif == "🏉":
                                 # Label personnalisé pour le vainqueur
                                 st.markdown('<div style="font-size: 1.1em; font-weight: 600; color: #64748b; margin-bottom: 6px;">Sélectionner le Vainqueur :</div>', unsafe_allow_html=True)
                                 
-                                # --- TROIS BOUTONS EN BULLES SUR UNE SEULE LIGNE ---
+                                # --- DISPOSITION EN DEUX ÉTAGES SÉCURISÉS ---
                                 is_dom_sel = (choix_actuel == m['equipe_dom'])
                                 is_nul_sel = (choix_actuel == "Match Nul")
                                 is_ext_sel = (choix_actuel == m['equipe_ext'])
             
-                                col_a, col_b, col_c = st.columns(3)
+                                # Étage 1 : Les deux équipes (50/50)
+                                col_dom, col_ext = st.columns(2)
             
-                                with col_a:
+                                with col_dom:
                                     if st.button(nom_dom_affiche, key=f"btn_dom_{m['id']}", type="primary" if is_dom_sel else "secondary", disabled=bouton_bloque):
                                         st.session_state[key_w] = m['equipe_dom']
                                         sauvegarder_prono_auto(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
                                         st.rerun()
             
-                                with col_b:
-                                    if st.button("🤝 Nul", key=f"btn_nul_{m['id']}", type="primary" if is_nul_sel else "secondary", disabled=bouton_bloque):
-                                        st.session_state[key_w] = "Match Nul"
-                                        sauvegarder_prono_auto(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
-                                        st.rerun()
-            
-                                with col_c:
+                                with col_ext:
                                     if st.button(nom_ext_affiche, key=f"btn_ext_{m['id']}", type="primary" if is_ext_sel else "secondary", disabled=bouton_bloque):
                                         st.session_state[key_w] = m['equipe_ext']
                                         sauvegarder_prono_auto(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
                                         st.rerun()
+            
+                                # Espace vertical de sécurité entre les deux étages
+                                st.markdown('<div style="margin-top: 8px;"></div>', unsafe_allow_html=True)
+            
+                                # Étage 2 : Le Match Nul en pleine largeur en dessous
+                                if st.button("🤝 Match Nul", key=f"btn_nul_{m['id']}", type="primary" if is_nul_sel else "secondary", disabled=bouton_bloque):
+                                    st.session_state[key_w] = "Match Nul"
+                                    sauvegarder_prono_auto(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
+                                    st.rerun()
             
                                 st.markdown("<br>", unsafe_allow_html=True)
                                 
