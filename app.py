@@ -1322,7 +1322,7 @@ elif st.session_state.onglet_actif == "📺":
                     sc_dom = m.get('score_dom') if m.get('score_dom') is not None else 0
                     sc_ext = m.get('score_ext') if m.get('score_ext') is not None else 0
                     
-                    # Récupération des noms courts et logos pour l'expander
+                    # Récupération des noms courts pour l'expander
                     nom_dom_api = m.get('equipe_dom')
                     nom_ext_api = m.get('equipe_ext')
                     
@@ -1332,14 +1332,8 @@ elif st.session_state.onglet_actif == "📺":
                     dom_court = dict_noms_courts.get(key_dom, nom_dom_api)
                     ext_court = dict_noms_courts.get(key_ext, nom_ext_api)
                     
-                    dom_logo = dict_logos.get(key_dom, "")
-                    ext_logo = dict_logos.get(key_ext, "")
-                    
-                    # Construction du titre de l'expander avec les logos si disponibles
-                    dom_exp_html = f'<img src="{dom_logo}" width="22" height="22" style="object-fit:contain; vertical-align:middle; margin-right:4px;"> ' if dom_logo else ""
-                    ext_exp_html = f' <img src="{ext_logo}" width="22" height="22" style="object-fit:contain; vertical-align:middle; margin-left:4px;"' if ext_logo else ""
-                    
-                    expander_title_markdown = f"🏉 {dom_exp_html}**{dom_court}** {sc_dom} - {sc_ext} **{ext_court}**{ext_exp_html} | 📅 {date_affichee}{label_statut}"
+                    # Titre propre de l'expander sans balises HTML non supportées
+                    expander_title = f"🏉 {dom_court} {sc_dom} - {sc_ext} {ext_court} | 📅 {date_affichee}{label_statut}"
                     
                     vrai_gagnant_brut = "home" if sc_dom > sc_ext else ("away" if sc_dom < sc_ext else "draw")
                     diff = abs(sc_dom - sc_ext)
@@ -1353,7 +1347,7 @@ elif st.session_state.onglet_actif == "📺":
                     elif diff <= 50: vraie_tranche = "41-50"
                     else: vraie_tranche = "51+"
                         
-                    with st.expander(expander_title_markdown, expanded=False):
+                    with st.expander(expander_title, expanded=False):
                         pronos = supabase.table("Pronostics").select("*").eq("match_id", m.get('id')).execute().data or []
                         dict_pronos = {p['user_id']: p for p in pronos} if pronos else {}
                         
@@ -1402,8 +1396,9 @@ elif st.session_state.onglet_actif == "📺":
                                     nom_court_equipe = dict_noms_courts.get(clean_eq_key, nom_equipe_api)
                                     logo_url = dict_logos.get(clean_eq_key, "")
                                     
+                                    # Affichage uniquement du logo (avec attribut title pour accessibilité) et de l'écart en dessous
                                     if logo_url:
-                                        affichage_pronostic = f'<span style="display:inline-flex; align-items:center; gap:6px;"><img src="{logo_url}" width="20" height="20" style="object-fit:contain; vertical-align:middle;"> <b>{nom_court_equipe}</b></span>'
+                                        affichage_pronostic = f'<img src="{logo_url}" width="24" height="24" style="object-fit:contain; vertical-align:middle;" title="{nom_court_equipe}">'
                                     else:
                                         affichage_pronostic = f'<b>{nom_court_equipe}</b>'
                                     
