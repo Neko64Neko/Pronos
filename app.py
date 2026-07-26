@@ -908,7 +908,7 @@ if st.session_state.onglet_actif == "🏉":
                 st.markdown('<div style="height: 1px; background-color: #cbd5e1; margin: 25px auto 15px auto; width: calc(100% - 40px);"></div>', unsafe_allow_html=True)
                 st.subheader("🏉 Liste des Matchs")
             
-                # CSS global : Taille unique plus grande pour toutes les bulles et anti-débordement mobile parfait
+                # CSS global : Taille 100% unifiée et anti-débordement mobile total
                 st.markdown("""
                     <style>
                         [data-testid="stVerticalBlockBorderWrapper"] {
@@ -916,40 +916,59 @@ if st.session_state.onglet_actif == "🏉":
                             border-radius: 12px !important;
                             padding-left: 10px !important;
                             padding-right: 10px !important;
-                            padding-bottom: 12px !important;
-                            box-shadow: 0 1px 2px rgba(0,0,0,0.02);
-                        }
-                        
-                        /* TAILLE UNIFORME ET PLUS GRANDE POUR TOUTES LES BULLES DE BOUTONS */
-                        div.stButton > button {
-                            border-radius: 30px !important;
-                            width: 100% !important;
-                            font-weight: 600 !important;
-                            min-height: 50px !important;
-                            font-size: 0.95em !important;
-                            padding: 6px 12px !important;
+                            padding-bottom: 14px !important;
                             box-sizing: border-box !important;
+                            max-width: 100% !important;
+                            overflow: hidden !important;
                         }
                         
-                        /* FORÇAGE DU CÔTE À CÔTE SANS DÉBORDEMENT SUR MOBILE */
+                        /* TAILLE STRICTEMENT UNIFORME POUR TOUTES LES BULLES */
+                        div.stButton > button {
+                            border-radius: 25px !important;
+                            width: 100% !important;
+                            height: 48px !important;
+                            min-height: 48px !important;
+                            max-height: 48px !important;
+                            font-weight: 600 !important;
+                            font-size: 0.88em !important;
+                            padding: 0 10px !important;
+                            box-sizing: border-box !important;
+                            white-space: nowrap !important;
+                            overflow: hidden !important;
+                            text-overflow: ellipsis !important;
+                            display: flex !important;
+                            align-items: center !important;
+                            justify-content: center !important;
+                        }
+                        
+                        /* ALIGNEMENT 50/50 SANS AUCUN DÉBORDEMENT */
+                        div[data-testid="stHorizontalBlock"] {
+                            display: flex !important;
+                            flex-direction: row !important;
+                            flex-wrap: nowrap !important;
+                            justify-content: space-between !important;
+                            gap: 8px !important;
+                            width: 100% !important;
+                            box-sizing: border-box !important;
+                            margin: 0 !important;
+                        }
+                        
+                        div[data-testid="column"] {
+                            flex: 0 0 calc(50% - 4px) !important;
+                            width: calc(50% - 4px) !important;
+                            min-width: 0 !important;
+                            max-width: calc(50% - 4px) !important;
+                            box-sizing: border-box !important;
+                            padding: 0 !important;
+                        }
+                        
                         @media (max-width: 640px) {
-                            div[data-testid="stHorizontalBlock"] {
-                                display: flex !important;
-                                flex-direction: row !important;
-                                flex-wrap: nowrap !important;
-                                gap: 6px !important;
-                            }
-                            div[data-testid="column"] {
-                                flex: 1 1 calc(50% - 3px) !important;
-                                width: calc(50% - 3px) !important;
-                                min-width: 0 !important;
-                                max-width: calc(50% - 3px) !important;
-                                box-sizing: border-box !important;
-                            }
                             div.stButton > button {
-                                font-size: 0.82em !important;
-                                min-height: 46px !important;
-                                padding: 4px 6px !important;
+                                font-size: 0.78em !important;
+                                height: 44px !important;
+                                min-height: 44px !important;
+                                max-height: 44px !important;
+                                padding: 0 6px !important;
                             }
                         }
                         
@@ -1072,13 +1091,13 @@ if st.session_state.onglet_actif == "🏉":
                                 # Label personnalisé pour le vainqueur
                                 st.markdown('<div style="font-size: 1.1em; font-weight: 600; color: #64748b; margin-bottom: 6px;">Sélectionner le Vainqueur :</div>', unsafe_allow_html=True)
                                 
-                                # --- DISPOSITION EN DEUX ÉTAGES HARMONISÉS ---
+                                # --- DISPOSITION EN DEUX ÉTAGES UNIFORMISÉS ---
                                 is_dom_sel = (choix_actuel == m['equipe_dom'])
                                 is_nul_sel = (choix_actuel == "Match Nul")
                                 is_ext_sel = (choix_actuel == m['equipe_ext'])
             
-                                # Étage 1 : Les deux équipes côte à côte
-                                col_dom, col_ext = st.columns(2, gap="small")
+                                # Étage 1 : Les deux équipes côte à côte (sans argument gap pour laisser le CSS gérer l'espace exact)
+                                col_dom, col_ext = st.columns(2)
             
                                 with col_dom:
                                     if st.button(nom_dom_affiche, key=f"btn_dom_{m['id']}", type="primary" if is_dom_sel else "secondary", disabled=bouton_bloque):
@@ -1095,7 +1114,7 @@ if st.session_state.onglet_actif == "🏉":
                                 # Espace vertical de sécurité entre les deux étages
                                 st.markdown('<div style="margin-top: 8px;"></div>', unsafe_allow_html=True)
             
-                                # Étage 2 : Le Match Nul en pleine largeur en dessous (même hauteur de bulle)
+                                # Étage 2 : Le Match Nul en pleine largeur en dessous (même hauteur exacte)
                                 if st.button("🤝 Match Nul", key=f"btn_nul_{m['id']}", type="primary" if is_nul_sel else "secondary", disabled=bouton_bloque):
                                     st.session_state[key_w] = "Match Nul"
                                     sauvegarder_prono_auto(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
