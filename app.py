@@ -908,18 +908,17 @@ if st.session_state.onglet_actif == "🏉":
                 st.markdown('<div style="height: 1px; background-color: #cbd5e1; margin: 25px auto 15px auto; width: calc(100% - 40px);"></div>', unsafe_allow_html=True)
                 st.subheader("🏉 Liste des Matchs")
             
-                # CSS global : Correction définitive du conteneur mobile et uniformisation des bulles
+                # CSS global : Bulles de taille 100% unifiée et centrée
                 st.markdown("""
                     <style>
-                        /* Conteneur principal des matchs */
                         [data-testid="stVerticalBlockBorderWrapper"] {
                             border: 1.5px solid #cbd5e1 !important;
                             border-radius: 12px !important;
-                            padding-bottom: 12px !important;
+                            padding-bottom: 14px !important;
                             box-shadow: 0 1px 2px rgba(0,0,0,0.02);
                         }
                         
-                        /* TAILLE STRICTEMENT IDENTIQUE POUR TOUS LES BOUTONS (Équipes et Match Nul) */
+                        /* TAILLE STRICTEMENT IDENTIQUE POUR TOUTES LES BULLES EMPILÉES */
                         div.stButton > button {
                             border-radius: 25px !important;
                             width: 100% !important;
@@ -927,8 +926,8 @@ if st.session_state.onglet_actif == "🏉":
                             min-height: 46px !important;
                             max-height: 46px !important;
                             font-weight: 600 !important;
-                            font-size: 0.85em !important;
-                            padding: 0 8px !important;
+                            font-size: 0.9em !important;
+                            padding: 0 12px !important;
                             box-sizing: border-box !important;
                             white-space: nowrap !important;
                             overflow: hidden !important;
@@ -936,28 +935,7 @@ if st.session_state.onglet_actif == "🏉":
                             display: flex !important;
                             align-items: center !important;
                             justify-content: center !important;
-                        }
-                        
-                        /* ANTI-DÉBORDEMENT MOBILE ABSOLU */
-                        @media (max-width: 640px) {
-                            [data-testid="stVerticalBlockBorderWrapper"] {
-                                padding-left: 6px !important;
-                                padding-right: 6px !important;
-                            }
-                            [data-testid="stHorizontalBlock"] {
-                                display: flex !important;
-                                flex-direction: row !important;
-                                flex-wrap: nowrap !important;
-                                gap: 6px !important;
-                                width: 100% !important;
-                            }
-                            [data-testid="column"] {
-                                flex: 1 1 50% !important;
-                                width: 50% !important;
-                                min-width: 0 !important;
-                                max-width: 50% !important;
-                                box-sizing: border-box !important;
-                            }
+                            margin-bottom: 6px !important;
                         }
                         
                         hr.match-separator {
@@ -1073,35 +1051,36 @@ if st.session_state.onglet_actif == "🏉":
                                 def cb_changement_ecart(match_id, eq_dom, eq_ext, u_id):
                                     sauvegarder_prono_auto(match_id, eq_dom, eq_ext, u_id)
             
-                                st.markdown('<div style="font-size: 1.1em; font-weight: 600; color: #64748b; margin-bottom: 6px;">Sélectionner le Vainqueur :</div>', unsafe_allow_html=True)
+                                # Label personnalisé pour le vainqueur
+                                st.markdown('<div style="font-size: 1.1em; font-weight: 600; color: #64748b; margin-bottom: 6px; text-align: center;">Sélectionner le Vainqueur :</div>', unsafe_allow_html=True)
                                 
                                 is_dom_sel = (choix_actuel == m['equipe_dom'])
                                 is_nul_sel = (choix_actuel == "Match Nul")
                                 is_ext_sel = (choix_actuel == m['equipe_ext'])
             
-                                col_dom, col_ext = st.columns(2)
+                                # --- 3 LIGNES EMPILÉES CENTRÉES (TAILLE IDENTIQUE) ---
+                                
+                                # Ligne 1 : Équipe Domicile
+                                if st.button(nom_dom_affiche, key=f"btn_dom_{m['id']}", type="primary" if is_dom_sel else "secondary", disabled=bouton_bloque, use_container_width=True):
+                                    st.session_state[key_w] = m['equipe_dom']
+                                    sauvegarder_prono_auto(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
+                                    st.rerun()
             
-                                with col_dom:
-                                    if st.button(nom_dom_affiche, key=f"btn_dom_{m['id']}", type="primary" if is_dom_sel else "secondary", disabled=bouton_bloque):
-                                        st.session_state[key_w] = m['equipe_dom']
-                                        sauvegarder_prono_auto(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
-                                        st.rerun()
-            
-                                with col_ext:
-                                    if st.button(nom_ext_affiche, key=f"btn_ext_{m['id']}", type="primary" if is_ext_sel else "secondary", disabled=bouton_bloque):
-                                        st.session_state[key_w] = m['equipe_ext']
-                                        sauvegarder_prono_auto(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
-                                        st.rerun()
-            
-                                st.markdown('<div style="margin-top: 6px;"></div>', unsafe_allow_html=True)
-            
-                                if st.button("🤝 Match Nul", key=f"btn_nul_{m['id']}", type="primary" if is_nul_sel else "secondary", disabled=bouton_bloque):
+                                # Ligne 2 : Match Nul
+                                if st.button("🤝 Match Nul", key=f"btn_nul_{m['id']}", type="primary" if is_nul_sel else "secondary", disabled=bouton_bloque, use_container_width=True):
                                     st.session_state[key_w] = "Match Nul"
+                                    sauvegarder_prono_auto(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
+                                    st.rerun()
+            
+                                # Ligne 3 : Équipe Extérieur
+                                if st.button(nom_ext_affiche, key=f"btn_ext_{m['id']}", type="primary" if is_ext_sel else "secondary", disabled=bouton_bloque, use_container_width=True):
+                                    st.session_state[key_w] = m['equipe_ext']
                                     sauvegarder_prono_auto(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
                                     st.rerun()
             
                                 st.markdown("<br>", unsafe_allow_html=True)
                                 
+                                # --- SÉLECTEUR D'ÉCARTS ---
                                 key_m = f"m_{m['id']}_{id_joueur_cible}"
                                 options_ecarts = ["..."] + TRANCHES_ECARTS
                                 
@@ -1126,6 +1105,7 @@ if st.session_state.onglet_actif == "🏉":
                                     label_visibility="collapsed"
                                 )
                                 
+                                # --- GESTION DU MESSAGE D'ÉTAT DYNAMIQUE ---
                                 val_ecart = st.session_state.get(key_m, ecart_existant)
                                 has_vainqueur = bool(val_vainqueur and val_vainqueur != "")
                                 
@@ -1156,6 +1136,7 @@ if st.session_state.onglet_actif == "🏉":
                                         unsafe_allow_html=True
                                     )
             
+                                # --- SÉPARATEUR PROPRE ENTRE LES MATCHS ---
                                 if index < total_matchs - 1:
                                     st.markdown('<hr class="match-separator">', unsafe_allow_html=True)
                     else: 
