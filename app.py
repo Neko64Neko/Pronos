@@ -91,6 +91,13 @@ def charger_surnoms_equipes():
     except Exception:
         pass
     return {}
+
+# Chargement du dictionnaire des surnoms
+dict_surnoms = charger_surnoms_equipes()
+
+def get_nom_affiche(nom_api):
+    """Renvoie le nom court s'il existe, sinon le nom d'origine de l'API"""
+    return dict_surnoms.get(nom_api, nom_api)
     
 # =====================================================================
 # 2 - SYSTEME DE SCRAPING GRATUIT ET AUTOMATIQUE
