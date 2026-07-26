@@ -1322,7 +1322,7 @@ elif st.session_state.onglet_actif == "📺":
                     sc_dom = m.get('score_dom') if m.get('score_dom') is not None else 0
                     sc_ext = m.get('score_ext') if m.get('score_ext') is not None else 0
                     
-                    # Récupération des noms courts pour l'expander
+                    # Récupération des noms courts et logos
                     nom_dom_api = m.get('equipe_dom')
                     nom_ext_api = m.get('equipe_ext')
                     
@@ -1332,8 +1332,26 @@ elif st.session_state.onglet_actif == "📺":
                     dom_court = dict_noms_courts.get(key_dom, nom_dom_api)
                     ext_court = dict_noms_courts.get(key_ext, nom_ext_api)
                     
-                    # Titre propre de l'expander sans balises HTML non supportées
-                    expander_title = f"🏉 {dom_court} {sc_dom} - {sc_ext} {ext_court} | 📅 {date_affichee}{label_statut}"
+                    dom_logo = dict_logos.get(key_dom, "")
+                    ext_logo = dict_logos.get(key_ext, "")
+                    
+                    # Affichage d'un bandeau HTML propre pour le match (les titres st.expander ne supportant pas les balises <img>)
+                    dom_img_html = f'<img src="{dom_logo}" width="24" height="24" style="object-fit:contain; vertical-align:middle; margin-right:6px;">' if dom_logo else ""
+                    ext_img_html = f'<img src="{ext_logo}" width="24" height="24" style="object-fit:contain; vertical-align:middle; margin-left:6px;">' if ext_logo else ""
+                    
+                    match_banner_html = f"""
+                    <div style="display: flex; align-items: center; justify-content: space-between; background-color: #f8fafc; padding: 12px 16px; border-radius: 8px; border: 1px solid #e2e8f0; margin-top: 15px;">
+                        <div style="display: flex; align-items: center; gap: 6px; font-weight: bold; font-size: 15px; color: #0f172a;">
+                            🏉 {dom_img_html}<span>{dom_court}</span>
+                            <span style="margin: 0 10px; background-color: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 6px; font-size: 14px;">{sc_dom} - {sc_ext}</span>
+                            <span>{ext_court}</span>{ext_img_html}
+                        </div>
+                        <div style="font-size: 12px; color: #64748b; font-weight: 500;">
+                            📅 {date_affichee} {label_statut}
+                        </div>
+                    </div>
+                    """
+                    st.markdown(match_banner_html, unsafe_allow_html=True)
                     
                     vrai_gagnant_brut = "home" if sc_dom > sc_ext else ("away" if sc_dom < sc_ext else "draw")
                     diff = abs(sc_dom - sc_ext)
@@ -1347,7 +1365,7 @@ elif st.session_state.onglet_actif == "📺":
                     elif diff <= 50: vraie_tranche = "41-50"
                     else: vraie_tranche = "51+"
                         
-                    with st.expander(expander_title, expanded=False):
+                    with st.expander("🔍 Voir les pronostics des joueurs", expanded=False):
                         pronos = supabase.table("Pronostics").select("*").eq("match_id", m.get('id')).execute().data or []
                         dict_pronos = {p['user_id']: p for p in pronos} if pronos else {}
                         
