@@ -82,7 +82,7 @@ def obtenir_logo(nom_equipe):
     return ""
 
 #1.5 - NOM COURT EQUIPES
-@st.cache_data(ttl=300)
+#@st.cache_data(ttl=300)
 def charger_surnoms_equipes():
     try:
         res = supabase.table("Equipes").select("nom_api, nom_court").execute()
@@ -971,6 +971,7 @@ if st.session_state.onglet_actif == "🏉":
                                 
                                 nom_dom_affiche = get_nom_affiche(m["equipe_dom"])
                                 nom_ext_affiche = get_nom_affiche(m["equipe_ext"])
+                                st.write("Dictionnaire des surnoms chargés :", dict_surnoms)
                                 
                                 # --- EN-TÊTE : [LOGO 1 GRAND] EQUIPE 1 VS EQUIPE 2 [LOGO 2 GRAND] ---
                                 logo_dom_html = f'<img src="{logo_dom}" style="width: 32px; height: 32px; object-fit: contain; vertical-align: middle; flex-shrink: 0;">' if logo_dom else ''
