@@ -947,7 +947,7 @@ if st.session_state.onglet_actif == "🏉":
                     </style>
                 """, unsafe_allow_html=True)
             
-                # --- MISE EN CACHE POUR ACCÉLÉRER LE CHARGEMENT INITIAL ---
+                # Mise en cache pour accélérer le chargement initial
                 @st.cache_data(ttl=3600)
                 def logo_cache(equipe):
                     return obtenir_logo(equipe)
@@ -1063,18 +1063,21 @@ if st.session_state.onglet_actif == "🏉":
                                 is_nul_sel = (choix_actuel == "Match Nul")
                                 is_ext_sel = (choix_actuel == m['equipe_ext'])
             
-                                # SANS ST.RERUN() POUR QUE LE CLIC SOIT INSTANTANÉ
+                                # AVEC ST.RERUN() POUR RAFRAÎCHIR L'AFFICHAGE INSTANTANÉMENT DÈS LE 1er CLIC
                                 if st.button(nom_dom_affiche, key=f"btn_dom_{m['id']}", type="primary" if is_dom_sel else "secondary", disabled=bouton_bloque, use_container_width=True):
                                     st.session_state[key_w] = m['equipe_dom']
                                     sauvegarder_prono_auto(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
+                                    st.rerun()
             
                                 if st.button("🤝 Match Nul", key=f"btn_nul_{m['id']}", type="primary" if is_nul_sel else "secondary", disabled=bouton_bloque, use_container_width=True):
                                     st.session_state[key_w] = "Match Nul"
                                     sauvegarder_prono_auto(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
+                                    st.rerun()
             
                                 if st.button(nom_ext_affiche, key=f"btn_ext_{m['id']}", type="primary" if is_ext_sel else "secondary", disabled=bouton_bloque, use_container_width=True):
                                     st.session_state[key_w] = m['equipe_ext']
                                     sauvegarder_prono_auto(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
+                                    st.rerun()
             
                                 st.markdown("<br>", unsafe_allow_html=True)
                                 
