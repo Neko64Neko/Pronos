@@ -904,11 +904,11 @@ if st.session_state.onglet_actif == "🏉":
                 except Exception as e:
                     st.error(f"Erreur lors du chargement des questions bonus : {e}")
 
-            # 7.2.2 - SECTION MATCHS OUVERTS
+             # 7.2.2 - SECTION MATCHS OUVERTS
                 st.markdown('<div style="height: 1px; background-color: #cbd5e1; margin: 25px auto 15px auto; width: calc(100% - 40px);"></div>', unsafe_allow_html=True)
                 st.subheader("🏉 Liste des Matchs")
             
-            # CSS global : Forcer les colonnes à rester côte à côte sur mobile + bulles
+                # CSS global : Forçage absolu du côte-à-côte sur mobile pour st.columns(2)
                 st.markdown("""
                     <style>
                         [data-testid="stVerticalBlockBorderWrapper"] {
@@ -926,23 +926,28 @@ if st.session_state.onglet_actif == "🏉":
                             font-size: 0.9em !important;
                             padding: 0px 4px !important;
                         }
-                        /* FORCER LES COLONNES À NE PAS SE EMPILER SUR MOBILE */
+                        
+                        /* ANTI-EMPILEMENT MOBILE : FORCE LES DEUX COLONNES CÔTE À CÔTE */
+                        div[data-testid="stHorizontalBlock"] {
+                            display: flex !important;
+                            flex-direction: row !important;
+                            flex-wrap: nowrap !important;
+                        }
+                        div[data-testid="column"] {
+                            flex: 1 1 50% !important;
+                            width: 50% !important;
+                            min-width: 0 !important;
+                            max-width: 50% !important;
+                        }
+                        
                         @media (max-width: 640px) {
-                            [data-testid="stHorizontalBlock"] {
-                                display: flex !important;
-                                flex-direction: row !important;
-                            }
-                            [data-testid="column"] {
-                                width: 50% !important;
-                                flex: 1 1 50% !important;
-                                min-width: unset !important;
-                            }
                             div.stButton > button {
-                                font-size: 0.78em !important;
+                                font-size: 0.75em !important;
                                 min-height: 38px !important;
                                 padding: 0px 2px !important;
                             }
                         }
+                        
                         hr.match-separator {
                             border: none !important;
                             border-top: 1px solid #cbd5e1 !important;
