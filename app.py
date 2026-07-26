@@ -1283,7 +1283,7 @@ elif st.session_state.onglet_actif == "📺":
                                 base_match = float(pts_gagnant_cfg)
                                 if a_bon_ecart:
                                     base_match += float(pts_ecart_cfg)
-                                
+                            
                                 is_ose = mises_gagnant <= int(float(seuil_ose_cfg))
                                 if is_ose:
                                     scores_generaux[j_id] += float(base_match) * float(mult_ose_cfg)
@@ -1358,15 +1358,19 @@ elif st.session_state.onglet_actif == "📺":
                                 ec_prevu = p.get('ecart_prevu')
                                 
                                 if est_un_nul(g_prevu):
-                                    nom_gagnant_prevu = "Match Nul"
+                                    affichage_pronostic = "<b>Match Nul</b>"
                                     ligne_ecart_html = ""
                                 else:
                                     if g_prevu == "home":
-                                        nom_gagnant_prevu = m.get('equipe_dom')
+                                        nom_equipe = m.get('equipe_dom')
                                     elif g_prevu == "away":
-                                        nom_gagnant_prevu = m.get('equipe_ext')
+                                        nom_equipe = m.get('equipe_ext')
                                     else:
-                                        nom_gagnant_prevu = str(g_prevu)
+                                        nom_equipe = str(g_prevu)
+                                    
+                                    # Récupération du logo de l'équipe à la place du nom
+                                    logo = obtenir_logo_equipe(nom_equipe) if 'obtenir_logo_equipe' in globals() else f"<b>{nom_equipe}</b>"
+                                    affichage_pronostic = logo
                                     
                                     if ec_prevu is not None and str(ec_prevu).strip() != "":
                                         ligne_ecart_html = f"<br><span style='font-size:11px; color:#555555;'>{ec_prevu}</span>"
@@ -1427,13 +1431,13 @@ elif st.session_state.onglet_actif == "📺":
                                 lignes_table_html += f"""
                                 <tr style="{style_ligne_joueur} border-bottom: 1px solid #f1f5f9; color: #000000;">
                                     <td style="padding: 10px; font-size: 13px; color: #000000;">{pseudo_final}</td>
-                                    <td style="padding: 10px; font-size: 13px; color: #000000;"><b>{nom_gagnant_prevu}</b>{badge_ose}{ligne_ecart_html}</td>
-                                    <td style="padding: 10px; text-align: center;">
+                                    <td style="padding: 10px; font-size: 13px; color: #000000; vertical-align: middle;">{affichage_pronostic}{badge_ose}{ligne_ecart_html}</td>
+                                    <td style="padding: 10px; text-align: center; vertical-align: middle;">
                                         <span style="color: {color_txt}; font-size: 11px; font-weight: bold;">
                                             {texte_badge_resultat}
                                         </span>
                                     </td>
-                                    <td style="padding: 10px; text-align: right;">
+                                    <td style="padding: 10px; text-align: right; vertical-align: middle;">
                                         <span style="background-color: {color_bg}; color: {color_txt}; padding: 4px 10px; border-radius: 12px; font-size: 13px; font-weight: bold; display: inline-block;">
                                             {texte_points}
                                         </span>
@@ -1444,9 +1448,9 @@ elif st.session_state.onglet_actif == "📺":
                                 lignes_table_html += f"""
                                 <tr style="{style_ligne_joueur} border-bottom: 1px solid #f1f5f9; color: #000000;">
                                     <td style="padding: 10px; font-size: 13px; color: #000000;">{pseudo_final}</td>
-                                    <td style="padding: 10px; font-size: 13px; font-style: italic; color: #555555;">Aucun pronostic</td>
-                                    <td style="padding: 10px; text-align: center; font-size: 11px; color: #64748b;">❌ Absent</td>
-                                    <td style="padding: 10px; text-align: right;">
+                                    <td style="padding: 10px; font-size: 13px; font-style: italic; color: #555555; vertical-align: middle;">Aucun pronostic</td>
+                                    <td style="padding: 10px; text-align: center; font-size: 11px; color: #64748b; vertical-align: middle;">❌ Absent</td>
+                                    <td style="padding: 10px; text-align: right; vertical-align: middle;">
                                         <span style="background-color: #f1f5f9; color: #64748b; padding: 4px 10px; border-radius: 12px; font-size: 13px; font-weight: bold; display: inline-block;">
                                             0 pt
                                         </span>
@@ -1480,13 +1484,11 @@ elif st.session_state.onglet_actif == "📺":
             reponses_bonus = supabase.table("Réponses_Questions").select("*").execute().data
             
             if questions_bonus and tous_les_joueurs:
-                # Dictionnaire d'indexation {(user_id, question_id): reponse_texte}
                 dict_reponses = {(r['user_id'], r['question_id']): r.get('reponse_joueur') for r in reponses_bonus} if reponses_bonus else {}
                 
                 for q in questions_bonus:
                     st.markdown(f"##### ❓ {q['question']}")
                     
-                    # Vérification temporelle pour savoir si la question est fermée/expirée
                     question_fermee = False
                     date_limite_str = q.get('date_limite')
                     if date_limite_str:
@@ -1497,22 +1499,18 @@ elif st.session_state.onglet_actif == "📺":
                             tz_paris = pytz.timezone('Europe/Paris')
                             dt_limite_q = dt_limite_utc.astimezone(tz_paris)
                             
-                            # Comparaison naïve
                             if maintenant_paris.replace(tzinfo=None) >= dt_limite_q.replace(tzinfo=None):
                                 question_fermee = True
                         except Exception:
                             pass
                     
-                    # Si le statut de validation en BDD est passé sur "closed", on force à fermé
                     if q.get('statut') == 'closed':
                         question_fermee = True
 
                     if q.get('reponse_correcte'):
                         st.markdown(f"🎯 *Réponse officielle : `{q['reponse_correcte']}`*")
                     
-                    # --- AFFICHAGE CONDITIONNEL SELON LA TIMELINE ---
                     if question_fermee:
-                        # La date limite est passée : on affiche tout le monde
                         for j in tous_les_joueurs:
                             rep_joueur = dict_reponses.get((j['id'], q['id']))
                             
@@ -1521,10 +1519,8 @@ elif st.session_state.onglet_actif == "📺":
                             else:
                                 st.markdown(f"👤 **{j['pseudo']}** : <span style='color: #94a3b8; font-style: italic;'>❌ Pas de prono</span>", unsafe_allow_html=True)
                     else:
-                        # La date limite n'est PAS passée : on masque les pronos des autres !
                         st.markdown("<span style='color: #64748b; font-style: italic; font-size: 0.9em;'>🔒 Les réponses des autres joueurs seront visibles une fois la date limite dépassée.</span>", unsafe_allow_html=True)
                         
-                        # Optionnel et sympa : On montre quand même au joueur connecté sa propre réponse actuelle
                         ma_rep = dict_reponses.get((st.session_state.user_id, q['id']))
                         if ma_rep and ma_rep.strip() != "":
                             st.markdown(f"👤 **{st.session_state.pseudo} ** : `{ma_rep}`")
