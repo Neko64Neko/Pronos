@@ -908,7 +908,7 @@ if st.session_state.onglet_actif == "🏉":
                 st.markdown('<div style="height: 1px; background-color: #cbd5e1; margin: 25px auto 15px auto; width: calc(100% - 40px);"></div>', unsafe_allow_html=True)
                 st.subheader("🏉 Liste des Matchs")
             
-                # CSS global inchangé pour les bulles et l'anti-débordement
+                # CSS global inchangé
                 st.markdown("""
                     <style>
                         [data-testid="stVerticalBlockBorderWrapper"] {
@@ -947,6 +947,15 @@ if st.session_state.onglet_actif == "🏉":
                     </style>
                 """, unsafe_allow_html=True)
             
+                # --- MISE EN CACHE POUR ACCÉLÉRER LE CHARGEMENT INITIAL ---
+                @st.cache_data(ttl=3600)
+                def logo_cache(equipe):
+                    return obtenir_logo(equipe)
+            
+                @st.cache_data(ttl=3600)
+                def nom_affiche_cache(equipe):
+                    return get_nom_affiche(equipe)
+            
                 try:
                     matchs_potentiels = supabase.table("Matchs").select("*").neq("statut", "FT").execute().data
                     matchs_visibles = []
@@ -978,15 +987,15 @@ if st.session_state.onglet_actif == "🏉":
                         tous_pronos_bruts = supabase.table("Pronostics").select("*").eq("user_id", id_joueur_cible).execute().data
                         dict_tous_pronos = {p['match_id']: p for p in tous_pronos_bruts} if tous_pronos_bruts else {}
                         
-                        # --- DÉFINITION DU FRAGMENT ULTRA-RAPIDE PAR MATCH ---
+                        # --- FRAGMENT ULTRA-RAPIDE PAR MATCH ---
                         @st.fragment
                         def afficher_carte_match(m, id_joueur_cible, dict_tous_pronos_local, droits_admin_actifs, maintenant_paris_local, paris_tz_local):
                             with st.container(border=True):
-                                logo_dom = obtenir_logo(m["equipe_dom"])
-                                logo_ext = obtenir_logo(m["equipe_ext"])
+                                logo_dom = logo_cache(m["equipe_dom"])
+                                logo_ext = logo_cache(m["equipe_ext"])
                                 
-                                nom_dom_affiche = get_nom_affiche(m["equipe_dom"])
-                                nom_ext_affiche = get_nom_affiche(m["equipe_ext"])
+                                nom_dom_affiche = nom_affiche_cache(m["equipe_dom"])
+                                nom_ext_affiche = nom_affiche_cache(m["equipe_ext"])
                                 
                                 logo_dom_html = f'<img src="{logo_dom}" style="width: 32px; height: 32px; object-fit: contain; vertical-align: middle; flex-shrink: 0;">' if logo_dom else ''
                                 logo_ext_html = f'<img src="{logo_ext}" style="width: 32px; height: 32px; object-fit: contain; vertical-align: middle; flex-shrink: 0;">' if logo_ext else ''
@@ -1054,20 +1063,18 @@ if st.session_state.onglet_actif == "🏉":
                                 is_nul_sel = (choix_actuel == "Match Nul")
                                 is_ext_sel = (choix_actuel == m['equipe_ext'])
             
+                                # SANS ST.RERUN() POUR QUE LE CLIC SOIT INSTANTANÉ
                                 if st.button(nom_dom_affiche, key=f"btn_dom_{m['id']}", type="primary" if is_dom_sel else "secondary", disabled=bouton_bloque, use_container_width=True):
                                     st.session_state[key_w] = m['equipe_dom']
                                     sauvegarder_prono_auto(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
-                                    st.rerun()
             
                                 if st.button("🤝 Match Nul", key=f"btn_nul_{m['id']}", type="primary" if is_nul_sel else "secondary", disabled=bouton_bloque, use_container_width=True):
                                     st.session_state[key_w] = "Match Nul"
                                     sauvegarder_prono_auto(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
-                                    st.rerun()
             
                                 if st.button(nom_ext_affiche, key=f"btn_ext_{m['id']}", type="primary" if is_ext_sel else "secondary", disabled=bouton_bloque, use_container_width=True):
                                     st.session_state[key_w] = m['equipe_ext']
                                     sauvegarder_prono_auto(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
-                                    st.rerun()
             
                                 st.markdown("<br>", unsafe_allow_html=True)
                                 
