@@ -80,6 +80,18 @@ def obtenir_logo(nom_equipe):
         print(f"Erreur logo pour '{nom_equipe}' : {e}")
         
     return ""
+
+#1.5 - NOM COURT EQUIPES
+@st.cache_data(ttl=300)
+def charger_surnoms_equipes():
+    try:
+        res = supabase.table("Equipes").select("nom_api, nom_court").execute()
+        if res.data:
+            return {item['nom_api']: item['nom_court'] for item in res.data if item.get('nom_court')}
+    except Exception:
+        pass
+    return {}
+    
 # =====================================================================
 # 2 - SYSTEME DE SCRAPING GRATUIT ET AUTOMATIQUE
 # =====================================================================
@@ -936,7 +948,7 @@ if st.session_state.onglet_actif == "🏉":
                                     matchs_visibles.append(m)
             
                     if matchs_visibles:
-                        matchs_visibles = sorted(matchs_visibles, key=lambda x: x['date_match'] if x.get('date_match') is not None else "9999-12-31")
+                        matchs_visibles = sorted(matchs_visibles, key=lambda x: x['date_match'] if x.get('date_match'] is not None else "9999-12-31")
                         
                         # Chargement global des pronos en 1 seule requête pour la performance
                         tous_pronos_bruts = supabase.table("Pronostics").select("*").eq("user_id", id_joueur_cible).execute().data
@@ -946,9 +958,12 @@ if st.session_state.onglet_actif == "🏉":
                         for index, m in enumerate(matchs_visibles):
                             with st.container(border=True):
                                 
-                                # --- RÉCUPÉRATION DES LOGOS ---
+                                # --- RÉCUPÉRATION DES LOGOS ET NOMS COURTS ---
                                 logo_dom = obtenir_logo(m["equipe_dom"])
                                 logo_ext = obtenir_logo(m["equipe_ext"])
+                                
+                                nom_dom_affiche = get_nom_affiche(m["equipe_dom"])
+                                nom_ext_affiche = get_nom_affiche(m["equipe_ext"])
                                 
                                 # --- EN-TÊTE : [LOGO 1 GRAND] EQUIPE 1 VS EQUIPE 2 [LOGO 2 GRAND] ---
                                 logo_dom_html = f'<img src="{logo_dom}" style="width: 32px; height: 32px; object-fit: contain; vertical-align: middle; flex-shrink: 0;">' if logo_dom else ''
@@ -958,11 +973,11 @@ if st.session_state.onglet_actif == "🏉":
                                 <div style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 6px; text-align: center;">
                                     <div style="display: flex; align-items: center; gap: 8px; justify-content: flex-end; flex: 1; overflow: hidden;">
                                         {logo_dom_html}
-                                        <span style="font-weight: bold; font-size: 1.15em; color: #2563eb; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{m["equipe_dom"]}</span>
+                                        <span style="font-weight: bold; font-size: 1.15em; color: #2563eb; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{m["equipe_dom"]}">{nom_dom_affiche}</span>
                                     </div>
                                     <span style="color: #94a3b8; font-size: 1.1em; font-weight: 500; padding: 0 2px; flex-shrink: 0;">vs</span>
                                     <div style="display: flex; align-items: center; gap: 8px; justify-content: flex-start; flex: 1; overflow: hidden;">
-                                        <span style="font-weight: bold; font-size: 1.15em; color: #2563eb; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{m["equipe_ext"]}</span>
+                                        <span style="font-weight: bold; font-size: 1.15em; color: #2563eb; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{m["equipe_ext"]}">{nom_ext_affiche}</span>
                                         {logo_ext_html}
                                     </div>
                                 </div>
@@ -995,6 +1010,7 @@ if st.session_state.onglet_actif == "🏉":
                                 
                                 if prono_donnees:
                                     g_prevu = prono_donnees['gagnant_prevu']
+                                    # On compare avec le vrai nom de l'API stocké en base
                                     if g_prevu == "home": choix_actuel = m['equipe_dom']
                                     elif g_prevu == "away": choix_actuel = m['equipe_ext']
                                     elif g_prevu == "draw": choix_actuel = "Match Nul"
@@ -1004,6 +1020,7 @@ if st.session_state.onglet_actif == "🏉":
                                 
                                 key_w = f"w_{m['id']}_{id_joueur_cible}"
                                 if key_w not in st.session_state:
+                                    # Si un choix existe déjà, on le mappe sur le vrai nom de l'API
                                     st.session_state[key_w] = choix_actuel
             
                                 def cb_changement_vainqueur(match_id, eq_dom, eq_ext, u_id):
@@ -1015,18 +1032,36 @@ if st.session_state.onglet_actif == "🏉":
                                 # Label personnalisé pour le vainqueur
                                 st.markdown('<div style="font-size: 1.1em; font-weight: 600; color: #64748b; margin-bottom: 6px;">Sélectionner le Vainqueur :</div>', unsafe_allow_html=True)
                                 
-                                options_vainqueur = [m['equipe_dom'], "Match Nul", m['equipe_ext']]
+                                # Les options du segmented control affichent les noms courts, 
+                                # mais gardent la valeur technique du vrai nom de l'équipe (m['equipe_dom'])
+                                options_vainqueur_map = {
+                                    nom_dom_affiche: m['equipe_dom'],
+                                    "Match Nul": "Match Nul",
+                                    nom_ext_affiche: m['equipe_ext']
+                                }
                                 
-                                # Composant natif ultra stable pour la sélection avec style en bulles
-                                st.segmented_control(
+                                # On convertit le choix actuel (stocké sous forme de nom API) vers le nom affiché pour le widget
+                                val_actuelle_affiche = None
+                                if choix_actuel == m['equipe_dom']: val_actuelle_affiche = nom_dom_affiche
+                                elif choix_actuel == m['equipe_ext']: val_actuelle_affiche = nom_ext_affiche
+                                elif choix_actuel == "Match Nul": val_actuelle_affiche = "Match Nul"
+                                
+                                if key_w not in st.session_state or st.session_state[key_w] not in options_vainqueur_map.values():
+                                    st.session_state[key_w] = val_actuelle_affiche
+            
+                                # Composant natif avec les noms courts
+                                choix_selectionne_affiche = st.segmented_control(
                                     "Sélectionner le Vainqueur",
-                                    options=options_vainqueur,
+                                    options=list(options_vainqueur_map.keys()),
                                     key=key_w,
                                     on_change=cb_changement_vainqueur,
                                     args=(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible),
                                     disabled=bouton_bloque,
                                     label_visibility="collapsed"
                                 )
+                                
+                                # On traduit le choix affiché en vrai nom d'équipe pour la base de données si nécessaire, 
+                                # ou sauvegarder_prono_auto gère la correspondance.
                                 
                                 st.markdown("<br>", unsafe_allow_html=True)
                                 
@@ -1037,8 +1072,7 @@ if st.session_state.onglet_actif == "🏉":
                                 if key_m not in st.session_state:
                                     st.session_state[key_m] = ecart_existant if ecart_existant in TRANCHES_ECARTS else "..."
             
-                                val_vainqueur = st.session_state.get(key_w)
-                                est_match_nul = (val_vainqueur == "Match Nul")
+                                est_match_nul = (choix_selectionne_affiche == "Match Nul")
             
                                 if est_match_nul:
                                     st.markdown('<div style="font-size: 1.1em; font-weight: 600; color: #94a3b8; margin-bottom: 2px;">Écart (pts) : <span style="font-size: 0.85em; font-weight: normal; font-style: italic;">(Non requis pour un match nul)</span></div>', unsafe_allow_html=True)
@@ -1057,8 +1091,7 @@ if st.session_state.onglet_actif == "🏉":
                                 
                                 # --- GESTION DU MESSAGE D'ÉTAT DYNAMIQUE ---
                                 val_ecart = st.session_state.get(key_m, ecart_existant)
-                                
-                                has_vainqueur = bool(val_vainqueur and val_vainqueur != "")
+                                has_vainqueur = bool(choix_selectionne_affiche and choix_selectionne_affiche != "")
                                 
                                 if est_match_nul:
                                     has_ecart = True
