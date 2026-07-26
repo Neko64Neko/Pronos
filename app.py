@@ -1178,6 +1178,16 @@ elif st.session_state.onglet_actif == "📺":
             tous_les_pronos = supabase.table("Pronostics").select("*").execute().data or []
             questions_bonus = supabase.table("Questions_Bonus").select("*").execute().data or []
             reponses_bonus = supabase.table("Réponses_Questions").select("*").execute().data or []
+            tous_equipes = supabase.table("Equipes").select("*").execute().data or []
+            
+            # --- DICTIONNAIRES DE CORRESPONDANCE (NOM API -> NOM COURT / LOGO) ---
+            dict_noms_courts = {}
+            dict_logos = {}
+            for eq in tous_equipes:
+                nom_api = eq.get('nom') or eq.get('nom_api')
+                if nom_api:
+                    dict_noms_courts[nom_api] = eq.get('nom_court', nom_api)
+                    dict_logos[nom_api] = eq.get('logo', '')
             
             paris_tz = pytz.timezone("Europe/Paris")
             
@@ -1311,6 +1321,12 @@ elif st.session_state.onglet_actif == "📺":
                     sc_dom = m.get('score_dom') if m.get('score_dom') is not None else 0
                     sc_ext = m.get('score_ext') if m.get('score_ext') is not None else 0
                     
+                    # Récupération des noms courts pour l'expander
+                    nom_dom_api = m.get('equipe_dom')
+                    nom_ext_api = m.get('equipe_ext')
+                    dom_court = dict_noms_courts.get(nom_dom_api, nom_dom_api)
+                    ext_court = dict_noms_courts.get(nom_ext_api, nom_ext_api)
+                    
                     vrai_gagnant_brut = "home" if sc_dom > sc_ext else ("away" if sc_dom < sc_ext else "draw")
                     diff = abs(sc_dom - sc_ext)
                     
@@ -1323,7 +1339,7 @@ elif st.session_state.onglet_actif == "📺":
                     elif diff <= 50: vraie_tranche = "41-50"
                     else: vraie_tranche = "51+"
                         
-                    with st.expander(f"🏉 {m.get('equipe_dom')} {sc_dom} - {sc_ext} {m.get('equipe_ext')} | 📅{date_affichee}{label_statut}"):
+                    with st.expander(f"🏉 {dom_court} {sc_dom} - {sc_ext} {ext_court} | 📅{date_affichee}{label_statut}"):
                         pronos = supabase.table("Pronostics").select("*").eq("match_id", m.get('id')).execute().data or []
                         dict_pronos = {p['user_id']: p for p in pronos} if pronos else {}
                         
@@ -1362,15 +1378,20 @@ elif st.session_state.onglet_actif == "📺":
                                     ligne_ecart_html = ""
                                 else:
                                     if g_prevu == "home":
-                                        nom_equipe = m.get('equipe_dom')
+                                        nom_equipe_api = nom_dom_api
                                     elif g_prevu == "away":
-                                        nom_equipe = m.get('equipe_ext')
+                                        nom_equipe_api = nom_ext_api
                                     else:
-                                        nom_equipe = str(g_prevu)
+                                        nom_equipe_api = str(g_prevu)
                                     
-                                    # Récupération du logo de l'équipe à la place du nom
-                                    logo = obtenir_logo_equipe(nom_equipe) if 'obtenir_logo_equipe' in globals() else f"<b>{nom_equipe}</b>"
-                                    affichage_pronostic = logo
+                                    # Récupération du nom court et du logo
+                                    nom_court_equipe = dict_noms_courts.get(nom_equipe_api, nom_equipe_api)
+                                    logo_url = dict_logos.get(nom_equipe_api, "")
+                                    
+                                    if logo_url:
+                                        affichage_pronostic = f'<span style="display:inline-flex; align-items:center; gap:6px;"><img src="{logo_url}" width="20" height="20" style="object-fit:contain; vertical-align:middle;"> <b>{nom_court_equipe}</b></span>'
+                                    else:
+                                        affichage_pronostic = f'<b>{nom_court_equipe}</b>'
                                     
                                     if ec_prevu is not None and str(ec_prevu).strip() != "":
                                         ligne_ecart_html = f"<br><span style='font-size:11px; color:#555555;'>{ec_prevu}</span>"
