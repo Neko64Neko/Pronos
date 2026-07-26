@@ -905,247 +905,245 @@ if st.session_state.onglet_actif == "🏉":
                     st.error(f"Erreur lors du chargement des questions bonus : {e}")
 
             # 7.2.2 - SECTION MATCHS OUVERTS
-                st.markdown('<div style="height: 1px; background-color: #cbd5e1; margin: 25px auto 15px auto; width: calc(100% - 40px);"></div>', unsafe_allow_html=True)
-                st.subheader("🏉 Liste des Matchs")
-            
-                # CSS global inchangé
-                st.markdown("""
-                    <style>
-                        [data-testid="stVerticalBlockBorderWrapper"] {
-                            border: 1.5px solid #cbd5e1 !important;
-                            border-radius: 12px !important;
-                            padding-bottom: 14px !important;
-                            box-shadow: 0 1px 2px rgba(0,0,0,0.02);
-                        }
-                        div.stButton > button {
-                            border-radius: 25px !important;
-                            width: 100% !important;
-                            height: 46px !important;
-                            min-height: 46px !important;
-                            max-height: 46px !important;
-                            font-weight: 600 !important;
-                            font-size: 0.9em !important;
-                            padding: 0 12px !important;
-                            box-sizing: border-box !important;
-                            white-space: nowrap !important;
-                            overflow: hidden !important;
-                            text-overflow: ellipsis !important;
-                            display: flex !important;
-                            align-items: center !important;
-                            justify-content: center !important;
-                            margin-bottom: 6px !important;
-                        }
-                        hr.match-separator {
-                            border: none !important;
-                            border-top: 1px solid #cbd5e1 !important;
-                            border-bottom: 1px solid #cbd5e1 !important;
-                            height: 3px !important;
-                            width: 40% !important;
-                            margin: 30px auto !important;
-                            background-color: transparent !important;
-                        }
-                    </style>
-                """, unsafe_allow_html=True)
-            
-                # Mise en cache pour accélérer le chargement initial
-                @st.cache_data(ttl=3600)
-                def logo_cache(equipe):
-                    return obtenir_logo(equipe)
-            
-                @st.cache_data(ttl=3600)
-                def nom_affiche_cache(equipe):
-                    return get_nom_affiche(equipe)
-            
-                try:
-                    matchs_potentiels = supabase.table("Matchs").select("*").neq("statut", "FT").execute().data
-                    matchs_visibles = []
-                    
-                    droits_admin_totalement_actifs = (
-                        st.session_state.is_admin 
-                        and st.session_state.get('mode_admin_actif', False) 
-                        and st.session_state.get('mode_admin_pronos', False)
-                    )
-                    
-                    paris_tz = pytz.timezone("Europe/Paris")
-                    
-                    if matchs_potentiels:
-                        for m in matchs_potentiels:
-                            try:
-                                date_clean = m['date_match'].replace("Z", "+00:00")
-                                dt_match_utc = datetime.fromisoformat(date_clean)
-                                dt_match_paris = dt_match_utc.astimezone(paris_tz)
-                                
-                                if maintenant_paris.replace(tzinfo=None) < dt_match_paris.replace(tzinfo=None) or droits_admin_totalement_actifs:
-                                    matchs_visibles.append(m)
-                            except Exception:
-                                if m['statut'] == "NS" or droits_admin_totalement_actifs:
-                                    matchs_visibles.append(m)
-            
-                    if matchs_visibles:
-                        matchs_visibles = sorted(matchs_visibles, key=lambda x: x['date_match'] if x.get('date_match') is not None else "9999-12-31")
+                    st.markdown('<div style="height: 1px; background-color: #cbd5e1; margin: 25px auto 15px auto; width: calc(100% - 40px);"></div>', unsafe_allow_html=True)
+                    st.subheader("🏉 Liste des Matchs")
+                
+                    # CSS global inchangé
+                    st.markdown("""
+                        <style>
+                            [data-testid="stVerticalBlockBorderWrapper"] {
+                                border: 1.5px solid #cbd5e1 !important;
+                                border-radius: 12px !important;
+                                padding-bottom: 14px !important;
+                                box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+                            }
+                            div.stButton > button {
+                                border-radius: 25px !important;
+                                width: 100% !important;
+                                height: 46px !important;
+                                min-height: 46px !important;
+                                max-height: 46px !important;
+                                font-weight: 600 !important;
+                                font-size: 0.9em !important;
+                                padding: 0 12px !important;
+                                box-sizing: border-box !important;
+                                white-space: nowrap !important;
+                                overflow: hidden !important;
+                                text-overflow: ellipsis !important;
+                                display: flex !important;
+                                align-items: center !important;
+                                justify-content: center !important;
+                                margin-bottom: 6px !important;
+                            }
+                            hr.match-separator {
+                                border: none !important;
+                                border-top: 1px solid #cbd5e1 !important;
+                                border-bottom: 1px solid #cbd5e1 !important;
+                                height: 3px !important;
+                                width: 40% !important;
+                                margin: 30px auto !important;
+                                background-color: transparent !important;
+                            }
+                        </style>
+                    """, unsafe_allow_html=True)
+                
+                    # Mise en cache pour accélérer le chargement initial
+                    @st.cache_data(ttl=3600)
+                    def logo_cache(equipe):
+                        return obtenir_logo(equipe)
+                
+                    @st.cache_data(ttl=3600)
+                    def nom_affiche_cache(equipe):
+                        return get_nom_affiche(equipe)
+                
+                    try:
+                        matchs_potentiels = supabase.table("Matchs").select("*").neq("statut", "FT").execute().data
+                        matchs_visibles = []
                         
-                        tous_pronos_bruts = supabase.table("Pronostics").select("*").eq("user_id", id_joueur_cible).execute().data
-                        dict_tous_pronos = {p['match_id']: p for p in tous_pronos_bruts} if tous_pronos_bruts else {}
+                        droits_admin_totalement_actifs = (
+                            st.session_state.is_admin 
+                            and st.session_state.get('mode_admin_actif', False) 
+                            and st.session_state.get('mode_admin_pronos', False)
+                        )
                         
-                        # --- FRAGMENT ULTRA-RAPIDE PAR MATCH ---
-                        @st.fragment
-                        def afficher_carte_match(m, id_joueur_cible, dict_tous_pronos_local, droits_admin_actifs, maintenant_paris_local, paris_tz_local):
-                            with st.container(border=True):
-                                logo_dom = logo_cache(m["equipe_dom"])
-                                logo_ext = logo_cache(m["equipe_ext"])
-                                
-                                nom_dom_affiche = nom_affiche_cache(m["equipe_dom"])
-                                nom_ext_affiche = nom_affiche_cache(m["equipe_ext"])
-                                
-                                logo_dom_html = f'<img src="{logo_dom}" style="width: 32px; height: 32px; object-fit: contain; vertical-align: middle; flex-shrink: 0;">' if logo_dom else ''
-                                logo_ext_html = f'<img src="{logo_ext}" style="width: 32px; height: 32px; object-fit: contain; vertical-align: middle; flex-shrink: 0;">' if logo_ext else ''
-                                
-                                header_html = f"""
-                                <div style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 6px; text-align: center;">
-                                    <div style="display: flex; align-items: center; gap: 8px; justify-content: flex-end; flex: 1;">
-                                        {logo_dom_html}
-                                        <span style="font-weight: bold; font-size: 1.1em; color: #2563eb; white-space: normal; word-break: break-word; text-align: right;" title="{m["equipe_dom"]}">{nom_dom_affiche}</span>
-                                    </div>
-                                    <span style="color: #94a3b8; font-size: 1.1em; font-weight: 500; padding: 0 2px; flex-shrink: 0;">vs</span>
-                                    <div style="display: flex; align-items: center; gap: 8px; justify-content: flex-start; flex: 1;">
-                                        <span style="font-weight: bold; font-size: 1.1em; color: #2563eb; white-space: normal; word-break: break-word; text-align: left;" title="{m["equipe_ext"]}">{nom_ext_affiche}</span>
-                                        {logo_ext_html}
-                                    </div>
-                                </div>
-                                """
-                                st.markdown(header_html, unsafe_allow_html=True)
-                                
-                                bouton_bloque = False
+                        paris_tz = pytz.timezone("Europe/Paris")
+                        
+                        if matchs_potentiels:
+                            for m in matchs_potentiels:
                                 try:
                                     date_clean = m['date_match'].replace("Z", "+00:00")
                                     dt_match_utc = datetime.fromisoformat(date_clean)
-                                    dt_match_paris = dt_match_utc.astimezone(paris_tz_local)
+                                    dt_match_paris = dt_match_utc.astimezone(paris_tz)
                                     
-                                    date_affiche = formater_date_paris(m['date_match'])
-                                    match_commence = maintenant_paris_local.replace(tzinfo=None) >= dt_match_paris.replace(tzinfo=None)
-                                    
-                                    if match_commence:
-                                        if droits_admin_actifs:
-                                            st.markdown(f"<div style='text-align: center; color: #b7791f; font-size: 0.9em; font-weight: bold; margin-bottom: 10px;'>⚠️ Match commencé ({date_affiche}) - Autorisé (Admin)</div>", unsafe_allow_html=True)
-                                        else:
-                                            st.markdown(f"<div style='text-align: center; color: #dc2626; font-size: 0.9em; font-weight: bold; margin-bottom: 10px;'>🔒 Match commencé le {date_affiche}</div>", unsafe_allow_html=True)
-                                            bouton_bloque = True
-                                    else:
-                                        st.markdown(f"<div style='text-align: center; color: #64748b; font-size: 0.9em; margin-bottom: 10px;'>📅 Match prévu le {date_affiche}</div>", unsafe_allow_html=True)
+                                    if maintenant_paris.replace(tzinfo=None) < dt_match_paris.replace(tzinfo=None) or droits_admin_totalement_actifs:
+                                        matchs_visibles.append(m)
                                 except Exception:
-                                    pass
-            
-                                prono_donnees = dict_tous_pronos_local.get(m['id'])
-                                choix_actuel = None
-                                ecart_existant = "..."
-                                
-                                if prono_donnees:
-                                    g_prevu = prono_donnees['gagnant_prevu']
-                                    if g_prevu == "home": choix_actuel = m['equipe_dom']
-                                    elif g_prevu == "away": choix_actuel = m['equipe_ext']
-                                    elif g_prevu == "draw": choix_actuel = "Match Nul"
-                                    
-                                    if prono_donnees.get('ecart_prevu'):
-                                        ecart_existant = prono_donnees['ecart_prevu']
-                                
-                                key_w = f"w_{m['id']}_{id_joueur_cible}"
-                                if key_w not in st.session_state:
-                                    st.session_state[key_w] = choix_actuel
-                                else:
-                                    choix_actuel = st.session_state[key_w]
-            
-                                def cb_changement_ecart(match_id, eq_dom, eq_ext, u_id):
-                                    sauvegarder_prono_auto(match_id, eq_dom, eq_ext, u_id)
-            
-                                st.markdown('<div style="font-size: 1.1em; font-weight: 600; color: #64748b; margin-bottom: 6px; text-align: center;">Sélectionner le Vainqueur :</div>', unsafe_allow_html=True)
-                                
-                                is_dom_sel = (choix_actuel == m['equipe_dom'])
-                                is_nul_sel = (choix_actuel == "Match Nul")
-                                is_ext_sel = (choix_actuel == m['equipe_ext'])
-            
-                                # AVEC ST.RERUN() POUR RAFRAÎCHIR L'AFFICHAGE INSTANTANÉMENT DÈS LE 1er CLIC
-                                if st.button(nom_dom_affiche, key=f"btn_dom_{m['id']}", type="primary" if is_dom_sel else "secondary", disabled=bouton_bloque, use_container_width=True):
-                                    st.session_state[key_w] = m['equipe_dom']
-                                    sauvegarder_prono_auto(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
-                                    st.rerun()
-            
-                                if st.button("🤝 Match Nul", key=f"btn_nul_{m['id']}", type="primary" if is_nul_sel else "secondary", disabled=bouton_bloque, use_container_width=True):
-                                    st.session_state[key_w] = "Match Nul"
-                                    sauvegarder_prono_auto(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
-                                    st.rerun()
-            
-                                if st.button(nom_ext_affiche, key=f"btn_ext_{m['id']}", type="primary" if is_ext_sel else "secondary", disabled=bouton_bloque, use_container_width=True):
-                                    st.session_state[key_w] = m['equipe_ext']
-                                    sauvegarder_prono_auto(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
-                                    st.rerun()
-            
-                                st.markdown("<br>", unsafe_allow_html=True)
-                                
-                                key_m = f"m_{m['id']}_{id_joueur_cible}"
-                                options_ecarts = ["..."] + TRANCHES_ECARTS
-                                
-                                if key_m not in st.session_state:
-                                    st.session_state[key_m] = ecart_existant if ecart_existant in TRANCHES_ECARTS else "..."
-            
-                                val_vainqueur = st.session_state.get(key_w, choix_actuel)
-                                est_match_nul = (val_vainqueur == "Match Nul")
-            
-                                if est_match_nul:
-                                    st.markdown('<div style="font-size: 1.1em; font-weight: 600; color: #94a3b8; margin-bottom: 2px;">Écart (pts) : <span style="font-size: 0.85em; font-weight: normal; font-style: italic;">(Non requis pour un match nul)</span></div>', unsafe_allow_html=True)
-                                else:
-                                    st.markdown('<div style="font-size: 1.1em; font-weight: 600; color: #64748b; margin-bottom: 2px;">Écart (pts) :</div>', unsafe_allow_html=True)
-                                
-                                st.selectbox(
-                                    "Écart (pts)", 
-                                    options=options_ecarts,
-                                    key=key_m, 
-                                    on_change=cb_changement_ecart, 
-                                    args=(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible),
-                                    disabled=bouton_bloque or est_match_nul,
-                                    label_visibility="collapsed"
-                                )
-                                
-                                val_ecart = st.session_state.get(key_m, ecart_existant)
-                                has_vainqueur = bool(val_vainqueur and val_vainqueur != "")
-                                
-                                if est_match_nul:
-                                    has_ecart = True
-                                else:
-                                    has_ecart = bool(val_ecart and val_ecart != "...")
-                                
-                                if has_vainqueur and has_ecart:
-                                    st.markdown(
-                                        "<div style='background-color: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; padding: 10px; border-radius: 8px; font-size: 0.9em; font-weight: bold; margin-top: 15px; text-align: center;'>"
-                                        "✅ Pronostic complet enregistré"
-                                        "</div>", 
-                                        unsafe_allow_html=True
-                                    )
-                                elif has_vainqueur and not has_ecart:
-                                    st.markdown(
-                                        "<div style='background-color: #fffbeb; border: 1px solid #fde68a; color: #92400e; padding: 10px; border-radius: 8px; font-size: 0.9em; font-weight: bold; margin-top: 15px; text-align: center;'>"
-                                        "⚠️ Vainqueur enregistré, n'oubliez pas l'écart"
-                                        "</div>", 
-                                        unsafe_allow_html=True
-                                    )
-                                elif not has_vainqueur and has_ecart:
-                                    st.markdown(
-                                        "<div style='background-color: #fffbeb; border: 1px solid #fde68a; color: #92400e; padding: 10px; border-radius: 8px; font-size: 0.9em; font-weight: bold; margin-top: 15px; text-align: center;'>"
-                                        "⚠️ Écart enregistré, n'oubliez pas le vainqueur"
-                                        "</div>", 
-                                        unsafe_allow_html=True
-                                    )
-            
-                        # --- BOUCLE D'AFFICHAGE DES MATCHS ---
-                        total_matchs = len(matchs_visibles)
-                        for index, m in enumerate(matchs_visibles):
-                            afficher_carte_match(m, id_joueur_cible, dict_tous_pronos, droits_admin_totalement_actifs, maintenant_paris, paris_tz)
+                                    if m['statut'] == "NS" or droits_admin_totalement_actifs:
+                                        matchs_visibles.append(m)
+                
+                        if matchs_visibles:
+                            matchs_visibles = sorted(matchs_visibles, key=lambda x: x['date_match'] if x.get('date_match') is not None else "9999-12-31")
                             
-                            if index < total_matchs - 1:
-                                st.markdown('<hr class="match-separator">', unsafe_allow_html=True)
-                    else: 
-                        st.info("Aucun match disponible à pronostiquer.")
-                except Exception as e: 
-                    st.error(f"Erreur lors du chargement de la grille : {e}")
+                            tous_pronos_bruts = supabase.table("Pronostics").select("*").eq("user_id", id_joueur_cible).execute().data
+                            dict_tous_pronos = {p['match_id']: p for p in tous_pronos_bruts} if tous_pronos_bruts else {}
+                            
+                            # --- FRAGMENT ULTRA-RAPIDE PAR MATCH ---
+                            @st.fragment
+                            def afficher_carte_match(m, id_joueur_cible, dict_tous_pronos_local, droits_admin_actifs, maintenant_paris_local, paris_tz_local):
+                                with st.container(border=True):
+                                    logo_dom = logo_cache(m["equipe_dom"])
+                                    logo_ext = logo_cache(m["equipe_ext"])
+                                    
+                                    nom_dom_affiche = nom_affiche_cache(m["equipe_dom"])
+                                    nom_ext_affiche = nom_affiche_cache(m["equipe_ext"])
+                                    
+                                    logo_dom_html = f'<img src="{logo_dom}" style="width: 28px; height: 28px; object-fit: contain; vertical-align: middle; flex-shrink: 0;">' if logo_dom else ''
+                                    logo_ext_html = f'<img src="{logo_ext}" style="width: 28px; height: 28px; object-fit: contain; vertical-align: middle; flex-shrink: 0;">' if logo_ext else ''
+                                    
+                                    # HEADER HTML SIMPLIFIÉ ET SANS RISQUE DE TAG COUPÉ
+                                    header_html = f"""
+                                    <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 8px; text-align: center; font-size: 1.1em;">
+                                        <span style="display: inline-flex; align-items: center; gap: 6px; font-weight: bold; color: #2563eb;" title="{m["equipe_dom"]}">
+                                            {logo_dom_html} {nom_dom_affiche}
+                                        </span>
+                                        <span style="color: #94a3b8; font-weight: 500; padding: 0 4px;">vs</span>
+                                        <span style="display: inline-flex; align-items: center; gap: 6px; font-weight: bold; color: #2563eb;" title="{m["equipe_ext"]}">
+                                            {nom_ext_affiche} {logo_ext_html}
+                                        </span>
+                                    </div>
+                                    """
+                                    st.markdown(header_html, unsafe_allow_html=True)
+                                    
+                                    bouton_bloque = False
+                                    try:
+                                        date_clean = m['date_match'].replace("Z", "+00:00")
+                                        dt_match_utc = datetime.fromisoformat(date_clean)
+                                        dt_match_paris = dt_match_utc.astimezone(paris_tz_local)
+                                        
+                                        date_affiche = formater_date_paris(m['date_match'])
+                                        match_commence = maintenant_paris_local.replace(tzinfo=None) >= dt_match_paris.replace(tzinfo=None)
+                                        
+                                        if match_commence:
+                                            if droits_admin_actifs:
+                                                st.markdown(f"<div style='text-align: center; color: #b7791f; font-size: 0.9em; font-weight: bold; margin-bottom: 10px;'>⚠️ Match commencé ({date_affiche}) - Autorisé (Admin)</div>", unsafe_allow_html=True)
+                                            else:
+                                                st.markdown(f"<div style='text-align: center; color: #dc2626; font-size: 0.9em; font-weight: bold; margin-bottom: 10px;'>🔒 Match commencé le {date_affiche}</div>", unsafe_allow_html=True)
+                                                bouton_bloque = True
+                                        else:
+                                            st.markdown(f"<div style='text-align: center; color: #64748b; font-size: 0.9em; margin-bottom: 10px;'>📅 Match prévu le {date_affiche}</div>", unsafe_allow_html=True)
+                                    except Exception:
+                                        pass
+                
+                                    prono_donnees = dict_tous_pronos_local.get(m['id'])
+                                    choix_actuel = None
+                                    ecart_existant = "..."
+                                    
+                                    if prono_donnees:
+                                        g_prevu = prono_donnees['gagnant_prevu']
+                                        if g_prevu == "home": choix_actuel = m['equipe_dom']
+                                        elif g_prevu == "away": choix_actuel = m['equipe_ext']
+                                        elif g_prevu == "draw": choix_actuel = "Match Nul"
+                                        
+                                        if prono_donnees.get('ecart_prevu'):
+                                            ecart_existant = prono_donnees['ecart_prevu']
+                                    
+                                    key_w = f"w_{m['id']}_{id_joueur_cible}"
+                                    if key_w not in st.session_state:
+                                        st.session_state[key_w] = choix_actuel
+                                    else:
+                                        choix_actuel = st.session_state[key_w]
+                
+                                    def cb_changement_ecart(match_id, eq_dom, eq_ext, u_id):
+                                        sauvegarder_prono_auto(match_id, eq_dom, eq_ext, u_id)
+                
+                                    st.markdown('<div style="font-size: 1.1em; font-weight: 600; color: #64748b; margin-bottom: 6px; text-align: center;">Sélectionner le Vainqueur :</div>', unsafe_allow_html=True)
+                                    
+                                    is_dom_sel = (choix_actuel == m['equipe_dom'])
+                                    is_nul_sel = (choix_actuel == "Match Nul")
+                                    is_ext_sel = (choix_actuel == m['equipe_ext'])
+                
+                                    if st.button(nom_dom_affiche, key=f"btn_dom_{m['id']}", type="primary" if is_dom_sel else "secondary", disabled=bouton_bloque, use_container_width=True):
+                                        st.session_state[key_w] = m['equipe_dom']
+                                        sauvegarder_prono_auto(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
+                                        st.rerun()
+                
+                                    if st.button("🤝 Match Nul", key=f"btn_nul_{m['id']}", type="primary" if is_nul_sel else "secondary", disabled=bouton_bloque, use_container_width=True):
+                                        st.session_state[key_w] = "Match Nul"
+                                        sauvegarder_prono_auto(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
+                                        st.rerun()
+                
+                                    if st.button(nom_ext_affiche, key=f"btn_ext_{m['id']}", type="primary" if is_ext_sel else "secondary", disabled=bouton_bloque, use_container_width=True):
+                                        st.session_state[key_w] = m['equipe_ext']
+                                        sauvegarder_prono_auto(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible)
+                                        st.rerun()
+                
+                                    st.markdown("<br>", unsafe_allow_html=True)
+                                    
+                                    key_m = f"m_{m['id']}_{id_joueur_cible}"
+                                    options_ecarts = ["..."] + TRANCHES_ECARTS
+                                    
+                                    if key_m not in st.session_state:
+                                        st.session_state[key_m] = ecart_existant if ecart_existant in TRANCHES_ECARTS else "..."
+                
+                                    val_vainqueur = st.session_state.get(key_w, choix_actuel)
+                                    est_match_nul = (val_vainqueur == "Match Nul")
+                
+                                    if est_match_nul:
+                                        st.markdown('<div style="font-size: 1.1em; font-weight: 600; color: #94a3b8; margin-bottom: 2px;">Écart (pts) : <span style="font-size: 0.85em; font-weight: normal; font-style: italic;">(Non requis pour un match nul)</span></div>', unsafe_allow_html=True)
+                                    else:
+                                        st.markdown('<div style="font-size: 1.1em; font-weight: 600; color: #64748b; margin-bottom: 2px;">Écart (pts) :</div>', unsafe_allow_html=True)
+                                    
+                                    st.selectbox(
+                                        "Écart (pts)", 
+                                        options=options_ecarts,
+                                        key=key_m, 
+                                        on_change=cb_changement_ecart, 
+                                        args=(m['id'], m['equipe_dom'], m['equipe_ext'], id_joueur_cible),
+                                        disabled=bouton_bloque or est_match_nul,
+                                        label_visibility="collapsed"
+                                    )
+                                    
+                                    val_ecart = st.session_state.get(key_m, ecart_existant)
+                                    has_vainqueur = bool(val_vainqueur and val_vainqueur != "")
+                                    
+                                    if est_match_nul:
+                                        has_ecart = True
+                                    else:
+                                        has_ecart = bool(val_ecart and val_ecart != "...")
+                                    
+                                    if has_vainqueur and has_ecart:
+                                        st.markdown(
+                                            "<div style='background-color: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; padding: 10px; border-radius: 8px; font-size: 0.9em; font-weight: bold; margin-top: 15px; text-align: center;'>"
+                                            "✅ Pronostic complet enregistré"
+                                            "</div>", 
+                                            unsafe_allow_html=True
+                                        )
+                                    elif has_vainqueur and not has_ecart:
+                                        st.markdown(
+                                            "<div style='background-color: #fffbeb; border: 1px solid #fde68a; color: #92400e; padding: 10px; border-radius: 8px; font-size: 0.9em; font-weight: bold; margin-top: 15px; text-align: center;'>"
+                                            "⚠️ Vainqueur enregistré, n'oubliez pas l'écart"
+                                            "</div>", 
+                                            unsafe_allow_html=True
+                                        )
+                                    elif not has_vainqueur and has_ecart:
+                                        st.markdown(
+                                            "<div style='background-color: #fffbeb; border: 1px solid #fde68a; color: #92400e; padding: 10px; border-radius: 8px; font-size: 0.9em; font-weight: bold; margin-top: 15px; text-align: center;'>"
+                                            "⚠️ Écart enregistré, n'oubliez pas le vainqueur"
+                                            "</div>", 
+                                            unsafe_allow_html=True
+                                        )
+                
+                            # --- BOUCLE D'AFFICHAGE DES MATCHS ---
+                            total_matchs = len(matchs_visibles)
+                            for index, m in enumerate(matchs_visibles):
+                                afficher_carte_match(m, id_joueur_cible, dict_tous_pronos, droits_admin_totalement_actifs, maintenant_paris, paris_tz)
+                                
+                                if index < total_matchs - 1:
+                                    st.markdown('<hr class="match-separator">', unsafe_allow_html=True)
+                        else: 
+                            st.info("Aucun match disponible à pronostiquer.")
+                    except Exception as e: 
+                        st.error(f"Erreur lors du chargement de la grille : {e}")
         else:
             st.error("Impossible de récupérer les informations du joueur sélectionné.")
     else:
