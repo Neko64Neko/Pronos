@@ -85,9 +85,9 @@ def obtenir_logo(nom_equipe):
 #@st.cache_data(ttl=300)
 def charger_surnoms_equipes():
     try:
-        res = supabase.table("Equipes").select("nom_api, nom_court").execute()
+        res = supabase.table("Equipes").select("nom, nom_court").execute()
         if res.data:
-            return {item['nom_api']: item['nom_court'] for item in res.data if item.get('nom_court')}
+            return {item['nom']: item['nom_court'] for item in res.data if item.get('nom_court')}
     except Exception:
         pass
     return {}
@@ -95,9 +95,9 @@ def charger_surnoms_equipes():
 # Chargement du dictionnaire des surnoms
 dict_surnoms = charger_surnoms_equipes()
 
-def get_nom_affiche(nom_api):
+def get_nom_affiche(nom):
     """Renvoie le nom court s'il existe, sinon le nom d'origine de l'API"""
-    return dict_surnoms.get(nom_api, nom_api)
+    return dict_surnoms.get(nom, nom)
     
 # =====================================================================
 # 2 - SYSTEME DE SCRAPING GRATUIT ET AUTOMATIQUE
@@ -971,7 +971,6 @@ if st.session_state.onglet_actif == "🏉":
                                 
                                 nom_dom_affiche = get_nom_affiche(m["equipe_dom"])
                                 nom_ext_affiche = get_nom_affiche(m["equipe_ext"])
-                                st.write("Dictionnaire des surnoms chargés :", dict_surnoms)
                                 
                                 # --- EN-TÊTE : [LOGO 1 GRAND] EQUIPE 1 VS EQUIPE 2 [LOGO 2 GRAND] ---
                                 logo_dom_html = f'<img src="{logo_dom}" style="width: 32px; height: 32px; object-fit: contain; vertical-align: middle; flex-shrink: 0;">' if logo_dom else ''
