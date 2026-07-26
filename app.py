@@ -908,7 +908,7 @@ if st.session_state.onglet_actif == "🏉":
                 st.markdown('<div style="height: 1px; background-color: #cbd5e1; margin: 25px auto 15px auto; width: calc(100% - 40px);"></div>', unsafe_allow_html=True)
                 st.subheader("🏉 Liste des Matchs")
             
-                # CSS global : bulles et espacement sécurisé pour le format portrait mobile
+            # CSS global : Forcer les colonnes à rester côte à côte sur mobile + bulles
                 st.markdown("""
                     <style>
                         [data-testid="stVerticalBlockBorderWrapper"] {
@@ -926,11 +926,21 @@ if st.session_state.onglet_actif == "🏉":
                             font-size: 0.9em !important;
                             padding: 0px 4px !important;
                         }
-                        /* Adaptation automatique pour les écrans étroits (smartphones en format portrait) */
+                        /* FORCER LES COLONNES À NE PAS SE EMPILER SUR MOBILE */
                         @media (max-width: 640px) {
+                            [data-testid="stHorizontalBlock"] {
+                                display: flex !important;
+                                flex-direction: row !important;
+                            }
+                            [data-testid="column"] {
+                                width: 50% !important;
+                                flex: 1 1 50% !important;
+                                min-width: unset !important;
+                            }
                             div.stButton > button {
-                                font-size: 0.8em !important;
-                                min-height: 40px !important;
+                                font-size: 0.78em !important;
+                                min-height: 38px !important;
+                                padding: 0px 2px !important;
                             }
                         }
                         hr.match-separator {
