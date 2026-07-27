@@ -1580,6 +1580,7 @@ elif st.session_state.onglet_actif == "📺":
                 
         except Exception as e:
             st.error(f"Erreur lors du chargement des scores : {e}")
+            
 # =====================================================================
 # 9 - CONTENU DE L'ONGLET 4 : ADMIN (SÉCURISÉ AVEC LE TOGGLE)
 # =====================================================================
@@ -1588,529 +1589,533 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
     # Si le bouton est sur OFF, on bloque l'accès visuel
     if not st.session_state.mode_admin_actif:
         st.title("⚙️ Panneau d'Administration")
-        st.warning("⚠️ Le mode d'édition admin est actuellement désactivé. Activez-le dans la barre latérale pour modifier le barème, ajouter des matchs ou modifier des scores.")
+        st.warning("⚠️ Le mode d'édition admin est actuellement désactivé. Activez-le dans la barre latérale pour accéder aux outils d'administration.")
     else:
         st.title("⚙️ Panneau d'Administration")
         
-        # Ajout des onglets du panneau admin (Vérifiez bien qu'il y en a 8)
-        tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
-            "⚙️ Barème & Points",
-            "➕ Ajouter Match", 
-            "📝 Matchs Existants", 
-            "🎯 Questions Bonus", 
-            "🔌 API",  # Renommé en "API" comme demandé précédemment
-            "🚨 Danger",
-            "Suppression matchs",
-            "Gestion des joueurs"
+        # --- REORGANISATION : 4 GRANDS ONGLETS PRINCIPAUX ---
+        tab_matchs, tab_bonus, tab_joueurs, tab_systeme = st.tabs([
+            "⚽ Gestion des Matchs",
+            "🎯 Questions Bonus",
+            "👥 Joueurs & Points",
+            "⚙️ Système & Paramètres"
         ])
     
-# 9.1 - TAB 1 : GESTION DES POINTS ET DU BARÈME
-    with tab1:
-        st.subheader("📊 Configuration du Barème de Points")
-        st.info("Ajuste les coefficients ci-dessous. Ils seront appliqués lors du calcul des résultats.")
-        
-        # Initialisation des valeurs par défaut dans le session_state si elles n'existent pas
-        if "pts_vainqueur" not in st.session_state: st.session_state.pts_vainqueur = 2
-        if "pts_ecart" not in st.session_state: st.session_state.pts_ecart = 2
-        if "pct_ose" not in st.session_state: st.session_state.pct_ose = 3  # Valeur par défaut modifiée à 3 joueurs au lieu de 20%
-        if "mult_ose" not in st.session_state: st.session_state.mult_ose = 2.0
-        
-        with st.form("form_bareme_points"):
-            col_b1, col_b2 = st.columns(2)
-            with col_b1:
-                pts_v = st.number_input("Points Vainqueur trouvé", min_value=0, value=int(st.session_state.pts_vainqueur), step=1)
-                pts_e = st.number_input("Points Écart parfait (Bonus)", min_value=0, value=int(st.session_state.pts_ecart), step=1)
-            with col_b2:
-                # CHANGEMENT ICI : On remplace le texte, on enlève max_value=100 et on ajuste l'aide (help)
-                seuil_o = st.number_input(
-                    "Nombre max de gagnants pour prono osé (X)", 
-                    min_value=1, 
-                    value=int(st.session_state.pct_ose), 
-                    step=1, 
-                    help="Le bonus s'active uniquement si le nombre de joueurs ayant trouvé le bon vainqueur est INFÉRIEUR OU EGAL à ce nombre X."
-                )
-                mult_o = st.number_input("Multiplicateur du prono osé", min_value=1.0, max_value=10.0, value=float(st.session_state.mult_ose), step=0.5)
+        # =====================================================================
+        # 9.1 - ONGLET 1 : GESTION DES MATCHS (Ajout, Scores, Suppression)
+        # =====================================================================
+        with tab_matchs:
+            sub_m1, sub_m2, sub_m3 = st.tabs(["➕ Ajouter un match", "📝 Modifier les scores", "🗑️ Supprimer un match"])
             
-            if st.form_submit_button("💾 Sauvegarder le barème"):
-                data_bareme = {
-                    "id": "default_config",
-                    "pts_gagnant": int(pts_v),
-                    "pts_ecart": int(pts_e),
-                    "seuil_poursentage_ose": int(seuil_o),  # On garde la clé Supabase actuelle pour éviter de casser la table
-                    "multiplicateur_ose": int(mult_o) 
-                }
+            # --- Sous-onglet 1.1 : Ajouter un match ---
+            with sub_m1:
+                st.subheader("➕ Ajouter un match manuellement")
                 
-                try:
-                    # L'argument on_conflict est crucial ici pour les clés primaires
-                    supabase.table("Configuration").upsert(
-                        data_bareme, 
-                        on_conflict="id" 
-                    ).execute()
-                    
-                    st.session_state.pts_vainqueur = pts_v
-                    st.session_state.pts_ecart = pts_e
-                    st.session_state.pct_ose = seuil_o  # On stocke le nombre de joueurs dans le state
-                    st.session_state.mult_ose = mult_o
-                    
-                    st.success(f"🎉 Barème sauvegardé ! Le seuil est désormais fixé à moins de {seuil_o} joueur(s) gagnant(s).")
-                    time.sleep(1)
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"Erreur : {e}")
-
- # 9.2 - TAB 2 : AJOUTER UN MATCH MANUELLEMENT
-    with tab2:
-        if st.session_state.is_admin:
-            st.subheader("➕ Ajouter un match")
-            
-            col1, col2 = st.columns(2)
-            with col1:
-                equipe_dom = st.text_input("Équipe Domicile", key="dom")
-                equipe_ext = st.text_input("Équipe Extérieure", key="ext")
-            with col2:
-                date_saisie = st.date_input("Date du match", key="date")
-                heure_saisie = st.time_input("Heure du match", key="heure")
-            
-            if st.button("Valider la création"):
-                if equipe_dom and equipe_ext:
-                    try:
-                        # 1. Calcul de l'ID (Incrément manuel pour éviter les erreurs de séquence)
-                        response_last = supabase.table("Matchs").select("id").order("id", desc=True).limit(1).execute()
-                        new_id = 1
-                        if response_last.data:
-                            new_id = int(response_last.data[0]['id']) + 1
-                        
-                        # 2. Conversion horaire (Paris -> UTC)
-                        naive_dt = datetime.combine(date_saisie, heure_saisie)
-                        paris_tz = pytz.timezone("Europe/Paris")
-                        local_dt = paris_tz.localize(naive_dt)
-                        utc_dt = local_dt.astimezone(pytz.UTC)
-                        
-                        # 3. Insertion avec un external_id numérique (ex: -new_id pour éviter les conflits avec l'API)
-                        supabase.table("Matchs").insert({
-                            "id": new_id,
-                            "equipe_dom": equipe_dom,
-                            "equipe_ext": equipe_ext,
-                            "date_match": utc_dt.isoformat(),
-                            "external_id": -new_id  # Entier unique pour satisfaire le format bigint NOT NULL
-                        }).execute()
-                        
-                        st.success(f"Match {equipe_dom} vs {equipe_ext} créé (ID: {new_id}) !")
-                        time.sleep(1)
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"Erreur lors de l'ajout : {e}")
-                else:
-                    st.warning("Merci de remplir les noms des équipes.")
-        else:
-            st.error("Accès réservé aux administrateurs.")
-    
-    # 9.3 - TAB 3 : GESTION DES MATCHS EXISTANTS
-    with tab3:
-        st.subheader("📝 Liste et scores des matchs")
-        matchs_existants = supabase.table("Matchs").select("*").order("date_match", desc=True).execute().data
-        
-        if matchs_existants:
-            for m in matchs_existants:
-                with st.container():
-                    col_m_info, col_s_dom, col_s_ext, col_stat, col_save = st.columns([3, 1, 1, 2, 1])
-                    with col_m_info:
-                        st.write(f"**{m['equipe_dom']} - {m['equipe_ext']}**")
-                    with col_s_dom:
-                        s_d = st.number_input("Dom", min_value=0, value=m.get('score_dom', 0) if m.get('score_dom') is not None else 0, key=f"sd_{m['id']}", step=1)
-                    with col_s_ext:
-                        s_e = st.number_input("Ext", min_value=0, value=m.get('score_ext', 0) if m.get('score_ext') is not None else 0, key=f"se_{m['id']}", step=1)
-                    with col_stat:
-                        opt_statut = ["NS", "LIVE", "FT"]
-                        idx_statut = opt_statut.index(m['statut']) if m['statut'] in opt_statut else 0
-                        st_m = st.selectbox("Statut", opt_statut, index=idx_statut, key=f"stat_{m['id']}")
-                    with col_save:
-                        if st.button("💾", key=f"save_m_{m['id']}"):
-                            try:
-                                supabase.table("Matchs").update({
-                                    "score_dom": s_d,
-                                    "score_ext": s_e,
-                                    "statut": st_m
-                                }).eq("id", m['id']).execute()
-                                st.success("Mis à jour")
-                                time.sleep(0.5)
-                                st.rerun()
-                            except Exception as e: st.error(str(e))
-                    st.markdown("---")
-
-# =====================================================================
-    # 9.4 & 9.45 - TAB 4 : QUESTIONS BONUS (CRÉATION ET VALIDATION)
-    # =====================================================================
-    with tab4:
-        st.subheader("🎯 Gestion des Questions Bonus")
-        
-        # --- PARTIE 1 : CRÉATION (9.4) ---
-        st.markdown("#### ➕ Ajouter une nouvelle Question Bonus")
-
-        # Choix du type de barème à la création
-        type_bareme = st.radio(
-            "Type de barème pour les points :",
-            ["Point unique pour la bonne réponse", "Points différents par réponse"],
-            key="admin_type_bareme_94",
-            horizontal=True
-        )
-
-        points_stockes = ""
-
-        if type_bareme == "Point unique pour la bonne réponse":
-            pts_uniques = st.number_input("Nombre de points à gagner :", min_value=1, value=5, step=1, key="admin_pts_uniques_94")
-            points_stockes = str(pts_uniques)
-        else:
-            st.info("👉 Entrez les réponses possibles et les points associés sous la forme : `Réponse:Points`. Séparez les blocs par des points-virgules ( ; ).")
-            ex_bareme = st.text_input(
-                "Configuration du barème (Exemple: Toulouse:5 ; La Rochelle:3 ; Toulon:1) :",
-                placeholder="Option1:5 ; Option2:2",
-                key="admin_bareme_multiple_94"
-            )
-            points_stockes = ex_bareme.strip()
-
-        # Champ pour l'intitulé de la question
-        txt_question = st.text_input("Intitulé de la question bonus :", key="admin_txt_question_94")
-
-        # --- NOUVEAUTÉ : Saisie de la date et heure limite ---
-        st.markdown("📅 **Date et Heure limite pour répondre :**")
-        col_date_q, col_heure_q = st.columns(2)
-        with col_date_q:
-            date_limite_q = st.date_input("Date limite :", value=datetime.now().date(), key="date_limite_q_bonus")
-        with col_heure_q:
-            heure_limite_q = st.time_input("Heure limite :", value=datetime.now().time(), key="heure_limite_q_bonus")
-
-        if st.button("Créer la question bonus", key="admin_btn_creer_94", use_container_width=True):
-            if txt_question and points_stockes:
-                try:
-                    # Combinaison date + heure brute choisie par l'admin
-                    dt_limite_combinee = datetime.combine(date_limite_q, heure_limite_q)
-                    
-                    # On indique à Python que cette heure est celle de Paris
-                    tz_paris = pytz.timezone('Europe/Paris')
-                    dt_limite_paris = tz_paris.localize(dt_limite_combinee)
-                    
-                    # On convertit en UTC pour Supabase (norme standard des bases de données)
-                    iso_date_limite = dt_limite_paris.astimezone(pytz.utc).isoformat()
-
-                    # Enregistrement dans la table Questions_Bonus
-                    supabase.table("Questions_Bonus").insert({
-                        "question": txt_question,
-                        "points": points_stockes,
-                        "statut": "open",
-                        "date_limite": iso_date_limite
-                    }).execute()
-                    st.success("🎉 Question bonus créée avec succès !")
-                    time.sleep(1)
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"Erreur lors de la création dans Supabase : {e}")
-            else:
-                st.warning("⚠️ Veuillez remplir l'intitulé de la question et la configuration des points.")
-
-        # Séparateur visuel entre la création et la validation
-        st.markdown("<hr style='border: 1px dashed #cbd5e1; margin: 40px 0;'>", unsafe_allow_html=True)
-
-        # --- PARTIE 2 : VALIDATION / CLÔTURE (9.45) ---
-        st.markdown("#### 🎯 Valider et Clôturer une Question Bonus")
-        
-        try:
-            # Récupération des questions encore ouvertes
-            questions_ouvertes = supabase.table("Questions_Bonus").select("*").eq("statut", "open").execute().data
-            
-            if questions_ouvertes:
-                for q_a_valider in questions_ouvertes:
-                    st.write(f"❓ **Question :** {q_a_valider['question']}")
-                    
-                    # Lecture adaptative de la colonne (points ou points_bonus)
-                    pts_config = str(q_a_valider.get("points") or q_a_valider.get("points_bonus") or "").strip()
-                    options_possibles = []
-                    
-                    # Détection et extraction automatique des options à mettre dans le selectbox
-                    if ":" in pts_config:
-                        segments = pts_config.split(";")
-                        for s in segments:
-                            if ":" in s:
-                                option_nom, _ = s.split(":")
-                                options_possibles.append(option_nom.strip())
-                    
-                    # Si le barème contient des options, on affiche la liste déroulante
-                    if options_possibles:
-                        choix_admin = st.selectbox(
-                            "Sélectionnez la réponse correcte :",
-                            ["-- Choisir le vainqueur --"] + options_possibles,
-                            key=f"val_sel_95_{q_a_valider['id']}"
-                        )
-                        
-                        # Désactivation du bouton tant qu'aucune option n'est sélectionnée
-                        bouton_desactive = (choix_admin == "-- Choisir le vainqueur --")
-                        
-                        if st.button("Valider ce résultat", key=f"btn_val_sel_95_{q_a_valider['id']}", disabled=bouton_desactive):
-                            try:
-                                # On passe la question en 'closed' et on valide la réponse en minuscules
-                                supabase.table("Questions_Bonus").update({
-                                    "reponse_correcte": choix_admin.strip().lower(),
-                                    "statut": "closed"
-                                }).eq("id", q_a_valider['id']).execute()
-                                
-                                st.success(f"🎉 Question clôturée ! Réponse '{choix_admin}' enregistrée.")
-                                time.sleep(1)
-                                st.rerun()
-                            except Exception as e:
-                                st.error(f"Erreur lors de la validation : {e}")
-                    
+                col1, col2 = st.columns(2)
+                with col1:
+                    equipe_dom = st.text_input("Équipe Domicile", key="dom")
+                    equipe_ext = st.text_input("Équipe Extérieure", key="ext")
+                with col2:
+                    date_saisie = st.date_input("Date du match", key="date")
+                    heure_saisie = st.time_input("Heure du match", key="heure")
+                
+                if st.button("Valider la création", key="btn_create_match"):
+                    if equipe_dom and equipe_ext:
+                        try:
+                            response_last = supabase.table("Matchs").select("id").order("id", desc=True).limit(1).execute()
+                            new_id = 1
+                            if response_last.data:
+                                new_id = int(response_last.data[0]['id']) + 1
+                            
+                            naive_dt = datetime.combine(date_saisie, heure_saisie)
+                            paris_tz = pytz.timezone("Europe/Paris")
+                            local_dt = paris_tz.localize(naive_dt)
+                            utc_dt = local_dt.astimezone(pytz.UTC)
+                            
+                            supabase.table("Matchs").insert({
+                                "id": new_id,
+                                "equipe_dom": equipe_dom,
+                                "equipe_ext": equipe_ext,
+                                "date_match": utc_dt.isoformat(),
+                                "external_id": -new_id 
+                            }).execute()
+                            
+                            st.success(f"Match {equipe_dom} vs {equipe_ext} créé (ID: {new_id}) !")
+                            time.sleep(1)
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Erreur lors de l'ajout : {e}")
                     else:
-                        # Sécurité / Mode de secours : Si la question n'a pas de barème Option:Points
-                        st.warning("⚠️ Barème à point unique détecté. Saisie manuelle obligatoire :")
-                        choix_manuel = st.text_input("Réponse correcte :", key=f"val_txt_95_{q_a_valider['id']}")
-                        
-                        if st.button("Clôturer (Saisie manuelle)", key=f"btn_val_txt_95_{q_a_valider['id']}"):
-                            if choix_manuel.strip():
+                        st.warning("Merci de remplir les noms des équipes.")
+
+            # --- Sous-onglet 1.2 : Matchs Existants (Scores & Statuts) ---
+            with sub_m2:
+                st.subheader("📝 Liste et mise à jour des scores")
+                matchs_existants = supabase.table("Matchs").select("*").order("date_match", desc=True).execute().data
+                
+                if matchs_existants:
+                    for m in matchs_existants:
+                        with st.container():
+                            col_m_info, col_s_dom, col_s_ext, col_stat, col_save = st.columns([3, 1, 1, 2, 1])
+                            with col_m_info:
+                                st.write(f"**{m['equipe_dom']} - {m['equipe_ext']}**")
+                            with col_s_dom:
+                                s_d = st.number_input("Dom", min_value=0, value=m.get('score_dom', 0) if m.get('score_dom') is not None else 0, key=f"sd_{m['id']}", step=1)
+                            with col_s_ext:
+                                s_e = st.number_input("Ext", min_value=0, value=m.get('score_ext', 0) if m.get('score_ext') is not None else 0, key=f"se_{m['id']}", step=1)
+                            with col_stat:
+                                opt_statut = ["NS", "LIVE", "FT"]
+                                idx_statut = opt_statut.index(m['statut']) if m['statut'] in opt_statut else 0
+                                st_m = st.selectbox("Statut", opt_statut, index=idx_statut, key=f"stat_{m['id']}")
+                            with col_save:
+                                if st.button("💾", key=f"save_m_{m['id']}"):
+                                    try:
+                                        supabase.table("Matchs").update({
+                                            "score_dom": s_d,
+                                            "score_ext": s_e,
+                                            "statut": st_m
+                                        }).eq("id", m['id']).execute()
+                                        st.success("Mis à jour")
+                                        time.sleep(0.5)
+                                        st.rerun()
+                                    except Exception as e: st.error(str(e))
+                            st.markdown("---")
+                else:
+                    st.info("Aucun match existant.")
+
+            # --- Sous-onglet 1.3 : Supprimer un match ---
+            with sub_m3:
+                st.subheader("🗑️ Suppression de matchs")
+                st.warning("⚠️ Attention : Toute suppression de match supprime également les pronostics associés.")
+                
+                tous_matchs = supabase.table("Matchs").select("*").order("date_match").execute().data
+                if tous_matchs:
+                    match_a_supprimer = st.selectbox(
+                        "Sélectionnez le match à supprimer :",
+                        options=[(m['id'], f"{(m['date_match'][:10] if m.get('date_match') else 'N/A')} | {m['equipe_dom']} vs {m['equipe_ext']}") for m in tous_matchs],
+                        format_func=lambda x: x[1],
+                        key="select_del_match"
+                    )
+                    
+                    if match_a_supprimer:
+                        with st.popover("🗑️ Supprimer ce match"):
+                            st.error(f"Êtes-vous sûr de vouloir supprimer **{match_a_supprimer[1]}** ?")
+                            if st.button("Confirmer la suppression", key=f"del_confirm_{match_a_supprimer[0]}"):
                                 try:
-                                    supabase.table("Questions_Bonus").update({
-                                        "reponse_correcte": choix_manuel.strip().lower(),
-                                        "statut": "closed"
-                                    }).eq("id", q_a_valider['id']).execute()
-                                    st.success("🎉 Question clôturée avec succès !")
+                                    supabase.table("Pronostics").delete().eq("match_id", match_a_supprimer[0]).execute()
+                                    supabase.table("Matchs").delete().eq("id", match_a_supprimer[0]).execute()
+                                    st.success("Match supprimé avec succès.")
                                     time.sleep(1)
                                     st.rerun()
                                 except Exception as e:
                                     st.error(f"Erreur : {e}")
-                    
-                    st.markdown("---")
-            else:
-                st.info("Aucune question bonus en attente de validation.")
-                
-        except Exception as e:
-            st.error(f"Erreur lors du chargement du module de validation : {e}")
-            
-    # 9.5 - TAB 5 : TOUR DE CONTRÔLE API
-    with tab5:
-        st.subheader("🔌 Gestion de l'API")
-        
-        today_str = datetime.now().strftime("%Y-%m-%d")
-        
-        # 1. Chargement et vérification depuis Supabase (persistance + reset journalier)
-        try:
-            response_api = supabase.table("Configuration").select("*").eq("id", "default_config").execute()
-            if response_api.data:
-                config_api = response_api.data[0]
-                saved_date = config_api.get("last_reset_date")
-                
-                if saved_date != today_str:
-                    # Nouveau jour : réinitialisation du compteur dans Supabase
-                    current_count = 0
-                    current_logs = config_api.get("api_request_logs", []) or []
-                    supabase.table("Configuration").upsert({
-                        "id": "default_config",
-                        "api_request_count": 0,
-                        "last_reset_date": today_str,
-                        "api_request_logs": current_logs
-                    }, on_conflict="id").execute()
                 else:
-                    current_count = config_api.get("api_request_count", 0)
-                    current_logs = config_api.get("api_request_logs", []) or []
-            else:
-                # Première initialisation si la ligne n'existe pas encore
-                current_count = 0
-                current_logs = []
-                supabase.table("Configuration").upsert({
-                    "id": "default_config",
-                    "api_request_count": 0,
-                    "last_reset_date": today_str,
-                    "api_request_logs": []
-                }, on_conflict="id").execute()
-        except Exception as e:
-            current_count = 0
-            current_logs = []
-    
-        # Synchronisation avec le session_state pour l'affichage
-        st.session_state.api_request_count = current_count
-        st.session_state.api_request_logs = current_logs
-    
-        # Compteur de requêtes envoyées avec format /50
-        st.metric(label="Requêtes envoyées à l'API", value=f"{st.session_state.api_request_count}/50")
-    
-        col1, col2 = st.columns(2)
-    
-        # Fonction utilitaire pour enregistrer en base
-        def save_api_state(new_count, new_logs, action_name):
-            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            new_logs.insert(0, f"[{timestamp}] {action_name}")
-            if len(new_logs) > 20:
-                new_logs = new_logs[:20]  # Garde uniquement les 20 derniers logs
-            
-            try:
-                supabase.table("Configuration").upsert({
-                    "id": "default_config",
-                    "api_request_count": new_count,
-                    "last_reset_date": today_str,
-                    "api_request_logs": new_logs
-                }, on_conflict="id").execute()
-            except Exception as e:
-                st.error(f"Erreur de sauvegarde Supabase : {e}")
-            
-            return new_count, new_logs
-    
-        with col1:
-            if st.button("MAJ score"):
-                new_count = st.session_state.api_request_count + 1
-                new_count, updated_logs = save_api_state(new_count, st.session_state.api_request_logs, "MAJ score (run_update)")
-                st.session_state.api_request_count = new_count
-                st.session_state.api_request_logs = updated_logs
-                try:
-                    run_update()
-                    st.success("Mise à jour des scores effectuée avec succès.")
-                    time.sleep(1)
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"Erreur lors de la mise à jour des scores : {e}")
-    
-        with col2:
-            if st.button("MAJ Calendrier"):
-                new_count = st.session_state.api_request_count + 1
-                new_count, updated_logs = save_api_state(new_count, st.session_state.api_request_logs, "MAJ Calendrier (run_calendar)")
-                st.session_state.api_request_count = new_count
-                st.session_state.api_request_logs = updated_logs
-                try:
-                    run_calendar()
-                    st.success("Mise à jour du calendrier effectuée avec succès.")
-                    time.sleep(1)
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"Erreur lors de la mise à jour du calendrier : {e}")
-    
-        # Menu déroulant pour le log des 20 dernières requêtes
-        with st.expander("📜 Historique des 20 dernières requêtes"):
-            if st.session_state.api_request_logs:
-                for log in st.session_state.api_request_logs:
-                    st.text(log)
-            else:
-                st.info("Aucune requête enregistrée pour le moment.")
+                    st.info("Aucun match trouvé en base de données.")
 
-    # 9.6 - TAB 6 : ZONE DE DANGER
-    with tab6:
-        st.subheader("🚨 Zone de Danger")
-        confirmation_secu = st.checkbox("Je confirme vouloir tout réinitialiser.", key="danger_zone_confirm")
-        if st.button("🔥 Réinitialiser l'application", type="primary", disabled=not confirmation_secu):
-            with st.spinner("Nettoyage..."):
-                try:
-                    supabase.table("Pronostics").delete().not_.is_("id", "null").execute()
-                    supabase.table("Réponses_Questions").delete().not_.is_("id", "null").execute()
-                    supabase.table("Matchs").delete().not_.is_("id", "null").execute()
-                    supabase.table("Questions_Bonus").delete().not_.is_("id", "null").execute()
-                    supabase.table("Joueurs").update({"score": 0}).not_.is_("id", "null").execute()
-                    st.success("🎉 Reset saison terminé !")
-                    st.balloons()
-                    time.sleep(1)
-                    st.rerun()
-                except Exception as e: 
-                    st.error(f"Erreur : {e}")
-                    st.error(f"Erreur : {e}")
+        # =====================================================================
+        # 9.2 - ONGLET 2 : QUESTIONS BONUS (Création et Validation)
+        # =====================================================================
+        with tab_bonus:
+            sub_q1, sub_q2 = st.tabs(["➕ Créer une question", "✅ Valider & Clôturer"])
+            
+            # --- Sous-onglet 2.1 : Création ---
+            with sub_q1:
+                st.subheader("➕ Ajouter une nouvelle Question Bonus")
 
-# 9.7 - GESTION DES MATCHS (TABLEAU INTERACTIF)
-    with tab7: 
-        st.subheader("🗑️ Gestion des Matchs")
-        st.warning("⚠️ Attention : Toute suppression est définitive.")
-        
-        # Récupération des matchs
-        tous_matchs = supabase.table("Matchs").select("*").order("date_match").execute().data
-        
-        if tous_matchs:
-            # Création d'un tableau pour l'affichage
-            matchs_data = []
-            for m in tous_matchs:
-                # Sécurité : on vérifie si date_match existe et n'est pas None
-                date_formatee = m['date_match'][:10] if m.get('date_match') else "Date non définie"
-                matchs_data.append({
-                    "Date": date_formatee,
-                    "Match": f"{m['equipe_dom']} vs {m['equipe_ext']}",
-                    "ID": m['id'] # On garde l'ID pour la suppression
-                })
-            
-            # Affichage du tableau
-            st.table(matchs_data)
-            
-            # Sélecteur pour choisir quel match supprimer
-            st.markdown("---")
-            match_a_supprimer = st.selectbox(
-                "Sélectionnez le match à supprimer :",
-                options=[(m['id'], f"{(m['date_match'][:10] if m.get('date_match') else 'N/A')} | {m['equipe_dom']} vs {m['equipe_ext']}") for m in tous_matchs],
-                format_func=lambda x: x[1]
-            )
-            
-            if match_a_supprimer:
-                with st.popover("🗑️ Supprimer ce match"):
-                    st.error(f"Êtes-vous sûr de vouloir supprimer **{match_a_supprimer[1]}** ?")
-                    if st.button("Confirmer la suppression", key=f"del_confirm_{match_a_supprimer[0]}"):
+                type_bareme = st.radio(
+                    "Type de barème pour les points :",
+                    ["Point unique pour la bonne réponse", "Points différents par réponse"],
+                    key="admin_type_bareme_94",
+                    horizontal=True
+                )
+
+                points_stockes = ""
+
+                if type_bareme == "Point unique pour la bonne réponse":
+                    pts_uniques = st.number_input("Nombre de points à gagner :", min_value=1, value=5, step=1, key="admin_pts_uniques_94")
+                    points_stockes = str(pts_uniques)
+                else:
+                    st.info("👉 Entrez les réponses possibles et les points associés sous la forme : `Réponse:Points`. Séparez les blocs par des points-virgules ( ; ).")
+                    ex_bareme = st.text_input(
+                        "Configuration du barème (Exemple: Toulouse:5 ; La Rochelle:3) :",
+                        placeholder="Option1:5 ; Option2:2",
+                        key="admin_bareme_multiple_94"
+                    )
+                    points_stockes = ex_bareme.strip()
+
+                txt_question = st.text_input("Intitulé de la question bonus :", key="admin_txt_question_94")
+
+                st.markdown("📅 **Date et Heure limite pour répondre :**")
+                col_date_q, col_heure_q = st.columns(2)
+                with col_date_q:
+                    date_limite_q = st.date_input("Date limite :", value=datetime.now().date(), key="date_limite_q_bonus")
+                with col_heure_q:
+                    heure_limite_q = st.time_input("Heure limite :", value=datetime.now().time(), key="heure_limite_q_bonus")
+
+                if st.button("Créer la question bonus", key="admin_btn_creer_94", use_container_width=True):
+                    if txt_question and points_stockes:
                         try:
-                            # 1. Suppression des pronostics liés
-                            supabase.table("Pronostics").delete().eq("match_id", match_a_supprimer[0]).execute()
-                            # 2. Suppression du match
-                            supabase.table("Matchs").delete().eq("id", match_a_supprimer[0]).execute()
+                            dt_limite_combinee = datetime.combine(date_limite_q, heure_limite_q)
+                            tz_paris = pytz.timezone('Europe/Paris')
+                            dt_limite_paris = tz_paris.localize(dt_limite_combinee)
+                            iso_date_limite = dt_limite_paris.astimezone(pytz.utc).isoformat()
+
+                            supabase.table("Questions_Bonus").insert({
+                                "question": txt_question,
+                                "points": points_stockes,
+                                "statut": "open",
+                                "date_limite": iso_date_limite
+                            }).execute()
+                            st.success("🎉 Question bonus créée avec succès !")
+                            time.sleep(1)
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Erreur lors de la création dans Supabase : {e}")
+                    else:
+                        st.warning("⚠️ Veuillez remplir l'intitulé de la question et la configuration des points.")
+
+            # --- Sous-onglet 2.2 : Validation / Clôture ---
+            with sub_q2:
+                st.subheader("🎯 Valider et Clôturer une Question Bonus")
+                
+                try:
+                    questions_ouvertes = supabase.table("Questions_Bonus").select("*").eq("statut", "open").execute().data
+                    
+                    if questions_ouvertes:
+                        for q_a_valider in questions_ouvertes:
+                            st.write(f"❓ **Question :** {q_a_valider['question']}")
                             
-                            st.success("Match supprimé avec succès.")
+                            pts_config = str(q_a_valider.get("points") or q_a_valider.get("points_bonus") or "").strip()
+                            options_possibles = []
+                            
+                            if ":" in pts_config:
+                                segments = pts_config.split(";")
+                                for s in segments:
+                                    if ":" in s:
+                                        option_nom, _ = s.split(":")
+                                        options_possibles.append(option_nom.strip())
+                            
+                            if options_possibles:
+                                choix_admin = st.selectbox(
+                                    "Sélectionnez la réponse correcte :",
+                                    ["-- Choisir le vainqueur --"] + options_possibles,
+                                    key=f"val_sel_95_{q_a_valider['id']}"
+                                )
+                                
+                                bouton_desactive = (choix_admin == "-- Choisir le vainqueur --")
+                                
+                                if st.button("Valider ce résultat", key=f"btn_val_sel_95_{q_a_valider['id']}", disabled=bouton_desactive):
+                                    try:
+                                        supabase.table("Questions_Bonus").update({
+                                            "reponse_correcte": choix_admin.strip().lower(),
+                                            "statut": "closed"
+                                        }).eq("id", q_a_valider['id']).execute()
+                                        
+                                        st.success(f"🎉 Question clôturée ! Réponse '{choix_admin}' enregistrée.")
+                                        time.sleep(1)
+                                        st.rerun()
+                                    except Exception as e:
+                                        st.error(f"Erreur lors de la validation : {e}")
+                            else:
+                                st.warning("⚠️ Barème à point unique détecté. Saisie manuelle obligatoire :")
+                                choix_manuel = st.text_input("Réponse correcte :", key=f"val_txt_95_{q_a_valider['id']}")
+                                
+                                if st.button("Clôturer (Saisie manuelle)", key=f"btn_val_txt_95_{q_a_valider['id']}"):
+                                    if choix_manuel.strip():
+                                        try:
+                                            supabase.table("Questions_Bonus").update({
+                                                "reponse_correcte": choix_manuel.strip().lower(),
+                                                "statut": "closed"
+                                            }).eq("id", q_a_valider['id']).execute()
+                                            st.success("🎉 Question clôturée avec succès !")
+                                            time.sleep(1)
+                                            st.rerun()
+                                        except Exception as e:
+                                            st.error(f"Erreur : {e}")
+                            
+                            st.markdown("---")
+                    else:
+                        st.info("Aucune question bonus en attente de validation.")
+                        
+                except Exception as e:
+                    st.error(f"Erreur lors du chargement du module de validation : {e}")
+
+        # =====================================================================
+        # 9.3 - ONGLET 3 : JOUEURS & POINTS (Ajout manuel, Reset MDP, Suppression)
+        # =====================================================================
+        with tab_joueurs:
+            sub_j1, sub_j2, sub_j3 = st.tabs([
+                "🎁 Ajout manuel de points", 
+                "🔑 Réinitialiser MDP", 
+                "🗑️ Supprimer un joueur"
+            ])
+            
+            tous_les_joueurs = supabase.table("Joueurs").select("id, pseudo, score").execute().data
+
+            # --- Sous-onglet 3.1 : Ajout manuel de points (AVEC MOTIF) ---
+            with sub_j1:
+                st.subheader("🎁 Attribution manuelle de points")
+                st.info("Ajoutez ou retirez manuellement des points à un joueur en renseignant un motif explicatif.")
+                
+                if tous_les_joueurs:
+                    joueur_cible = st.selectbox(
+                        "Sélectionner le joueur :",
+                        options=[(j['id'], j['pseudo'], j.get('score', 0)) for j in tous_les_joueurs],
+                        format_func=lambda x: f"{x[1]} (Score actuel : {x[2]} pts)",
+                        key="select_joueur_manuel_pts"
+                    )
+                    
+                    col_p1, col_p2 = st.columns(2)
+                    with col_p1:
+                        pts_a_ajouter = st.number_input(
+                            "Points à ajouter (positif) ou retirer (négatif) :", 
+                            value=1, 
+                            step=1, 
+                            key="input_pts_manuel"
+                        )
+                    with col_p2:
+                        motif_pts = st.text_input(
+                            "Motif / Raison :", 
+                            placeholder="Ex: Bonus fair-play, gage perdu...", 
+                            key="input_motif_pts"
+                        )
+                        
+                    if st.button("Appliquer les points au joueur", key="btn_valider_pts_manuel"):
+                        if motif_pts.strip():
+                            try:
+                                j_id, j_pseudo, j_score_actuel = joueur_cible
+                                nouveau_score = (j_score_actuel or 0) + int(pts_a_ajouter)
+                                
+                                # Mise à jour directe dans la table Joueurs
+                                supabase.table("Joueurs").update({"score": nouveau_score}).eq("id", j_id).execute()
+                                
+                                st.success(f"✅ {pts_a_ajouter:+d} points appliqués avec succès à **{j_pseudo}** (Nouveau score : {nouveau_score} pts). Motif : _{motif_pts}_")
+                                time.sleep(1.5)
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Erreur lors de l'attribution des points : {e}")
+                        else:
+                            st.warning("⚠️ Veuillez indiquer un motif pour justifier l'attribution de ces points.")
+                else:
+                    st.info("Aucun joueur trouvé.")
+
+            # --- Sous-onglet 3.2 : Réinitialisation mot de passe ---
+            with sub_j2:
+                st.subheader("🔑 Réinitialisation de mot de passe")
+                if tous_les_joueurs:
+                    joueur_choisi_pseudo = st.selectbox(
+                        "Choisir le joueur à réinitialiser :",
+                        options=[j['pseudo'] for j in tous_les_joueurs],
+                        key="select_reinit"
+                    )
+                    id_choisi = next(j['id'] for j in tous_les_joueurs if j['pseudo'] == joueur_choisi_pseudo)
+                    
+                    nouveau_mdp = st.text_input("Nouveau mot de passe temporaire", type="password", key="new_pass_input")
+                    
+                    if st.button("Appliquer le nouveau mot de passe", key="btn_reinit"):
+                        try:
+                            admin_client = create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_SERVICE_ROLE_KEY"])
+                            admin_client.auth.admin.update_user_by_id(id_choisi, {"password": nouveau_mdp})
+                            st.success(f"Mot de passe mis à jour pour {joueur_choisi_pseudo} !")
+                        except Exception as e:
+                            st.error(f"Erreur : {e}")
+                else:
+                    st.info("Aucun joueur trouvé.")
+
+            # --- Sous-onglet 3.3 : Suppression d'un joueur ---
+            with sub_j3:
+                st.subheader("🗑️ Suppression d'un joueur")
+                if tous_les_joueurs:
+                    joueur_a_supprimer = st.selectbox(
+                        "Choisir un joueur à supprimer :",
+                        options=[(j['id'], j['pseudo']) for j in tous_les_joueurs],
+                        format_func=lambda x: x[1],
+                        key="select_suppr"
+                    )
+                    
+                    if joueur_a_supprimer:
+                        with st.popover("🗑️ Supprimer ce joueur"):
+                            st.error(f"Êtes-vous sûr de vouloir supprimer définitivement **{joueur_a_supprimer[1]}** ?")
+                            if st.button("Confirmer la suppression", key="btn_confirm_suppr"):
+                                try:
+                                    supabase.table("Pronostics").delete().eq("user_id", joueur_a_supprimer[0]).execute()
+                                    supabase.table("Réponses_Questions").delete().eq("user_id", joueur_a_supprimer[0]).execute()
+                                    supabase.table("Joueurs").delete().eq("id", joueur_a_supprimer[0]).execute()
+                                    
+                                    st.success(f"Joueur {joueur_a_supprimer[1]} supprimé.")
+                                    time.sleep(1)
+                                    st.rerun()
+                                except Exception as e:
+                                    st.error(f"Erreur : {e}")
+                else:
+                    st.info("Aucun joueur trouvé.")
+
+        # =====================================================================
+        # 9.4 - ONGLET 4 : SYSTÈME & PARAMÈTRES (Barème, API, Zone de danger)
+        # =====================================================================
+        with tab_systeme:
+            sub_s1, sub_s2, sub_s3 = st.tabs(["📊 Barème des points", "🔌 Tour de contrôle API", "🚨 Zone de Danger"])
+            
+            # --- Sous-onglet 4.1 : Barème & Points ---
+            with sub_s1:
+                st.subheader("📊 Configuration du Barème de Points")
+                st.info("Ajuste les coefficients ci-dessous. Ils seront appliqués lors du calcul des résultats.")
+                
+                if "pts_vainqueur" not in st.session_state: st.session_state.pts_vainqueur = 2
+                if "pts_ecart" not in st.session_state: st.session_state.pts_ecart = 2
+                if "pct_ose" not in st.session_state: st.session_state.pct_ose = 3
+                if "mult_ose" not in st.session_state: st.session_state.mult_ose = 2.0
+                
+                with st.form("form_bareme_points"):
+                    col_b1, col_b2 = st.columns(2)
+                    with col_b1:
+                        pts_v = st.number_input("Points Vainqueur trouvé", min_value=0, value=int(st.session_state.pts_vainqueur), step=1)
+                        pts_e = st.number_input("Points Écart parfait (Bonus)", min_value=0, value=int(st.session_state.pts_ecart), step=1)
+                    with col_b2:
+                        seuil_o = st.number_input(
+                            "Nombre max de gagnants pour prono osé (X)", 
+                            min_value=1, 
+                            value=int(st.session_state.pct_ose), 
+                            step=1, 
+                            help="Le bonus s'active uniquement si le nombre de joueurs ayant trouvé le bon vainqueur est INFÉRIEUR OU ÉGAL à ce nombre X."
+                        )
+                        mult_o = st.number_input("Multiplicateur du prono osé", min_value=1.0, max_value=10.0, value=float(st.session_state.mult_ose), step=0.5)
+                    
+                    if st.form_submit_button("💾 Sauvegarder le barème"):
+                        data_bareme = {
+                            "id": "default_config",
+                            "pts_gagnant": int(pts_v),
+                            "pts_ecart": int(pts_e),
+                            "seuil_poursentage_ose": int(seuil_o),
+                            "multiplicateur_ose": int(mult_o)
+                        }
+                        
+                        try:
+                            supabase.table("Configuration").upsert(data_bareme, on_conflict="id").execute()
+                            
+                            st.session_state.pts_vainqueur = pts_v
+                            st.session_state.pts_ecart = pts_e
+                            st.session_state.pct_ose = seuil_o
+                            st.session_state.mult_ose = mult_o
+                            
+                            st.success(f"🎉 Barème sauvegardé ! Le seuil est désormais fixé à moins de {seuil_o} joueur(s) gagnant(s).")
                             time.sleep(1)
                             st.rerun()
                         except Exception as e:
                             st.error(f"Erreur : {e}")
-        else:
-            st.info("Aucun match trouvé en base de données.")
 
-# 9.8 - GESTION DES JOUEURS (SUPPRESSION SÉCURISÉE)
-    with tab8:
-        st.subheader("⚙️ Maintenance des joueurs")
-        
-        # On crée deux onglets pour structurer l'interface
-        m_tab1, m_tab2 = st.tabs(["🗑️ Supprimer un joueur", "🔑 Réinitialiser mot de passe"])
-        
-        # 1. Sous-onglet Suppression
-        with m_tab1:
-            tous_les_joueurs = supabase.table("Joueurs").select("id, pseudo").execute().data
-            if tous_les_joueurs:
-                joueur_a_supprimer = st.selectbox(
-                    "Choisir un joueur à supprimer :",
-                    options=[(j['id'], j['pseudo']) for j in tous_les_joueurs],
-                    format_func=lambda x: x[1],
-                    key="select_suppr"
-                )
+            # --- Sous-onglet 4.2 : Tour de contrôle API ---
+            with sub_s2:
+                st.subheader("🔌 Gestion de l'API")
                 
-                if joueur_a_supprimer:
-                    with st.popover("🗑️ Supprimer ce joueur"):
-                        st.error(f"Êtes-vous sûr de vouloir supprimer définitivement **{joueur_a_supprimer[1]}** ?")
-                        if st.button("Confirmer la suppression", key="btn_confirm_suppr"):
-                            try:
-                                # Nettoyage en cascade
-                                supabase.table("Pronostics").delete().eq("user_id", joueur_a_supprimer[0]).execute()
-                                supabase.table("Réponses_Questions").delete().eq("user_id", joueur_a_supprimer[0]).execute()
-                                # Suppression du joueur
-                                supabase.table("Joueurs").delete().eq("id", joueur_a_supprimer[0]).execute()
-                                
-                                st.success(f"Joueur {joueur_a_supprimer[1]} supprimé.")
-                                time.sleep(1)
-                                st.rerun()
-                            except Exception as e:
-                                st.error(f"Erreur : {e}")
-            else:
-                st.info("Aucun joueur trouvé.")
-        
-        # 2. Sous-onglet Réinitialisation
-        with m_tab2:
-            if tous_les_joueurs:
-                joueur_choisi_pseudo = st.selectbox(
-                    "Choisir le joueur à réinitialiser :",
-                    options=[j['pseudo'] for j in tous_les_joueurs],
-                    key="select_reinit"
-                )
-                id_choisi = next(j['id'] for j in tous_les_joueurs if j['pseudo'] == joueur_choisi_pseudo)
+                today_str = datetime.now().strftime("%Y-%m-%d")
                 
-                nouveau_mdp = st.text_input("Nouveau mot de passe temporaire", type="password", key="new_pass_input")
+                try:
+                    response_api = supabase.table("Configuration").select("*").eq("id", "default_config").execute()
+                    if response_api.data:
+                        config_api = response_api.data[0]
+                        saved_date = config_api.get("last_reset_date")
+                        
+                        if saved_date != today_str:
+                            current_count = 0
+                            current_logs = config_api.get("api_request_logs", []) or []
+                            supabase.table("Configuration").upsert({
+                                "id": "default_config",
+                                "api_request_count": 0,
+                                "last_reset_date": today_str,
+                                "api_request_logs": current_logs
+                            }, on_conflict="id").execute()
+                        else:
+                            current_count = config_api.get("api_request_count", 0)
+                            current_logs = config_api.get("api_request_logs", []) or []
+                    else:
+                        current_count = 0
+                        current_logs = []
+                        supabase.table("Configuration").upsert({
+                            "id": "default_config",
+                            "api_request_count": 0,
+                            "last_reset_date": today_str,
+                            "api_request_logs": []
+                        }, on_conflict="id").execute()
+                except Exception as e:
+                    current_count = 0
+                    current_logs = []
                 
-                if st.button("Appliquer le nouveau mot de passe", key="btn_reinit"):
+                st.session_state.api_request_count = current_count
+                st.session_state.api_request_logs = current_logs
+            
+                st.metric(label="Requêtes envoyées à l'API", value=f"{st.session_state.api_request_count}/50")
+            
+                col_api1, col_api2 = st.columns(2)
+            
+                def save_api_state(new_count, new_logs, action_name):
+                    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    new_logs.insert(0, f"[{timestamp}] {action_name}")
+                    if len(new_logs) > 20:
+                        new_logs = new_logs[:20]
+                    
                     try:
-                        # Utilisation du client Admin avec la clé Service Role
-                        admin_client = create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_SERVICE_ROLE_KEY"])
-                        admin_client.auth.admin.update_user_by_id(id_choisi, {"password": nouveau_mdp})
-                        st.success(f"Mot de passe mis à jour pour {joueur_choisi_pseudo} !")
+                        supabase.table("Configuration").upsert({
+                            "id": "default_config",
+                            "api_request_count": new_count,
+                            "last_reset_date": today_str,
+                            "api_request_logs": new_logs
+                        }, on_conflict="id").execute()
                     except Exception as e:
-                        st.error(f"Erreur : {e}")
+                        st.error(f"Erreur de sauvegarde Supabase : {e}")
+                    
+                    return new_count, new_logs
+            
+                with col_api1:
+                    if st.button("MAJ score"):
+                        new_count = st.session_state.api_request_count + 1
+                        new_count, updated_logs = save_api_state(new_count, st.session_state.api_request_logs, "MAJ score (run_update)")
+                        st.session_state.api_request_count = new_count
+                        st.session_state.api_request_logs = updated_logs
+                        try:
+                            run_update()
+                            st.success("Mise à jour des scores effectuée avec succès.")
+                            time.sleep(1)
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Erreur lors de la mise à jour des scores : {e}")
+            
+                with col_api2:
+                    if st.button("MAJ Calendrier"):
+                        new_count = st.session_state.api_request_count + 1
+                        new_count, updated_logs = save_api_state(new_count, st.session_state.api_request_logs, "MAJ Calendrier (run_calendar)")
+                        st.session_state.api_request_count = new_count
+                        st.session_state.api_request_logs = updated_logs
+                        try:
+                            run_calendar()
+                            st.success("Mise à jour du calendrier effectuée avec succès.")
+                            time.sleep(1)
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Erreur lors de la mise à jour du calendrier : {e}")
+            
+                with st.expander("📜 Historique des 20 dernières requêtes"):
+                    if st.session_state.api_request_logs:
+                        for log in st.session_state.api_request_logs:
+                            st.text(log)
+                    else:
+                        st.info("Aucune requête enregistrée pour le moment.")
+
+            # --- Sous-onglet 4.3 : Zone de danger ---
+            with sub_s3:
+                st.subheader("🚨 Zone de Danger")
+                confirmation_secu = st.checkbox("Je confirme vouloir tout réinitialiser.", key="danger_zone_confirm")
+                if st.button("🔥 Réinitialiser l'application", type="primary", disabled=not confirmation_secu):
+                    with st.spinner("Nettoyage..."):
+                        try:
+                            supabase.table("Pronostics").delete().not_.is_("id", "null").execute()
+                            supabase.table("Réponses_Questions").delete().not_.is_("id", "null").execute()
+                            supabase.table("Matchs").delete().not_.is_("id", "null").execute()
+                            supabase.table("Questions_Bonus").delete().not_.is_("id", "null").execute()
+                            supabase.table("Joueurs").update({"score": 0}).not_.is_("id", "null").execute()
+                            st.success("🎉 Reset saison terminé !")
+                            st.balloons()
+                            time.sleep(1)
+                            st.rerun()
+                        except Exception as e: 
+                            st.error(f"Erreur : {e}")
