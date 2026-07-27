@@ -1342,7 +1342,7 @@ elif st.session_state.onglet_actif == "📺":
                     match_banner_html = f"""
                     <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding: 10px 14px; border-radius: 8px; border: 1px solid rgba(128, 128, 128, 0.2); margin-top: 15px;">
                         <div style="display: flex; align-items: center; gap: 4px; font-weight: bold; font-size: 14px;">
-                            🏉 {dom_img_html}<span>{dom_court}</span>
+                             {dom_img_html}<span>{dom_court}</span>
                             <span style="margin: 0 8px; background-color: rgba(2, 132, 199, 0.15); color: #0284c7; padding: 2px 6px; border-radius: 6px; font-size: 13px;">{sc_dom} - {sc_ext}</span>
                             <span>{ext_court}</span>{ext_img_html}
                         </div>
