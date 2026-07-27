@@ -1313,9 +1313,9 @@ elif st.session_state.onglet_actif == "📺":
                 for m in matchs:
                     label_statut = ""
                     if m.get('statut') == 'LIVE':
-                        label_statut = " 🔴 EN DIRECT (Virtuel)"
+                        label_statut = " 🔴 LIVE"
                     elif m.get('statut') == 'NS' and (m.get('score_dom') is None or m.get('score_ext') is None):
-                        label_statut = " ⏳ EN COURS (En attente du score)"
+                        label_statut = " ⏳ EN COURS"
                     
                     date_affichee = formater_date_paris(m.get('date_match'))
                     
@@ -1335,18 +1335,18 @@ elif st.session_state.onglet_actif == "📺":
                     dom_logo = dict_logos.get(key_dom, "")
                     ext_logo = dict_logos.get(key_ext, "")
                     
-                    # Affichage d'un bandeau HTML propre pour le match (les titres st.expander ne supportant pas les balises <img>)
-                    dom_img_html = f'<img src="{dom_logo}" width="24" height="24" style="object-fit:contain; vertical-align:middle; margin-right:6px;">' if dom_logo else ""
-                    ext_img_html = f'<img src="{ext_logo}" width="24" height="24" style="object-fit:contain; vertical-align:middle; margin-left:6px;">' if ext_logo else ""
+                    # Bandeau adapté aux thèmes sombre et clair de Streamlit avec flex-wrap pour éviter les superpositions
+                    dom_img_html = f'<img src="{dom_logo}" width="22" height="22" style="object-fit:contain; vertical-align:middle; margin-right:4px;">' if dom_logo else ""
+                    ext_img_html = f'<img src="{ext_logo}" width="22" height="22" style="object-fit:contain; vertical-align:middle; margin-left:4px;">' if ext_logo else ""
                     
                     match_banner_html = f"""
-                    <div style="display: flex; align-items: center; justify-content: space-between; background-color: #f8fafc; padding: 12px 16px; border-radius: 8px; border: 1px solid #e2e8f0; margin-top: 15px;">
-                        <div style="display: flex; align-items: center; gap: 6px; font-weight: bold; font-size: 15px; color: #0f172a;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding: 10px 14px; border-radius: 8px; border: 1px solid rgba(128, 128, 128, 0.2); margin-top: 15px;">
+                        <div style="display: flex; align-items: center; gap: 4px; font-weight: bold; font-size: 14px;">
                             🏉 {dom_img_html}<span>{dom_court}</span>
-                            <span style="margin: 0 10px; background-color: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 6px; font-size: 14px;">{sc_dom} - {sc_ext}</span>
+                            <span style="margin: 0 8px; background-color: rgba(2, 132, 199, 0.15); color: #0284c7; padding: 2px 6px; border-radius: 6px; font-size: 13px;">{sc_dom} - {sc_ext}</span>
                             <span>{ext_court}</span>{ext_img_html}
                         </div>
-                        <div style="font-size: 12px; color: #64748b; font-weight: 500;">
+                        <div style="font-size: 11px; opacity: 0.8; font-weight: 500;">
                             📅 {date_affichee} {label_statut}
                         </div>
                     </div>
@@ -1414,7 +1414,6 @@ elif st.session_state.onglet_actif == "📺":
                                     nom_court_equipe = dict_noms_courts.get(clean_eq_key, nom_equipe_api)
                                     logo_url = dict_logos.get(clean_eq_key, "")
                                     
-                                    # Affichage uniquement du logo (avec attribut title pour accessibilité) et de l'écart en dessous
                                     if logo_url:
                                         affichage_pronostic = f'<img src="{logo_url}" width="24" height="24" style="object-fit:contain; vertical-align:middle;" title="{nom_court_equipe}">'
                                     else:
