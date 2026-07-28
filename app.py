@@ -1582,23 +1582,24 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
                         match_id = match_a_supprimer[0]
                         match_label = match_a_supprimer[1]
                         
-                        # On utilise une case à cocher de sécurité à la place du popover
                         confirmation = st.checkbox(f"Je confirme vouloir supprimer définitivement : {match_label}", key=f"chk_del_{match_id}")
                         
                         if st.button("Supprimer définitivement", key=f"btn_real_del_{match_id}", type="primary"):
                             if confirmation:
                                 try:
-                                    # 1. Supprimer d'abord les pronostics liés
-                                    supabase.table("Pronostics").delete().eq("match_id", match_id).execute()
+                                    st.write("⏳ Tentative de suppression des pronostics liés...")
+                                    res_prono = supabase.table("Pronostics").delete().eq("match_id", match_id).execute()
+                                    st.write(réponse_prono := f"Réponse pronos : {res_prono}")
                                     
-                                    # 2. Supprimer le match
-                                    response = supabase.table("Matchs").delete().eq("id", match_id).execute()
+                                    st.write("⏳ Tentative de suppression du match...")
+                                    res_match = supabase.table("Matchs").delete().eq("id", match_id).execute()
+                                    st.write(f"Réponse match : {res_match}")
                                     
                                     st.success(f"Le match '{match_label}' a été supprimé avec succès.")
-                                    time.sleep(1)
+                                    time.sleep(1.5)
                                     st.rerun()
                                 except Exception as e:
-                                    st.error(f"Erreur lors de la suppression : {e}")
+                                    st.error(fErreur technique Supabase : {e}")
                             else:
                                 st.warning("Veuillez cocher la case de confirmation pour valider la suppression.")
                 else:
