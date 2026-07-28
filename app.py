@@ -1841,11 +1841,11 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
                     st.error(f"Erreur lors du chargement du module de validation : {e}")
 
 # =====================================================================
-        # 9.3 - ONGLET 3 : JOUEURS & POINTS (Tableau unique et actions)
+        # 9.3 - ONGLET 3 : JOUEURS & POINTS (Tableau avec actions par ligne)
         # =====================================================================
         with tab_joueurs:
             st.subheader("👥 Gestion des Joueurs & Points")
-            st.info("Retrouvez ci-dessous la liste des joueurs, leur score actuel, ainsi que les actions d'administration disponibles pour chacun.")
+            st.info("Retrouvez ci-dessous la liste de tous les joueurs, leur score actuel, et les actions d'administration associées.")
             
             tous_les_joueurs = supabase.table("Joueurs").select("*").execute().data
             
@@ -1867,36 +1867,31 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
                     with r_col2:
                         st.write(str(j.get('score', 0)))
                     
-                    # 1. Bouton d'ajout / retrait de points
+                    # 1. Bouton d'ajout / retrait de points (sans motif)
                     with r_col3:
                         with st.popover("🎁 Points", use_container_width=True):
                             st.write(f"**Ajuster les points de {j['pseudo']}**")
                             st.write(f"Score actuel : {j.get('score', 0)} pts")
                             
                             pts_delta = st.number_input("Points à ajouter (+) ou retirer (-)", value=1, step=1, key=f"pts_val_{j['id']}")
-                            motif_input = st.text_input("Motif obligatoire", placeholder="Ex: Bonus fair-play, gage...", key=f"motif_val_{j['id']}")
                             
-                            if st.button("Appliquer les points", key=f"btn_apply_pts_{j['id']}"):
-                                if motif_input.strip():
-                                    try:
-                                        nouveau_score = (j.get('score', 0) or 0) + int(pts_delta)
-                                        supabase.table("Joueurs").update({"score": nouveau_score}).eq("id", j['id']).execute()
-                                        st.success(f"✅ {pts_delta:+d} points appliqués à {j['pseudo']} (Motif : {motif_input})")
-                                        time.sleep(1)
-                                        st.rerun()
-                                    except Exception as e:
-                                        st.error(f"Erreur : {e}")
-                                else:
-                                    st.warning("⚠️ Veuillez indiquer un motif.")
+                            if st.button("Appliquer", key=f"btn_apply_pts_{j['id']}"):
+                                try:
+                                    nouveau_score = (j.get('score', 0) or 0) + int(pts_delta)
+                                    supabase.table("Joueurs").update({"score": nouveau_score}).eq("id", j['id']).execute()
+                                    st.success(f"✅ {pts_delta:+d} points appliqués à {j['pseudo']} !")
+                                    time.sleep(1)
+                                    st.rerun()
+                                except Exception as e:
+                                    st.error(f"Erreur : {e}")
 
-                    # 2. Bouton de réinitialisation du mot de passe avec double confirmation
+                    # 2. Bouton de réinitialisation du mot de passe (avec message simple)
                     with r_col4:
                         with st.popover("🔑 MDP", use_container_width=True):
                             st.write(f"**Réinitialiser le MDP de {j['pseudo']}**")
                             new_pwd = st.text_input("Nouveau mot de passe", type="password", key=f"pwd_{j['id']}")
-                            confirm_pwd = st.checkbox("Confirmer la modification du mot de passe", key=f"chk_pwd_{j['id']}")
                             
-                            if st.button("Réinitialiser", key=f"btn_reinit_pwd_{j['id']}", disabled=not confirm_pwd):
+                            if st.button("Valider la réinitialisation", key=f"btn_reinit_pwd_{j['id']}"):
                                 if new_pwd:
                                     try:
                                         admin_client = create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_SERVICE_ROLE_KEY"])
@@ -1909,15 +1904,12 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
                                 else:
                                     st.warning("Veuillez saisir un mot de passe.")
 
-                    # 3. Bouton de suppression d'un joueur avec double confirmation
+                    # 3. Bouton de suppression d'un joueur (avec message "êtes-vous sûr")
                     with r_col5:
                         with st.popover("🗑️ Supprimer", use_container_width=True):
-                            st.error(f"Supprimer **{j['pseudo']}** ?")
-                            chk_del_1 = st.checkbox("Étape 1 : Confirmer la suppression", key=f"del_1_{j['id']}")
-                            chk_del_2 = st.checkbox("Étape 2 : Confirmer l'irréversibilité", key=f"del_2_{j['id']}")
-                            double_conf = chk_del_1 and chk_del_2
+                            st.error(f"Êtes-vous sûr de vouloir supprimer définitivement **{j['pseudo']}** ?")
                             
-                            if st.button("Supprimer définitivement", key=f"btn_final_del_{j['id']}", disabled=not double_conf, type="primary"):
+                            if st.button("Oui, supprimer", key=f"btn_final_del_{j['id']}", type="primary"):
                                 try:
                                     supabase.table("Pronostics").delete().eq("user_id", j['id']).execute()
                                     supabase.table("Réponses_Questions").delete().eq("user_id", j['id']).execute()
