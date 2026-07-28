@@ -1564,7 +1564,7 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
                 else:
                     st.info("Aucun match existant.")
 
-            # --- Sous-onglet 1.3 : Supprimer un match ---
+# --- Sous-onglet 1.3 : Supprimer un match ---
             with sub_m3:
                 st.subheader("🗑️ Suppression de matchs")
                 st.warning("⚠️ Attention : Toute suppression de match supprime également les pronostics associés.")
@@ -1579,17 +1579,28 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
                     )
                     
                     if match_a_supprimer:
-                        with st.popover("🗑️ Supprimer ce match"):
-                            st.error(f"Êtes-vous sûr de vouloir supprimer **{match_a_supprimer[1]}** ?")
-                            if st.button("Confirmer la suppression", key=f"del_confirm_{match_a_supprimer[0]}"):
+                        match_id = match_a_supprimer[0]
+                        match_label = match_a_supprimer[1]
+                        
+                        # On utilise une case à cocher de sécurité à la place du popover
+                        confirmation = st.checkbox(f"Je confirme vouloir supprimer définitivement : {match_label}", key=f"chk_del_{match_id}")
+                        
+                        if st.button("Supprimer définitivement", key=f"btn_real_del_{match_id}", type="primary"):
+                            if confirmation:
                                 try:
-                                    supabase.table("Pronostics").delete().eq("match_id", match_a_supprimer[0]).execute()
-                                    supabase.table("Matchs").delete().eq("id", match_a_supprimer[0]).execute()
-                                    st.success("Match supprimé avec succès.")
+                                    # 1. Supprimer d'abord les pronostics liés
+                                    supabase.table("Pronostics").delete().eq("match_id", match_id).execute()
+                                    
+                                    # 2. Supprimer le match
+                                    response = supabase.table("Matchs").delete().eq("id", match_id).execute()
+                                    
+                                    st.success(f"Le match '{match_label}' a été supprimé avec succès.")
                                     time.sleep(1)
                                     st.rerun()
                                 except Exception as e:
-                                    st.error(f"Erreur : {e}")
+                                    st.error(f"Erreur lors de la suppression : {e}")
+                            else:
+                                st.warning("Veuillez cocher la case de confirmation pour valider la suppression.")
                 else:
                     st.info("Aucun match trouvé en base de données.")
 
