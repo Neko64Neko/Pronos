@@ -2086,6 +2086,7 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
                             supabase.table("Matchs").delete().not_.is_("id", "null").execute()
                             supabase.table("Questions_Bonus").delete().not_.is_("id", "null").execute()
                             supabase.table("Joueurs").update({"score": 0}).not_.is_("id", "null").execute()
+                            supabase.table("Joueurs").update({"points_manuels": 0}).not_.is_("id", "null").execute()
                             st.success("🎉 Reset saison terminé !")
                             st.balloons()
                             time.sleep(1)
