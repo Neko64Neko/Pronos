@@ -1095,13 +1095,32 @@ elif st.session_state.onglet_actif == "📺":
             scores_generaux = {j['id']: 0.0 for j in tous_les_joueurs}
 
             if tous_les_joueurs:
-                # 1. Ajout des points bonus s'ils existent
+                # 1. Ajout des points bonus s'ils existent (Sécurisé pour points fixes ou format "Équipe:X")
                 dict_points_bonus = {}
                 for q in questions_bonus:
                     q_id = q.get('id')
-                    pts_q = float(q.get('points_bonus') or q.get('points') or 0)
+                    brut_pts = q.get('points_bonus') if q.get('points_bonus') is not None else q.get('points', 0)
                     rep_corr = str(q.get('reponse_correcte') or '').strip().lower()
-                    dict_points_bonus[q_id] = (pts_q, rep_corr)
+                    
+                    mapping_points = {}
+                    pts_fixe_defaut = 0.0
+                    
+                    if isinstance(brut_pts, str) and (":" in brut_pts or ";" in brut_pts):
+                        parts = brut_pts.split(";")
+                        for p in parts:
+                            if ":" in p:
+                                cle_eq, val_p = p.split(":", 1)
+                                try:
+                                    mapping_points[cle_eq.strip().lower()] = float(val_p.strip())
+                                except ValueError:
+                                    pass
+                    else:
+                        try:
+                            pts_fixe_defaut = float(brut_pts or 0)
+                        except ValueError:
+                            pts_fixe_defaut = 0.0
+                            
+                    dict_points_bonus[q_id] = (pts_fixe_defaut, mapping_points, rep_corr)
                     
                 dict_reponses_bonus = {}
                 for r in reponses_bonus:
@@ -1113,10 +1132,18 @@ elif st.session_state.onglet_actif == "📺":
                 for j in tous_les_joueurs:
                     j_id = j['id']
                     pts_b_total = 0.0
-                    for q_id, (pts_q, rep_corr) in dict_points_bonus.items():
+                    for q_id, (pts_fixe_defaut, mapping_points, rep_corr) in dict_points_bonus.items():
                         rep_j = dict_reponses_bonus.get((j_id, q_id), "")
-                        if rep_corr and rep_j == rep_corr:
-                            pts_b_total += pts_q
+                        
+                        if mapping_points:
+                            rep_j_clean = str(rep_j).strip().lower()
+                            for cle_map, valeur_pts in mapping_points.items():
+                                if cle_map == rep_j_clean:
+                                    pts_b_total += valeur_pts
+                                    break
+                        elif rep_corr and str(rep_j).strip().lower() == rep_corr:
+                            pts_b_total += pts_fixe_defaut
+                            
                     scores_generaux[j_id] += pts_b_total
 
                 # 2. Ajout des points des matchs (FT ou LIVE avec scores)
@@ -1213,7 +1240,6 @@ elif st.session_state.onglet_actif == "📺":
                     dom_logo = dict_logos.get(key_dom, "")
                     ext_logo = dict_logos.get(key_ext, "")
                     
-                    # Bandeau adapté aux thèmes sombre et clair de Streamlit avec flex-wrap pour éviter les superpositions
                     dom_img_html = f'<img src="{dom_logo}" width="22" height="22" style="object-fit:contain; vertical-align:middle; margin-right:4px;">' if dom_logo else ""
                     ext_img_html = f'<img src="{ext_logo}" width="22" height="22" style="object-fit:contain; vertical-align:middle; margin-left:4px;">' if ext_logo else ""
                     
@@ -1400,7 +1426,7 @@ elif st.session_state.onglet_actif == "📺":
                             </table>
                         </div>
                         """.replace("\n", ""), unsafe_allow_html=True)
-                
+            
             # --- SOUS-SECTION B : LES QUESTIONS BONUS ---
             st.markdown("<hr style='border: 1px solid #e2e8f0; margin: 30px 0 20px 0;'>", unsafe_allow_html=True)
             st.subheader("🎯 Suivi des Questions Bonus")
