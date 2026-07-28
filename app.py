@@ -1841,86 +1841,78 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
                     st.error(f"Erreur lors du chargement du module de validation : {e}")
 
 # =====================================================================
-        # 9.3 - ONGLET 3 : JOUEURS & POINTS (Tableau avec actions par ligne)
+        # 9.3 - ONGLET 3 : JOUEURS & POINTS (Cartes responsives pour Mobile / PC)
         # =====================================================================
         with tab_joueurs:
             st.subheader("👥 Gestion des Joueurs & Points")
-            st.info("Retrouvez ci-dessous la liste de tous les joueurs, leur score actuel, et les actions d'administration associées.")
+            st.info("Retrouvez ci-dessous la liste de tous les joueurs et les actions d'administration associées.")
             
             tous_les_joueurs = supabase.table("Joueurs").select("*").execute().data
             
             if tous_les_joueurs:
-                # En-tête du tableau
-                h_col1, h_col2, h_col3, h_col4, h_col5 = st.columns([2, 1, 1.5, 1.5, 1.5])
-                h_col1.markdown("**Pseudo**")
-                h_col2.markdown("**Score**")
-                h_col3.markdown("**🎁 Points**")
-                h_col4.markdown("**🔑 Mot de passe**")
-                h_col5.markdown("**🗑️ Suppression**")
-                st.markdown("---")
-                
                 for j in tous_les_joueurs:
-                    r_col1, r_col2, r_col3, r_col4, r_col5 = st.columns([2, 1, 1.5, 1.5, 1.5])
-                    
-                    with r_col1:
-                        st.write(j.get('pseudo', 'Inconnu'))
-                    with r_col2:
-                        st.write(str(j.get('score', 0)))
-                    
-                    # 1. Bouton d'ajout / retrait de points (sans motif)
-                    with r_col3:
-                        with st.popover("🎁 Points", use_container_width=True):
-                            st.write(f"**Ajuster les points de {j['pseudo']}**")
-                            st.write(f"Score actuel : {j.get('score', 0)} pts")
-                            
-                            pts_delta = st.number_input("Points à ajouter (+) ou retirer (-)", value=1, step=1, key=f"pts_val_{j['id']}")
-                            
-                            if st.button("Appliquer", key=f"btn_apply_pts_{j['id']}"):
-                                try:
-                                    nouveau_score = (j.get('score', 0) or 0) + int(pts_delta)
-                                    supabase.table("Joueurs").update({"score": nouveau_score}).eq("id", j['id']).execute()
-                                    st.success(f"✅ {pts_delta:+d} points appliqués à {j['pseudo']} !")
-                                    time.sleep(1)
-                                    st.rerun()
-                                except Exception as e:
-                                    st.error(f"Erreur : {e}")
-
-                    # 2. Bouton de réinitialisation du mot de passe (avec message simple)
-                    with r_col4:
-                        with st.popover("🔑 MDP", use_container_width=True):
-                            st.write(f"**Réinitialiser le MDP de {j['pseudo']}**")
-                            new_pwd = st.text_input("Nouveau mot de passe", type="password", key=f"pwd_{j['id']}")
-                            
-                            if st.button("Valider la réinitialisation", key=f"btn_reinit_pwd_{j['id']}"):
-                                if new_pwd:
+                    # Utilisation d'un conteneur avec bordure pour faire une "carte" propre par joueur
+                    with st.container(border=True):
+                        # Ligne 1 : Pseudo et Score
+                        col_info1, col_info2 = st.columns([3, 1])
+                        with col_info1:
+                            st.markdown(f"### 👤 {j.get('pseudo', 'Inconnu')}")
+                        with col_info2:
+                            st.metric(label="Score", value=f"{j.get('score', 0)} pts")
+                        
+                        # Ligne 2 : Les 3 boutons d'action répartis proprement
+                        b_col1, b_col2, b_col3 = st.columns(3)
+                        
+                        # 1. Bouton Points
+                        with b_col1:
+                            with st.popover("🎁 Points", use_container_width=True):
+                                st.write(f"**Ajuster les points de {j['pseudo']}**")
+                                pts_delta = st.number_input("Delta (+/-)", value=1, step=1, key=f"pts_val_{j['id']}")
+                                
+                                if st.button("Appliquer", key=f"btn_apply_pts_{j['id']}", use_container_width=True):
                                     try:
-                                        admin_client = create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_SERVICE_ROLE_KEY"])
-                                        admin_client.auth.admin.update_user_by_id(j['id'], {"password": new_pwd})
-                                        st.success(f"Mot de passe mis à jour pour {j['pseudo']} !")
+                                        nouveau_score = (j.get('score', 0) or 0) + int(pts_delta)
+                                        supabase.table("Joueurs").update({"score": nouveau_score}).eq("id", j['id']).execute()
+                                        st.success(f"✅ {pts_delta:+d} pts appliqués !")
                                         time.sleep(1)
                                         st.rerun()
                                     except Exception as e:
                                         st.error(f"Erreur : {e}")
-                                else:
-                                    st.warning("Veuillez saisir un mot de passe.")
 
-                    # 3. Bouton de suppression d'un joueur (avec message "êtes-vous sûr")
-                    with r_col5:
-                        with st.popover("🗑️ Supprimer", use_container_width=True):
-                            st.error(f"Êtes-vous sûr de vouloir supprimer définitivement **{j['pseudo']}** ?")
-                            
-                            if st.button("Oui, supprimer", key=f"btn_final_del_{j['id']}", type="primary"):
-                                try:
-                                    supabase.table("Pronostics").delete().eq("user_id", j['id']).execute()
-                                    supabase.table("Réponses_Questions").delete().eq("user_id", j['id']).execute()
-                                    supabase.table("Joueurs").delete().eq("id", j['id']).execute()
-                                    st.success(f"Joueur {j['pseudo']} supprimé.")
-                                    time.sleep(1)
-                                    st.rerun()
-                                except Exception as e:
-                                    st.error(f"Erreur : {e}")
-                    
-                    st.markdown("---")
+                        # 2. Bouton Mot de passe
+                        with b_col2:
+                            with st.popover("🔑 MDP", use_container_width=True):
+                                st.write(f"**Nouveau MDP pour {j['pseudo']}**")
+                                new_pwd = st.text_input("Mot de passe", type="password", key=f"pwd_{j['id']}")
+                                
+                                if st.button("Valider", key=f"btn_reinit_pwd_{j['id']}", use_container_width=True):
+                                    if new_pwd:
+                                        try:
+                                            admin_client = create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_SERVICE_ROLE_KEY"])
+                                            admin_client.auth.admin.update_user_by_id(j['id'], {"password": new_pwd})
+                                            st.success("Mis à jour !")
+                                            time.sleep(1)
+                                            st.rerun()
+                                        except Exception as e:
+                                            st.error(f"Erreur : {e}")
+                                    else:
+                                        st.warning("Saisir un MDP.")
+
+                        # 3. Bouton Suppression
+                        with b_col3:
+                            with st.popover("🗑️ Suppr", use_container_width=True):
+                                st.error(f"Supprimer **{j['pseudo']}** ?")
+                                
+                                if st.button("Oui, supprimer", key=f"btn_final_del_{j['id']}", type="primary", use_container_width=True):
+                                    try:
+                                        supabase.table("Pronostics").delete().eq("user_id", j['id']).execute()
+                                        supabase.table("Réponses_Questions").delete().eq("user_id", j['id']).execute()
+                                        supabase.table("Joueurs").delete().eq("id", j['id']).execute()
+                                        st.success(f"Joueur supprimé.")
+                                        time.sleep(1)
+                                        st.rerun()
+                                    except Exception as e:
+                                        st.error(f"Erreur : {e}")
             else:
                 st.info("Aucun joueur trouvé.")
         # =====================================================================
