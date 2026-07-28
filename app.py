@@ -1589,7 +1589,7 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
                                 try:
                                     st.write("⏳ Tentative de suppression des pronostics liés...")
                                     res_prono = supabase.table("Pronostics").delete().eq("match_id", match_id).execute()
-                                    st.write(réponse_prono := f"Réponse pronos : {res_prono}")
+                                    st.write(f"Réponse pronos : {res_prono}")
                                     
                                     st.write("⏳ Tentative de suppression du match...")
                                     res_match = supabase.table("Matchs").delete().eq("id", match_id).execute()
@@ -1599,7 +1599,7 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
                                     time.sleep(1.5)
                                     st.rerun()
                                 except Exception as e:
-                                    st.error(fErreur technique Supabase : {e}")
+                                    st.error(f"Erreur technique Supabase : {e}")
                             else:
                                 st.warning("Veuillez cocher la case de confirmation pour valider la suppression.")
                 else:
