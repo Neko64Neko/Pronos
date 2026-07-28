@@ -129,9 +129,6 @@ def sauvegarder_prono_auto(match_id, equipe_dom, equipe_ext, user_id_cible):
             supabase.table("Pronostics").update(donnees_prono).eq("id", prono_existant[0]["id"]).execute()
         else:
             supabase.table("Pronostics").insert(donnees_prono).execute()
-            
-        # ✨ LA NOUVEAUTÉ : Un petit toast discret en bas à droite de l'écran
-        st.toast("Pronostic enregistré ! 🏉", icon="✅")
 
     except Exception as e:
         st.error(f"Erreur sauvegarde automatique : {e}")
