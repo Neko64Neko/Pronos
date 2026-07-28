@@ -1914,13 +1914,13 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
                 col_api1, col_api2 = st.columns(2)
             
                 # Récupération de ta clé Supabase depuis tes secrets Streamlit existants
-                supabase_key = st.secrets["SUPABASE_KEY"] # Adapte le nom de ta clé si besoin (ex: SUPABASE_ANON_KEY)
+                supabase_key = st.secrets["SUPABASE_KEY"]
             
                 with col_api1:
                     if st.button("MAJ score (Live)"):
                         with st.spinner("Exécution de la mise à jour live..."):
                             try:
-                                url = "https://puznnphyulbrnxjojnnc.supabase.co/functions/v1/update-live"
+                                url = "https://puznnphyulbrnxjojnnc.supabase.co/functions/v1/clever-responder"
                                 headers = {"Authorization": f"Bearer {supabase_key}"}
                                 
                                 response = requests.post(url, headers=headers)
@@ -1938,7 +1938,7 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
                     if st.button("MAJ Calendrier"):
                         with st.spinner("Exécution de la mise à jour du calendrier..."):
                             try:
-                                url = "https://puznnphyulbrnxjojnnc.supabase.co/functions/v1/update-calendar"
+                                url = "https://puznnphyulbrnxjojnnc.supabase.co/functions/v1/dynamic-endpoint"
                                 headers = {"Authorization": f"Bearer {supabase_key}"}
                                 
                                 response = requests.post(url, headers=headers)
