@@ -1840,116 +1840,97 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
                 except Exception as e:
                     st.error(f"Erreur lors du chargement du module de validation : {e}")
 
-        # =====================================================================
-        # 9.3 - ONGLET 3 : JOUEURS & POINTS (Ajout manuel, Reset MDP, Suppression)
+# =====================================================================
+        # 9.3 - ONGLET 3 : JOUEURS & POINTS (Tableau unique et actions)
         # =====================================================================
         with tab_joueurs:
-            sub_j1, sub_j2, sub_j3 = st.tabs([
-                "🎁 Ajout manuel de points", 
-                "🔑 Réinitialiser MDP", 
-                "🗑️ Supprimer un joueur"
-            ])
+            st.subheader("👥 Gestion des Joueurs & Points")
+            st.info("Retrouvez ci-dessous la liste des joueurs, leur score actuel, ainsi que les actions d'administration disponibles pour chacun.")
             
-            tous_les_joueurs = supabase.table("Joueurs").select("id, pseudo, score").execute().data
-
-            # --- Sous-onglet 3.1 : Ajout manuel de points (AVEC MOTIF) ---
-            with sub_j1:
-                st.subheader("🎁 Attribution manuelle de points")
-                st.info("Ajoutez ou retirez manuellement des points à un joueur en renseignant un motif explicatif.")
+            tous_les_joueurs = supabase.table("Joueurs").select("*").execute().data
+            
+            if tous_les_joueurs:
+                # En-tête du tableau
+                h_col1, h_col2, h_col3, h_col4, h_col5 = st.columns([2, 1, 1.5, 1.5, 1.5])
+                h_col1.markdown("**Pseudo**")
+                h_col2.markdown("**Score**")
+                h_col3.markdown("**🎁 Points**")
+                h_col4.markdown("**🔑 Mot de passe**")
+                h_col5.markdown("**🗑️ Suppression**")
+                st.markdown("---")
                 
-                if tous_les_joueurs:
-                    joueur_cible = st.selectbox(
-                        "Sélectionner le joueur :",
-                        options=[(j['id'], j['pseudo'], j.get('score', 0)) for j in tous_les_joueurs],
-                        format_func=lambda x: f"{x[1]} (Score actuel : {x[2]} pts)",
-                        key="select_joueur_manuel_pts"
-                    )
+                for j in tous_les_joueurs:
+                    r_col1, r_col2, r_col3, r_col4, r_col5 = st.columns([2, 1, 1.5, 1.5, 1.5])
                     
-                    col_p1, col_p2 = st.columns(2)
-                    with col_p1:
-                        pts_a_ajouter = st.number_input(
-                            "Points à ajouter (positif) ou retirer (négatif) :", 
-                            value=1, 
-                            step=1, 
-                            key="input_pts_manuel"
-                        )
-                    with col_p2:
-                        motif_pts = st.text_input(
-                            "Motif / Raison :", 
-                            placeholder="Ex: Bonus fair-play, gage perdu...", 
-                            key="input_motif_pts"
-                        )
-                        
-                    if st.button("Appliquer les points au joueur", key="btn_valider_pts_manuel"):
-                        if motif_pts.strip():
-                            try:
-                                j_id, j_pseudo, j_score_actuel = joueur_cible
-                                nouveau_score = (j_score_actuel or 0) + int(pts_a_ajouter)
-                                
-                                # Mise à jour directe dans la table Joueurs
-                                supabase.table("Joueurs").update({"score": nouveau_score}).eq("id", j_id).execute()
-                                
-                                st.success(f"✅ {pts_a_ajouter:+d} points appliqués avec succès à **{j_pseudo}** (Nouveau score : {nouveau_score} pts). Motif : _{motif_pts}_")
-                                time.sleep(1.5)
-                                st.rerun()
-                            except Exception as e:
-                                st.error(f"Erreur lors de l'attribution des points : {e}")
-                        else:
-                            st.warning("⚠️ Veuillez indiquer un motif pour justifier l'attribution de ces points.")
-                else:
-                    st.info("Aucun joueur trouvé.")
+                    with r_col1:
+                        st.write(j.get('pseudo', 'Inconnu'))
+                    with r_col2:
+                        st.write(str(j.get('score', 0)))
+                    
+                    # 1. Bouton d'ajout / retrait de points
+                    with r_col3:
+                        with st.popover("🎁 Points", use_container_width=True):
+                            st.write(f"**Ajuster les points de {j['pseudo']}**")
+                            st.write(f"Score actuel : {j.get('score', 0)} pts")
+                            
+                            pts_delta = st.number_input("Points à ajouter (+) ou retirer (-)", value=1, step=1, key=f"pts_val_{j['id']}")
+                            motif_input = st.text_input("Motif obligatoire", placeholder="Ex: Bonus fair-play, gage...", key=f"motif_val_{j['id']}")
+                            
+                            if st.button("Appliquer les points", key=f"btn_apply_pts_{j['id']}"):
+                                if motif_input.strip():
+                                    try:
+                                        nouveau_score = (j.get('score', 0) or 0) + int(pts_delta)
+                                        supabase.table("Joueurs").update({"score": nouveau_score}).eq("id", j['id']).execute()
+                                        st.success(f"✅ {pts_delta:+d} points appliqués à {j['pseudo']} (Motif : {motif_input})")
+                                        time.sleep(1)
+                                        st.rerun()
+                                    except Exception as e:
+                                        st.error(f"Erreur : {e}")
+                                else:
+                                    st.warning("⚠️ Veuillez indiquer un motif.")
 
-            # --- Sous-onglet 3.2 : Réinitialisation mot de passe ---
-            with sub_j2:
-                st.subheader("🔑 Réinitialisation de mot de passe")
-                if tous_les_joueurs:
-                    joueur_choisi_pseudo = st.selectbox(
-                        "Choisir le joueur à réinitialiser :",
-                        options=[j['pseudo'] for j in tous_les_joueurs],
-                        key="select_reinit"
-                    )
-                    id_choisi = next(j['id'] for j in tous_les_joueurs if j['pseudo'] == joueur_choisi_pseudo)
-                    
-                    nouveau_mdp = st.text_input("Nouveau mot de passe temporaire", type="password", key="new_pass_input")
-                    
-                    if st.button("Appliquer le nouveau mot de passe", key="btn_reinit"):
-                        try:
-                            admin_client = create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_SERVICE_ROLE_KEY"])
-                            admin_client.auth.admin.update_user_by_id(id_choisi, {"password": nouveau_mdp})
-                            st.success(f"Mot de passe mis à jour pour {joueur_choisi_pseudo} !")
-                        except Exception as e:
-                            st.error(f"Erreur : {e}")
-                else:
-                    st.info("Aucun joueur trouvé.")
+                    # 2. Bouton de réinitialisation du mot de passe avec double confirmation
+                    with r_col4:
+                        with st.popover("🔑 MDP", use_container_width=True):
+                            st.write(f"**Réinitialiser le MDP de {j['pseudo']}**")
+                            new_pwd = st.text_input("Nouveau mot de passe", type="password", key=f"pwd_{j['id']}")
+                            confirm_pwd = st.checkbox("Confirmer la modification du mot de passe", key=f"chk_pwd_{j['id']}")
+                            
+                            if st.button("Réinitialiser", key=f"btn_reinit_pwd_{j['id']}", disabled=not confirm_pwd):
+                                if new_pwd:
+                                    try:
+                                        admin_client = create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_SERVICE_ROLE_KEY"])
+                                        admin_client.auth.admin.update_user_by_id(j['id'], {"password": new_pwd})
+                                        st.success(f"Mot de passe mis à jour pour {j['pseudo']} !")
+                                        time.sleep(1)
+                                        st.rerun()
+                                    except Exception as e:
+                                        st.error(f"Erreur : {e}")
+                                else:
+                                    st.warning("Veuillez saisir un mot de passe.")
 
-            # --- Sous-onglet 3.3 : Suppression d'un joueur ---
-            with sub_j3:
-                st.subheader("🗑️ Suppression d'un joueur")
-                if tous_les_joueurs:
-                    joueur_a_supprimer = st.selectbox(
-                        "Choisir un joueur à supprimer :",
-                        options=[(j['id'], j['pseudo']) for j in tous_les_joueurs],
-                        format_func=lambda x: x[1],
-                        key="select_suppr"
-                    )
-                    
-                    if joueur_a_supprimer:
-                        with st.popover("🗑️ Supprimer ce joueur"):
-                            st.error(f"Êtes-vous sûr de vouloir supprimer définitivement **{joueur_a_supprimer[1]}** ?")
-                            if st.button("Confirmer la suppression", key="btn_confirm_suppr"):
+                    # 3. Bouton de suppression d'un joueur avec double confirmation
+                    with r_col5:
+                        with st.popover("🗑️ Supprimer", use_container_width=True):
+                            st.error(f"Supprimer **{j['pseudo']}** ?")
+                            chk_del_1 = st.checkbox("Étape 1 : Confirmer la suppression", key=f"del_1_{j['id']}")
+                            chk_del_2 = st.checkbox("Étape 2 : Confirmer l'irréversibilité", key=f"del_2_{j['id']}")
+                            double_conf = chk_del_1 and chk_del_2
+                            
+                            if st.button("Supprimer définitivement", key=f"btn_final_del_{j['id']}", disabled=not double_conf, type="primary"):
                                 try:
-                                    supabase.table("Pronostics").delete().eq("user_id", joueur_a_supprimer[0]).execute()
-                                    supabase.table("Réponses_Questions").delete().eq("user_id", joueur_a_supprimer[0]).execute()
-                                    supabase.table("Joueurs").delete().eq("id", joueur_a_supprimer[0]).execute()
-                                    
-                                    st.success(f"Joueur {joueur_a_supprimer[1]} supprimé.")
+                                    supabase.table("Pronostics").delete().eq("user_id", j['id']).execute()
+                                    supabase.table("Réponses_Questions").delete().eq("user_id", j['id']).execute()
+                                    supabase.table("Joueurs").delete().eq("id", j['id']).execute()
+                                    st.success(f"Joueur {j['pseudo']} supprimé.")
                                     time.sleep(1)
                                     st.rerun()
                                 except Exception as e:
                                     st.error(f"Erreur : {e}")
-                else:
-                    st.info("Aucun joueur trouvé.")
-
+                    
+                    st.markdown("---")
+            else:
+                st.info("Aucun joueur trouvé.")
         # =====================================================================
         # 9.4 - ONGLET 4 : SYSTÈME & PARAMÈTRES (Barème, API, Zone de danger)
         # =====================================================================
