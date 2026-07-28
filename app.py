@@ -98,11 +98,133 @@ dict_surnoms = charger_surnoms_equipes()
 def get_nom_affiche(nom):
     """Renvoie le nom court s'il existe, sinon le nom d'origine de l'API"""
     return dict_surnoms.get(nom, nom)
+
+# =====================================================================
+# 2 - SYSTEME DE SCRAPING GRATUIT ET AUTOMATIQUE
+# =====================================================================
     
-# =====================================================================
-# 2 - PARAMETRAGE
-# =====================================================================
-  
+def verifier_et_importer_matchs():
+    """Version robuste : scanne L'Équipe et dynamiquement TheSportsDB selon la saison en cours."""
+    matchs_traites = 0
+    url_scraping = "https://www.lequipe.fr/Rugby/top-14/page-calendrier-resultats"
+
+    
+# 2.1 - Tentative via le scraping L'Équipe (Méthode structurelle "Blindée")
+    try:
+        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+        st.session_state.logs_scraping.append(f"Debug: URL tentée = {url_scraping}")
+        response = requests.get(url_scraping, headers=headers, timeout=10)
+        
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.text, 'html.parser')
+            
+            # --- MÉTHODE BLINDÉE : On cherche les blocs sans dépendre des classes ---
+            # On récupère tous les div et on filtre ceux qui contiennent un score (" - ")
+            tous_les_divs = soup.find_all('div')
+           # --- NOUVELLE MÉTHODE BLINDÉE (Stricte) ---
+            # On cherche les div qui contiennent un score ET qui ont au moins 3 balises <span> à l'intérieur
+            # C'est cette structure qui définit un match.
+            blocs_matchs = [
+                d for d in soup.find_all('div') 
+                if " - " in d.get_text() 
+                and len(d.find_all('span')) >= 3 
+                and len(d.get_text()) < 300
+            ]
+            
+            st.session_state.logs_scraping.append(f"Méthode blindée stricte : {len(blocs_matchs)} blocs potentiels détectés.")
+            
+            # On élimine les doublons (si un bloc contient un autre bloc)
+            blocs_matchs = list(set(blocs_matchs))
+            
+            st.session_state.logs_scraping.append(f"Méthode blindée : {len(blocs_matchs)} blocs potentiels détectés.")
+            
+            for bloc in blocs_matchs:
+                try:
+                    # On récupère tous les textes des spans dans ce bloc
+                    spans = bloc.find_all('span')
+                    textes = [s.text.strip() for s in spans if len(s.text.strip()) > 1]
+                    
+                    # --- DEBUG : AFFICHER CE QU'ON A TROUVÉ ---
+                    st.session_state.logs_scraping.append(f"Debug bloc trouvé : {textes}")
+                    
+                    # On continue ton traitement normal après
+                    if len(textes) < 3:
+                        continue
+                        
+                    eq_dom = textes[0]
+                    score_txt = textes[1]
+                    eq_ext = textes[2]
+                    
+                    # DEBUG : Pour voir ce qu'on a extrait
+                    st.session_state.logs_scraping.append(f"Debug: Extrait '{eq_dom}' vs '{eq_ext}' ({score_txt})")
+                    
+                    # Calcul de l'ID et Upsert Supabase
+                    import hashlib
+                    match_string = f"{eq_dom}_{eq_ext}".encode('utf-8')
+                    match_id = int(hashlib.md5(match_string).hexdigest(), 16) % 10000000
+                    
+                    # Gestion score et statut
+                    sc_dom, sc_ext = (int(s) for s in score_txt.split("-")) if "-" in score_txt else (None, None)
+                    statut = "FT" if "-" in score_txt else "NS"
+                    
+                    supabase.table("Matchs").upsert({
+                        "id": match_id, "equipe_dom": eq_dom, "equipe_ext": eq_ext,
+                        "date_match": datetime.utcnow().isoformat(),
+                        "score_dom": sc_dom, "score_ext": sc_ext, "statut": statut
+                    }).execute()
+                    
+                    matchs_traites += 1
+                
+                except Exception as e:
+                    # On n'affiche pas les erreurs de chaque bloc pour ne pas polluer les logs
+                    continue
+        else:
+            st.session_state.logs_scraping.append(f"Erreur HTTP: {response.status_code}")
+            
+    except Exception as e:
+        st.session_state.logs_scraping.append(f"Erreur critique scraping : {e}")
+
+    # 2.2 - Sécurité TheSportsDB - CALCUL DYNAMIQUE DE LA SAISON
+#    if matchs_traites == 0:
+#        maintenant = datetime.now()
+#        annee_saison_courante = maintenant.year - 1 if maintenant.month < 8 else maintenant.year
+#        annees_a_tester = [str(annee_saison_courante - 1), str(annee_saison_courante)]
+#        
+#        for annee in annees_a_tester:
+#            try:
+#                url_tsdb = f"https://www.thesportsdb.com/api/v1/json/3/eventsseason.php?id=4413&s={annee}"
+#                res = requests.get(url_tsdb, timeout=10).json()
+#                if res.get("events"):
+#                    for event in res["events"]:
+#                        m_id = int(event["idEvent"])
+#                        statut = "LIVE" if event.get("strProgress") == "In Progress" else ("FT" if event.get("strStatus") == "Match Finished" else "NS")
+#                        
+#                        if event["intHomeScore"] is None:
+#                            date_match = (datetime.utcnow() + timedelta(days=5)).isoformat()
+#                        else:
+#                            date_match = f"{event['dateEvent']}T{event['strTime']}" if event.get('strTime') else datetime.utcnow().isoformat()
+#
+#                        supabase.table("Matchs").upsert({
+#                            "id": m_id, "equipe_dom": event["strHomeTeam"], "equipe_ext": event["strAwayTeam"],
+#                            "date_match": date_match,
+#                            "score_dom": int(event["intHomeScore"]) if event["intHomeScore"] is not None else None,
+#                            "score_ext": int(event["intAwayScore"]) if event["intAwayScore"] is not None else None,
+#                            "statut": statut
+#                        }).execute()
+#                        matchs_traites += 1
+#            except Exception as e:
+ #               st.session_state.logs_scraping.append(f"Erreur ligne {e.__traceback__.tb_lineno}: {e}")
+    # Mise à jour de l'heure du dernier passage et ajout du log
+    st.session_state.dernier_run = datetime.now(timezone.utc).strftime("%H:%M:%S UTC")
+    
+    msg_log = f"[{datetime.now(timezone.utc).strftime('%H:%M:%S')}] {matchs_traites} matchs traités."
+    st.session_state.logs_scraping.append(msg_log)
+    
+    # On garde seulement les 10 derniers logs pour ne pas encombrer la mémoire
+    st.session_state.logs_scraping = st.session_state.logs_scraping[-10:]
+            
+    return matchs_traites 
+    
 #2.3 - SAUVEGARDE AUTO PRONO (VERSION SILENCIEUSE)
 def sauvegarder_prono_auto(match_id, equipe_dom, equipe_ext, user_id_cible):
     """Sauvegarde instantanément le pronostic en arrière-plan avec une notification discrète."""
@@ -134,6 +256,9 @@ def sauvegarder_prono_auto(match_id, equipe_dom, equipe_ext, user_id_cible):
             supabase.table("Pronostics").update(donnees_prono).eq("id", prono_existant[0]["id"]).execute()
         else:
             supabase.table("Pronostics").insert(donnees_prono).execute()
+            
+        # ✨ LA NOUVEAUTÉ : Un petit toast discret en bas à droite de l'écran
+        st.toast("Pronostic enregistré ! 🏉", icon="✅")
 
     except Exception as e:
         st.error(f"Erreur sauvegarde automatique : {e}")
@@ -178,6 +303,41 @@ def verifier_fenetre_match():
         return False, "💤 Aucune fenêtre active."
     except:
         return False, "⚠️ Erreur calcul fenêtre"
+# =====================================================================
+# 3 - INITIALISATION ET GESTION DE LA SESSION
+# =====================================================================
+if "user_id" not in st.session_state: st.session_state.user_id = None
+if "is_admin" not in st.session_state: st.session_state.is_admin = False
+if "pseudo" not in st.session_state: st.session_state.pseudo = ""
+if "onglet_actif" not in st.session_state: st.session_state.onglet_actif = "📊"
+
+TRANCHES_ECARTS = ["1-6", "7-10", "11-15", "16-20", "21-30", "31-40", "41-50", "51+"]
+maintenant_paris = datetime.utcnow() + timedelta(hours=2)
+
+# =====================================================================
+# 3.1 - MOTEUR COLLABORATIF INTELLIGENT
+# =====================================================================
+
+is_active, _ = verifier_fenetre_match()
+
+if is_active:
+    # 1. On vérifie quand a eu lieu le dernier scraping dans Supabase
+    config = supabase.table("system_config").select("last_scrape").eq("id", 1).execute().data
+    last_run = datetime.fromisoformat(config[0]['last_scrape'])
+    
+    # 2. Si ça fait plus de 5 minutes (300 secondes)
+    if (datetime.now(timezone.utc) - last_run).total_seconds() > 300:
+        
+        # On lance le scraping
+        nb = verifier_et_importer_matchs()
+        
+        # On met à jour le verrou de sécurité dans la base
+        supabase.table("system_config").update({
+            "last_scrape": datetime.now(timezone.utc).isoformat()
+        }).eq("id", 1).execute()
+        
+    # Le autorefresh reste actif pour tous, mais il ne fera le travail que si nécessaire
+    st_autorefresh(interval=300000, key="live_refresh")
 
 # =====================================================================
 # 4 - ÉCRAN DE CONNEXION / INSCRIPTION
