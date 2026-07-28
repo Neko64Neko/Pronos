@@ -1913,29 +1913,44 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
             
                 col_api1, col_api2 = st.columns(2)
             
+                # Récupération de ta clé Supabase depuis tes secrets Streamlit existants
+                supabase_key = st.secrets["SUPABASE_KEY"] # Adapte le nom de ta clé si besoin (ex: SUPABASE_ANON_KEY)
+            
                 with col_api1:
                     if st.button("MAJ score (Live)"):
                         with st.spinner("Exécution de la mise à jour live..."):
                             try:
-                                # Appel direct de l'Edge Function Supabase 'update-live'
-                                res = supabase.functions.invoke("update-live", invoke_options={"method": "POST"})
-                                st.success("Mise à jour des scores effectuée avec succès via Supabase !")
-                                time.sleep(1)
-                                st.rerun()
+                                url = "https://puznnphyulbrnxjojnnc.supabase.co/functions/v1/update-live"
+                                headers = {"Authorization": f"Bearer {supabase_key}"}
+                                
+                                response = requests.post(url, headers=headers)
+                                
+                                if response.status_code == 200:
+                                    st.success("Mise à jour des scores effectuée avec succès !")
+                                    time.sleep(1)
+                                    st.rerun()
+                                else:
+                                    st.error(f"Erreur (Code {response.status_code}) : {response.text}")
                             except Exception as e:
-                                st.error(f"Erreur lors de l'appel de l'Edge Function : {e}")
+                                st.error(f"Erreur lors de l'appel : {e}")
             
                 with col_api2:
                     if st.button("MAJ Calendrier"):
                         with st.spinner("Exécution de la mise à jour du calendrier..."):
                             try:
-                                # Appel direct de l'Edge Function Supabase 'update-calendar'
-                                res = supabase.functions.invoke("update-calendar", invoke_options={"method": "POST"})
-                                st.success("Mise à jour du calendrier effectuée avec succès via Supabase !")
-                                time.sleep(1)
-                                st.rerun()
+                                url = "https://puznnphyulbrnxjojnnc.supabase.co/functions/v1/update-calendar"
+                                headers = {"Authorization": f"Bearer {supabase_key}"}
+                                
+                                response = requests.post(url, headers=headers)
+                                
+                                if response.status_code == 200:
+                                    st.success("Mise à jour du calendrier effectuée avec succès !")
+                                    time.sleep(1)
+                                    st.rerun()
+                                else:
+                                    st.error(f"Erreur (Code {response.status_code}) : {response.text}")
                             except Exception as e:
-                                st.error(f"Erreur lors de l'appel de l'Edge Function : {e}")
+                                st.error(f"Erreur lors de l'appel : {e}")
             
                 with st.expander("📜 Historique des 20 dernières requêtes"):
                     if current_logs:
