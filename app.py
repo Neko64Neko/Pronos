@@ -717,7 +717,7 @@ else:
                     pseudo_affiche = joueur['pseudo']
                 
                 sc_j = joueur["score_live"]
-                pts_m = joueur["points_manuels"]
+                pts_m = int(joueur["points_manuels"] or 0)  # <-- Conversion explicite en int ici
                 sc_j_affiche = int(sc_j) if isinstance(sc_j, float) and sc_j.is_integer() else sc_j
                 
                 # Affichage combiné du score et des points manuels si présents
