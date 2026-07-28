@@ -1891,99 +1891,55 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
                         except Exception as e:
                             st.error(f"Erreur : {e}")
 
-            # --- Sous-onglet 4.2 : Tour de contrôle API ---
+# --- Sous-onglet 4.2 : Tour de contrôle API ---
             with sub_s2:
                 st.subheader("🔌 Gestion de l'API")
                 
-                today_str = datetime.now().strftime("%Y-%m-%d")
-                
+                # 1. Affichage du compteur en direct depuis Supabase
                 try:
                     response_api = supabase.table("Configuration").select("*").eq("id", "default_config").execute()
                     if response_api.data:
                         config_api = response_api.data[0]
-                        saved_date = config_api.get("last_reset_date")
-                        
-                        if saved_date != today_str:
-                            current_count = 0
-                            current_logs = config_api.get("api_request_logs", []) or []
-                            supabase.table("Configuration").upsert({
-                                "id": "default_config",
-                                "api_request_count": 0,
-                                "last_reset_date": today_str,
-                                "api_request_logs": current_logs
-                            }, on_conflict="id").execute()
-                        else:
-                            current_count = config_api.get("api_request_count", 0)
-                            current_logs = config_api.get("api_request_logs", []) or []
+                        current_count = config_api.get("api_request_count", 0)
+                        current_logs = config_api.get("api_request_logs", []) or []
                     else:
                         current_count = 0
                         current_logs = []
-                        supabase.table("Configuration").upsert({
-                            "id": "default_config",
-                            "api_request_count": 0,
-                            "last_reset_date": today_str,
-                            "api_request_logs": []
-                        }, on_conflict="id").execute()
                 except Exception as e:
                     current_count = 0
                     current_logs = []
                 
-                st.session_state.api_request_count = current_count
-                st.session_state.api_request_logs = current_logs
-            
-                st.metric(label="Requêtes envoyées à l'API", value=f"{st.session_state.api_request_count}/50")
+                st.metric(label="Requêtes envoyées à l'API", value=f"{current_count}/50")
             
                 col_api1, col_api2 = st.columns(2)
             
-                def save_api_state(new_count, new_logs, action_name):
-                    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                    new_logs.insert(0, f"[{timestamp}] {action_name}")
-                    if len(new_logs) > 20:
-                        new_logs = new_logs[:20]
-                    
-                    try:
-                        supabase.table("Configuration").upsert({
-                            "id": "default_config",
-                            "api_request_count": new_count,
-                            "last_reset_date": today_str,
-                            "api_request_logs": new_logs
-                        }, on_conflict="id").execute()
-                    except Exception as e:
-                        st.error(f"Erreur de sauvegarde Supabase : {e}")
-                    
-                    return new_count, new_logs
-            
                 with col_api1:
-                    if st.button("MAJ score"):
-                        new_count = st.session_state.api_request_count + 1
-                        new_count, updated_logs = save_api_state(new_count, st.session_state.api_request_logs, "MAJ score (run_update)")
-                        st.session_state.api_request_count = new_count
-                        st.session_state.api_request_logs = updated_logs
-                        try:
-                            run_update()
-                            st.success("Mise à jour des scores effectuée avec succès.")
-                            time.sleep(1)
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f"Erreur lors de la mise à jour des scores : {e}")
+                    if st.button("MAJ score (Live)"):
+                        with st.spinner("Exécution de la mise à jour live..."):
+                            try:
+                                # Appel direct de l'Edge Function Supabase 'update-live'
+                                res = supabase.functions.invoke("update-live", invoke_options={"method": "POST"})
+                                st.success("Mise à jour des scores effectuée avec succès via Supabase !")
+                                time.sleep(1)
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Erreur lors de l'appel de l'Edge Function : {e}")
             
                 with col_api2:
                     if st.button("MAJ Calendrier"):
-                        new_count = st.session_state.api_request_count + 1
-                        new_count, updated_logs = save_api_state(new_count, st.session_state.api_request_logs, "MAJ Calendrier (run_calendar)")
-                        st.session_state.api_request_count = new_count
-                        st.session_state.api_request_logs = updated_logs
-                        try:
-                            run_calendar()
-                            st.success("Mise à jour du calendrier effectuée avec succès.")
-                            time.sleep(1)
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f"Erreur lors de la mise à jour du calendrier : {e}")
+                        with st.spinner("Exécution de la mise à jour du calendrier..."):
+                            try:
+                                # Appel direct de l'Edge Function Supabase 'update-calendar'
+                                res = supabase.functions.invoke("update-calendar", invoke_options={"method": "POST"})
+                                st.success("Mise à jour du calendrier effectuée avec succès via Supabase !")
+                                time.sleep(1)
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Erreur lors de l'appel de l'Edge Function : {e}")
             
                 with st.expander("📜 Historique des 20 dernières requêtes"):
-                    if st.session_state.api_request_logs:
-                        for log in st.session_state.api_request_logs:
+                    if current_logs:
+                        for log in current_logs:
                             st.text(log)
                     else:
                         st.info("Aucune requête enregistrée pour le moment.")
