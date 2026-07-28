@@ -503,10 +503,12 @@ else:
 
             scores_calculateurs = {}
             for j in tous_les_joueurs:
+                pts_manuels = float(j.get('points_manuels', 0) or 0)
                 scores_calculateurs[j['id']] = {
                     "id": j['id'],
                     "pseudo": j['pseudo'],
-                    "score_live": 0,
+                    "score_live": pts_manuels,  # Initialisé avec les points manuels pour impacter le classement
+                    "points_manuels": pts_manuels,
                     "vainqueurs": 0,
                     "ecarts": 0,
                     "bonus": 0
@@ -549,7 +551,6 @@ else:
         
                 vrai_est_nul = est_un_nul(vrai_gagnant)
                 
-                # CORRECTION ICI : Remplacement de m par match
                 if not vrai_est_nul and 'score_dom' in match and 'score_ext' in match:
                     if match['score_dom'] is not None and match['score_ext'] is not None and match['score_dom'] == match['score_ext']:
                         vrai_est_nul = True
@@ -578,14 +579,18 @@ else:
                             points_ce_match += float(pts_ecart_cfg)
         
                     scores_calculateurs[j_id]["score_live"] += points_ce_match
+                    
+                    # Comptabilisation des stats persos du joueur connecté (ou globalement si besoin)
+                    if j_id == st.session_state.user_id:
+                        scores_calculateurs[j_id]["vainqueurs"] += 1
+                        if a_bon_ecart:
+                            scores_calculateurs[j_id]["ecarts"] += 1
 
-        
-# 4. Calcul des points Questions Bonus (Barème défini à la création)
+        # 4. Calcul des points Questions Bonus
             for (j_id, q_id), rep_joueur in dict_reponses_bonus.items():
                 if j_id in scores_calculateurs and q_id in dict_points_bonus:
                     pts_config, rep_officielle = dict_points_bonus[q_id]
                     
-                    # On nettoie les entrées pour éviter les problèmes de casse/espaces
                     rep_joueur_clean = str(rep_joueur).strip().lower() if rep_joueur else ""
                     rep_officielle_clean = str(rep_officielle).strip().lower() if rep_officielle else ""
                     
@@ -593,7 +598,6 @@ else:
                         pts_attribues = 0
                         pts_config_str = str(pts_config).strip().lower()
                         
-                        # Cas 1 : Barème multiple détecté (présence de :)
                         if ":" in pts_config_str:
                             segments = pts_config_str.split(";")
                             for s in segments:
@@ -605,15 +609,12 @@ else:
                                         except ValueError:
                                             pts_attribues = 0
                                         break
-                        
-                        # Cas 2 : C'est un nombre unique classique stocké sous forme de texte
                         else:
                             try:
                                 pts_attribues = float(pts_config_str)
                             except ValueError:
                                 pts_attribues = 0
 
-                        # Incrémentation des scores
                         if pts_attribues > 0:
                             scores_calculateurs[j_id]["score_live"] += pts_attribues
                             scores_calculateurs[j_id]["bonus"] += pts_attribues
@@ -622,8 +623,7 @@ else:
             tous_les_joueurs_ordonnes = list(scores_calculateurs.values())
             tous_les_joueurs_ordonnes.sort(key=lambda x: x["score_live"], reverse=True)
 
-            # Identification des stats spécifiques du joueur connecté pour ses bulles d'en-tête
-            stats_joueur_connecte = scores_calculateurs.get(st.session_state.user_id, {"score_live": 0, "vainqueurs": 0, "ecarts": 0})
+            stats_joueur_connecte = scores_calculateurs.get(st.session_state.user_id, {"score_live": 0, "points_manuels": 0, "vainqueurs": 0, "ecarts": 0})
             
             # Recalcul précis des matchs osés réussis uniquement pour l'affichage des compteurs du joueur connecté
             stats_oses = 0
@@ -635,7 +635,6 @@ else:
                     sd, se = match.get('score_dom'), match.get('score_ext')
                     if sd is not None and se is not None:
                         vg = "home" if sd > se else ("away" if sd < se else "draw")
-        # Recalcul de la tranche pour le compteur visuel
                         vrai_ecart_points = abs(sd - se)
                         if vrai_ecart_points <= 6: vraie_tranche_m = "1-6"
                         elif vrai_ecart_points <= 10: vraie_tranche_m = "7-10"
@@ -646,16 +645,12 @@ else:
                         elif vrai_ecart_points <= 50: vraie_tranche_m = "41-50"
                         else: vraie_tranche_m = "51+"
                         
-                        # Si le joueur a le bon vainqueur
                         if p['gagnant_prevu'] == vg:
                             pronos_m = [pr for pr in pronostics_tous if pr['match_id'] == m_id]
                             nb_gagnants = sum(1 for pm in pronos_m if pm['gagnant_prevu'] == vg)
                             
-                            # Le bonus ne s'active QUE si le nombre de gagnants est inférieur à X
                             if nb_gagnants < seuil_ose_cfg:
-                                stats_oses += 1  # +1 pour le vainqueur osé
-                                
-                                # Si en plus il a le bon écart, on ajoute +1 au compteur de bonus réussis
+                                stats_oses += 1
                                 if p['ecart_prevu'] == vraie_tranche_m and vg != "draw":
                                     stats_oses += 1
 
@@ -669,7 +664,7 @@ else:
             st.error(f"Erreur de calcul du classement en direct : {e}")
             tous_les_joueurs_ordonnes = []
             rang_joueur = "-"
-            stats_joueur_connecte = {"score_live": 0, "vainqueurs": 0, "ecarts": 0}
+            stats_joueur_connecte = {"score_live": 0, "points_manuels": 0, "vainqueurs": 0, "ecarts": 0}
             stats_oses = 0
 
         suffixe = "er" if rang_joueur == 1 else "e"
@@ -706,7 +701,7 @@ else:
         </div>
         """.replace("\n", ""), unsafe_allow_html=True)
 
-# --- TABLEAU DU CLASSEMENT GÉNÉRAL GÉNÉRÉ EN DIRECT ---
+        # --- TABLEAU DU CLASSEMENT GÉNÉRAL GÉNÉRÉ EN DIRECT ---
         st.subheader(" 🏆 Classement")
         if tous_les_joueurs_ordonnes:
             lignes_html = ""
@@ -722,10 +717,17 @@ else:
                     pseudo_affiche = joueur['pseudo']
                 
                 sc_j = joueur["score_live"]
+                pts_m = joueur["points_manuels"]
                 sc_j_affiche = int(sc_j) if isinstance(sc_j, float) and sc_j.is_integer() else sc_j
                 
-                # Alignements : Position (droite), Joueur (gauche), Points (centre)
-                lignes_html += f'<tr style="{style_ligne} border-bottom: 1px solid #e2e8f0;"><td style="padding: 12px; text-align: right; color: inherit;">{prefixe_rang}</td><td style="padding: 12px; text-align: left; color: inherit;">{pseudo_affiche}</td><td style="padding: 12px; text-align: center; font-weight: bold; color: #000000;">{sc_j_affiche}</td></tr>'
+                # Affichage combiné du score et des points manuels si présents
+                if pts_m != 0:
+                    pts_m_str = f" ({pts_m:+d} 🎁)"
+                    points_cellule = f"<b>{sc_j_affiche}</b> <span style='font-size: 11px; color: #d97706; font-weight: normal;'>{pts_m_str}</span>"
+                else:
+                    points_cellule = f"<b>{sc_j_affiche}</b>"
+                
+                lignes_html += f'<tr style="{style_ligne} border-bottom: 1px solid #e2e8f0;"><td style="padding: 12px; text-align: right; color: inherit;">{prefixe_rang}</td><td style="padding: 12px; text-align: left; color: inherit;">{pseudo_affiche}</td><td style="padding: 12px; text-align: center; color: #000000;">{points_cellule}</td></tr>'
             
             st.markdown(f"""
             <div style="background-color: #f8fafc; border-radius: 12px; padding: 15px; border: 1px solid #e2e8f0;">
@@ -1841,39 +1843,45 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
                     st.error(f"Erreur lors du chargement du module de validation : {e}")
 
 # =====================================================================
-        # 9.3 - ONGLET 3 : JOUEURS & POINTS (Cartes responsives pour Mobile / PC)
+        # 9.3 - ONGLET 3 : JOUEURS & POINTS (Score classement + Points manuels)
         # =====================================================================
         with tab_joueurs:
             st.subheader("👥 Gestion des Joueurs & Points")
-            st.info("Retrouvez ci-dessous la liste de tous les joueurs et les actions d'administration associées.")
+            st.info("Retrouvez la liste des joueurs, leur score au classement, leurs points manuels et les actions associées.")
             
             tous_les_joueurs = supabase.table("Joueurs").select("*").execute().data
             
             if tous_les_joueurs:
                 for j in tous_les_joueurs:
-                    # Utilisation d'un conteneur avec bordure pour faire une "carte" propre par joueur
                     with st.container(border=True):
-                        # Ligne 1 : Pseudo et Score
-                        col_info1, col_info2 = st.columns([3, 1])
+                        # Récupération des scores (on gère le cas où la colonne points_manuels n'existe pas encore)
+                        score_classement = j.get('score', 0) or 0
+                        points_manuels = j.get('points_manuels', 0) or 0
+                        
+                        # Affichage des infos sous forme de colonnes pour les métriques
+                        col_info1, col_m1, col_m2 = st.columns([2, 1, 1])
                         with col_info1:
                             st.markdown(f"### 👤 {j.get('pseudo', 'Inconnu')}")
-                        with col_info2:
-                            st.metric(label="Score", value=f"{j.get('score', 0)} pts")
+                        with col_m1:
+                            st.metric(label="Score Classement", value=f"{score_classement} pts")
+                        with col_m2:
+                            st.metric(label="Points Manuels", value=f"{points_manuels:+d}" if points_manuels != 0 else "0")
                         
-                        # Ligne 2 : Les 3 boutons d'action répartis proprement
+                        # Ligne des boutons d'action
                         b_col1, b_col2, b_col3 = st.columns(3)
                         
-                        # 1. Bouton Points
+                        # 1. Bouton Points (modifie uniquement les points manuels)
                         with b_col1:
                             with st.popover("🎁 Points", use_container_width=True):
-                                st.write(f"**Ajuster les points de {j['pseudo']}**")
-                                pts_delta = st.number_input("Delta (+/-)", value=1, step=1, key=f"pts_val_{j['id']}")
+                                st.write(f"**Ajuster les points manuels de {j['pseudo']}**")
+                                pts_delta = st.number_input("Points à ajouter (+) ou retirer (-)", value=1, step=1, key=f"pts_val_{j['id']}")
                                 
                                 if st.button("Appliquer", key=f"btn_apply_pts_{j['id']}", use_container_width=True):
                                     try:
-                                        nouveau_score = (j.get('score', 0) or 0) + int(pts_delta)
-                                        supabase.table("Joueurs").update({"score": nouveau_score}).eq("id", j['id']).execute()
-                                        st.success(f"✅ {pts_delta:+d} pts appliqués !")
+                                        nouveau_pts_manuels = points_manuels + int(pts_delta)
+                                        # On met à jour uniquement la colonne dédiée aux points manuels
+                                        supabase.table("Joueurs").update({"points_manuels": nouveau_pts_manuels}).eq("id", j['id']).execute()
+                                        st.success(f"✅ {pts_delta:+d} pts manuels appliqués !")
                                         time.sleep(1)
                                         st.rerun()
                                     except Exception as e:
