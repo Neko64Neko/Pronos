@@ -361,13 +361,13 @@ else:
             pts_ecart_cfg = float(st.session_state.get("pts_ecart", 2))
             seuil_ose_cfg = int(st.session_state.get("pct_ose", 3))
             pts_v_ose_cfg = float(st.session_state.get("pts_v_ose", 2))
-            pts_e_ose_cfg = float(st.session_state.get("pts_e_ose", 3))
+            pts_e_ose_cfg = float(st.session_state.get("pts_e_ose", 1))
         except Exception as e:
             pts_gagnant_cfg = 1.0
             pts_ecart_cfg = 2.0
             seuil_ose_cfg = 3
             pts_v_ose_cfg = 2.0
-            pts_e_ose_cfg = 3.0
+            pts_e_ose_cfg = 1.0
          
         try:
             tous_les_joueurs = supabase.table("Joueurs").select("*").execute().data
@@ -1042,17 +1042,17 @@ elif st.session_state.onglet_actif == "📺":
     try:
         config_supabase = supabase.table("Configuration").select("*").execute().data
         config_data = config_supabase[0] if config_supabase else {}
-        pts_gagnant_cfg = float(config_data.get('pts_gagnant', 2))
-        pts_ecart_cfg = float(config_data.get('pts_ecart', 3))
+        pts_gagnant_cfg = float(config_data.get('pts_gagnant', 1))
+        pts_ecart_cfg = float(config_data.get('pts_ecart', 2))
         seuil_ose_cfg = float(config_data.get('seuil_poursentage_ose', 3))
         pts_v_ose_cfg = float(config_data.get('bonus_vainqueur_ose', 2))
-        pts_e_ose_cfg = float(config_data.get('bonus_ecart_ose', 3))
+        pts_e_ose_cfg = float(config_data.get('bonus_ecart_ose', 1))
     except Exception:
-        pts_gagnant_cfg = 2.0
-        pts_ecart_cfg = 3.0
+        pts_gagnant_cfg = 1.0
+        pts_ecart_cfg = 2.0
         seuil_ose_cfg = 3.0
         pts_v_ose_cfg = 2.0
-        pts_e_ose_cfg = 3.0
+        pts_e_ose_cfg = 1.0
     
     with st.spinner("Mise à jour des scores et du classement..."):
         try:
