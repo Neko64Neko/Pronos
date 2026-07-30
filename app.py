@@ -342,7 +342,8 @@ else:
             st.session_state.pts_vainqueur = conf.get("pts_gagnant", 1)
             st.session_state.pts_ecart = conf.get("pts_ecart", 2)
             st.session_state.pct_ose = conf.get("seuil_poursentage_ose", 3)
-            st.session_state.mult_ose = conf.get("multiplicateur_ose", 2)
+            st.session_state.pts_v_ose = conf.get("pts_vainqueur_ose", 2)
+            st.session_state.pts_e_ose = conf.get("pts_ecart_ose", 3)
             
             st.sidebar.success("Configuration chargée depuis Supabase") # Petit feedback visuel
     except Exception as e:
@@ -359,12 +360,14 @@ else:
             pts_gagnant_cfg = float(st.session_state.get("pts_vainqueur", 1))
             pts_ecart_cfg = float(st.session_state.get("pts_ecart", 2))
             seuil_ose_cfg = int(st.session_state.get("pct_ose", 3))
-            mult_ose_cfg = float(st.session_state.get("mult_ose", 2))
+            pts_v_ose_cfg = float(st.session_state.get("pts_v_ose", 2))
+            pts_e_ose_cfg = float(st.session_state.get("pts_e_ose", 3))
         except Exception as e:
             pts_gagnant_cfg = 1.0
             pts_ecart_cfg = 2.0
             seuil_ose_cfg = 3
-            mult_ose_cfg = 2.0
+            pts_v_ose_cfg = 2.0
+            pts_e_ose_cfg = 3.0
          
         try:
             tous_les_joueurs = supabase.table("Joueurs").select("*").execute().data
@@ -446,9 +449,9 @@ else:
                     a_bon_ecart = True if vrai_est_nul else (p.get('ecart_prevu') == vraie_tranche)
         
                     if mises_gagnant <= int(float(seuil_ose_cfg)):
-                        points_ce_match += float(pts_gagnant_cfg) * float(mult_ose_cfg)
+                        points_ce_match += float(pts_gagnant_cfg) + float(pts_v_ose_cfg)
                         if a_bon_ecart:
-                            points_ce_match += float(pts_ecart_cfg) * float(mult_ose_cfg)
+                            points_ce_match += float(pts_ecart_cfg) + float(pts_e_ose_cfg)
                     else:
                         points_ce_match += float(pts_gagnant_cfg)
                         if a_bon_ecart:
@@ -1041,13 +1044,15 @@ elif st.session_state.onglet_actif == "📺":
         config_data = config_supabase[0] if config_supabase else {}
         pts_gagnant_cfg = float(config_data.get('pts_gagnant', 2))
         pts_ecart_cfg = float(config_data.get('pts_ecart', 3))
-        seuil_ose_cfg = float(config_data.get('seuil_poursentage_ose', 0.2))
-        mult_ose_cfg = float(config_data.get('multiplicateur_ose', 2))
+        seuil_ose_cfg = float(config_data.get('seuil_poursentage_ose', 3))
+        pts_v_ose_cfg = float(config_data.get('pts_vainqueur_ose', 2))
+        pts_e_ose_cfg = float(config_data.get('pts_ecart_ose', 3))
     except Exception:
         pts_gagnant_cfg = 2.0
         pts_ecart_cfg = 3.0
-        seuil_ose_cfg = 0.2
-        mult_ose_cfg = 2.0
+        seuil_ose_cfg = 3.0
+        pts_v_ose_cfg = 2.0
+        pts_e_ose_cfg = 3.0
     
     with st.spinner("Mise à jour des scores et du classement..."):
         try:
@@ -1196,15 +1201,18 @@ elif st.session_state.onglet_actif == "📺":
 
                             if a_bon_vainqueur:
                                 a_bon_ecart = True if vrai_est_nul else (ec_prevu == vraie_tranche)
-                                base_match = float(pts_gagnant_cfg)
-                                if a_bon_ecart:
-                                    base_match += float(pts_ecart_cfg)
-                            
+                                
                                 is_ose = mises_gagnant <= int(float(seuil_ose_cfg))
+                                points_match_courant = float(pts_gagnant_cfg)
                                 if is_ose:
-                                    scores_generaux[j_id] += float(base_match) * float(mult_ose_cfg)
-                                else:
-                                    scores_generaux[j_id] += float(base_match)
+                                    points_match_courant += float(pts_v_ose_cfg)
+                                
+                                if a_bon_ecart:
+                                    points_match_courant += float(pts_ecart_cfg)
+                                    if is_ose:
+                                        points_match_courant += float(pts_e_ose_cfg)
+                                
+                                scores_generaux[j_id] += points_match_courant
 
             # Tri strict : score décroissant (-score), puis pseudo croissant (A-Z) en cas d'égalité
             tous_les_joueurs_tries = sorted(
@@ -1346,28 +1354,26 @@ elif st.session_state.onglet_actif == "📺":
                                     
                                     if a_bon_vainqueur:
                                         a_bon_ecart = True if vrai_est_nul else (ec_prevu == vraie_tranche)
-                                        
-                                        base_match = float(pts_gagnant_cfg)
-                                        if a_bon_ecart:
-                                            base_match += float(pts_ecart_cfg)
-                                            texte_badge_resultat = "⭐ Bon écart"
-                                            color_bg = "#d1fae5"  
-                                            color_txt = "#065f46"
-                                        else:
-                                            texte_badge_resultat = "✅ Bon vainqueur"
-                                            color_bg = "#dbeafe"  
-                                            color_txt = "#1e40af"
-                                        
                                         is_ose = mises_gagnant <= int(float(seuil_ose_cfg))
                                         
+                                        pts = float(pts_gagnant_cfg)
                                         if is_ose:
-                                            pts = float(base_match) * float(mult_ose_cfg)
-                                            badge_ose = " 🔥 x2"
-                                            color_bg = "#fde047"  
-                                            color_txt = "#713f12"  
-                                            texte_badge_resultat += " [OSÉ]"
+                                            pts += float(pts_v_ose_cfg)
+                                            
+                                        if a_bon_ecart:
+                                            pts += float(pts_ecart_cfg)
+                                            if is_ose:
+                                                pts += float(pts_e_ose_cfg)
+                                            texte_badge_resultat = "⭐ Bon écart" + (" [OSÉ]" if is_ose else "")
+                                            color_bg = "#d1fae5" if not is_ose else "#fde047"
+                                            color_txt = "#065f46" if not is_ose else "#713f12"
                                         else:
-                                            pts = float(base_match)
+                                            texte_badge_resultat = "✅ Bon vainqueur" + (" [OSÉ]" if is_ose else "")
+                                            color_bg = "#dbeafe" if not is_ose else "#fde047"
+                                            color_txt = "#1e40af" if not is_ose else "#713f12"
+                                        
+                                        if is_ose:
+                                            badge_ose = " 🔥 OSÉ"
                                     else:
                                         pts = 0.0
                                 
@@ -1851,7 +1857,8 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
                 if "pts_vainqueur" not in st.session_state: st.session_state.pts_vainqueur = 2
                 if "pts_ecart" not in st.session_state: st.session_state.pts_ecart = 2
                 if "pct_ose" not in st.session_state: st.session_state.pct_ose = 3
-                if "mult_ose" not in st.session_state: st.session_state.mult_ose = 2.0
+                if "pts_v_ose" not in st.session_state: st.session_state.pts_v_ose = 2
+                if "pts_e_ose" not in st.session_state: st.session_state.pts_e_ose = 3
                 
                 with st.form("form_bareme_points"):
                     col_b1, col_b2 = st.columns(2)
@@ -1866,7 +1873,8 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
                             step=1, 
                             help="Le bonus s'active uniquement si le nombre de joueurs ayant trouvé le bon vainqueur est INFÉRIEUR OU ÉGAL à ce nombre X."
                         )
-                        mult_o = st.number_input("Multiplicateur du prono osé", min_value=1.0, max_value=10.0, value=float(st.session_state.mult_ose), step=0.5)
+                        pts_v_o = st.number_input("Points vainqueur osé (M)", min_value=0, value=int(st.session_state.pts_v_ose), step=1, help="Points supplémentaires ajoutés si le vainqueur osé est trouvé.")
+                        pts_e_o = st.number_input("Points Ecart osé (N)", min_value=0, value=int(st.session_state.pts_e_ose), step=1, help="Points supplémentaires ajoutés pour l'écart sur un prono osé (total M+N si vainqueur + écart).")
                     
                     if st.form_submit_button("💾 Sauvegarder le barème"):
                         data_bareme = {
@@ -1874,7 +1882,8 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
                             "pts_gagnant": int(pts_v),
                             "pts_ecart": int(pts_e),
                             "seuil_poursentage_ose": int(seuil_o),
-                            "multiplicateur_ose": int(mult_o)
+                            "pts_vainqueur_ose": int(pts_v_o),
+                            "pts_ecart_ose": int(pts_e_o)
                         }
                         
                         try:
@@ -1883,9 +1892,10 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
                             st.session_state.pts_vainqueur = pts_v
                             st.session_state.pts_ecart = pts_e
                             st.session_state.pct_ose = seuil_o
-                            st.session_state.mult_ose = mult_o
+                            st.session_state.pts_v_ose = pts_v_o
+                            st.session_state.pts_e_ose = pts_e_o
                             
-                            st.success(f"🎉 Barème sauvegardé ! Le seuil est désormais fixé à moins de {seuil_o} joueur(s) gagnant(s).")
+                            st.success(f"🎉 Barème sauvegardé ! Le seuil est fixé à moins de {seuil_o} joueur(s) gagnant(s) (Bonus : +{pts_v_o} pts pour le vainqueur, +{pts_v_o}+{pts_e_o} pts pour vainqueur+écart).")
                             time.sleep(1)
                             st.rerun()
                         except Exception as e:
