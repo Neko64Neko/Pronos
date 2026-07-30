@@ -342,8 +342,8 @@ else:
             st.session_state.pts_vainqueur = conf.get("pts_gagnant", 1)
             st.session_state.pts_ecart = conf.get("pts_ecart", 2)
             st.session_state.pct_ose = conf.get("seuil_poursentage_ose", 3)
-            st.session_state.pts_v_ose = conf.get("pts_vainqueur_ose", 2)
-            st.session_state.pts_e_ose = conf.get("pts_ecart_ose", 3)
+            st.session_state.pts_v_ose = conf.get("bonus_vainqueur_ose", 2)
+            st.session_state.pts_e_ose = conf.get("bonus_ecart_ose", 3)
             
             st.sidebar.success("Configuration chargée depuis Supabase") # Petit feedback visuel
     except Exception as e:
@@ -1045,8 +1045,8 @@ elif st.session_state.onglet_actif == "📺":
         pts_gagnant_cfg = float(config_data.get('pts_gagnant', 2))
         pts_ecart_cfg = float(config_data.get('pts_ecart', 3))
         seuil_ose_cfg = float(config_data.get('seuil_poursentage_ose', 3))
-        pts_v_ose_cfg = float(config_data.get('pts_vainqueur_ose', 2))
-        pts_e_ose_cfg = float(config_data.get('pts_ecart_ose', 3))
+        pts_v_ose_cfg = float(config_data.get('bonus_vainqueur_ose', 2))
+        pts_e_ose_cfg = float(config_data.get('bonus_ecart_ose', 3))
     except Exception:
         pts_gagnant_cfg = 2.0
         pts_ecart_cfg = 3.0
@@ -1882,8 +1882,8 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
                             "pts_gagnant": int(pts_v),
                             "pts_ecart": int(pts_e),
                             "seuil_poursentage_ose": int(seuil_o),
-                            "pts_vainqueur_ose": int(pts_v_o),
-                            "pts_ecart_ose": int(pts_e_o)
+                            "bonus_vainqueur_ose": int(pts_v_o),
+                            "bonus_ecart_ose": int(pts_e_o)
                         }
                         
                         try:
