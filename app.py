@@ -9,6 +9,60 @@ import extra_streamlit_components as stx
 import pytz
 from streamlit_autorefresh import st_autorefresh
 import urllib.parse
+import streamlit.components.v1 as components
+
+# =====================================================================
+# 0 - FONCTION POUR LES NOTIFICATIONS PUSH
+# =====================================================================
+def injecter_script_notifications(user_id):
+    """Injecte le script JavaScript pour demander la permission push et enregistrer le token."""
+    js_code = f"""
+    <script type="module">
+      import {{ initializeApp }} from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
+      import {{ getMessaging, getToken }} from "https://www.gstatic.com/firebasejs/12.17.1/firebase-messaging.js";
+
+      const firebaseConfig = {{
+        apiKey: "AIzaSyCjh-8QKGlPXvaGebV4mUzOS1nZTsvic24",
+        authDomain: "notif-pronos.firebaseapp.com",
+        projectId: "notif-pronos",
+        storageBucket: "notif-pronos.firebasestorage.app",
+        messagingSenderId: "38774071291",
+        appId: "1:38774071291:web:9a651309225128598d355e"
+      }};
+
+      const app = initializeApp(firebaseConfig);
+      const messaging = getMessaging(app);
+
+      async function demanderPermission() {{
+        try {{
+          const permission = await Notification.requestPermission();
+          if (permission === 'granted') {{
+            const token = await getToken(messaging, {{
+              vapidKey: 'METTRE_TA_CLE_VAPID_ICI'
+            }});
+            
+            if (token) {{
+              // Envoi direct du jeton dans ta table 'Joueurs' de Supabase
+              fetch('https://<TON_PROJECT_REF>.supabase.co/rest/v1/Joueurs?id=eq.{user_id}', {{
+                method: 'PATCH',
+                headers: {{
+                  'Content-Type': 'application/json',
+                  'apikey': 'TA_SUPABASE_ANON_KEY',
+                  'Authorization': 'Bearer TA_SUPABASE_ANON_KEY'
+                }},
+                body: JSON.stringify({{ push_token: token }})
+              }});
+            }}
+          }}
+        }} catch (error) {{
+          console.error("Erreur notifications :", error);
+        }}
+      }}
+
+      demanderPermission();
+    </script>
+    """
+    components.html(js_code, height=0)
 
 # 1 - PARAMETRES ET CONNEXION
 import streamlit.components.v1 as components
@@ -227,6 +281,9 @@ if st.session_state.user_id is None:
 # 5 - INTERFACE PRINCIPALE (UTILISATEUR CONNECTÉ)
 # =====================================================================
 else:
+    # --- 5.0 - ACTIVATION DES NOTIFICATIONS PUSH ---
+    injecter_script_notifications(st.session_state.user_id)
+    
     # --- 5.1 - CONFIGURATION DES ONGLETS ACCESSIBLES ---
     icones_navigation = ["📊", "🏉", "📅"]
     if st.session_state.is_admin:
