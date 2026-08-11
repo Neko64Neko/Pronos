@@ -16,6 +16,11 @@ import streamlit.components.v1 as components
 # =====================================================================
 def injecter_script_notifications(user_id):
     """Injecte le script JavaScript pour demander la permission push et enregistrer le token."""
+    
+    # On récupère les secrets directement depuis Python
+    supabase_url = st.secrets["SUPABASE_URL"]
+    supabase_key = st.secrets["SUPABASE_KEY"]
+
     js_code = f"""
     <script type="module">
       import {{ initializeApp }} from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
@@ -38,17 +43,17 @@ def injecter_script_notifications(user_id):
           const permission = await Notification.requestPermission();
           if (permission === 'granted') {{
             const token = await getToken(messaging, {{
-              vapidKey: 'METTRE_TA_CLE_VAPID_ICI'
+              vapidKey: BOIFbJ36HvSEWbG_0ztnYhAgk297l2b_sLkkkFrq2-NK5PEswJm1aupdn6kGCG3-mJK-S5QLAU2lUZwpaqwN3aQ
             }});
             
             if (token) {{
-              // Envoi direct du jeton dans ta table 'Joueurs' de Supabase
-              fetch('https://<TON_PROJECT_REF>.supabase.co/rest/v1/Joueurs?id=eq.{user_id}', {{
+              // On injecte dynamiquement l'URL et la clé Supabase sécurisées par Python
+              fetch('{supabase_url}/rest/v1/Joueurs?id=eq.{user_id}', {{
                 method: 'PATCH',
                 headers: {{
                   'Content-Type': 'application/json',
-                  'apikey': 'TA_SUPABASE_ANON_KEY',
-                  'Authorization': 'Bearer TA_SUPABASE_ANON_KEY'
+                  'apikey': '{supabase_key}',
+                  'Authorization': 'Bearer {supabase_key}'
                 }},
                 body: JSON.stringify({{ push_token: token }})
               }});
