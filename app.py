@@ -14,60 +14,36 @@ import streamlit.components.v1 as components
 # =====================================================================
 # 0 - FONCTION POUR LES NOTIFICATIONS PUSH
 # =====================================================================
-def injecter_script_notifications(user_id):
-    """Injecte le script JavaScript pour demander la permission push et enregistrer le token."""
-    
-    # On récupère les secrets directement depuis Python
-    supabase_url = st.secrets["SUPABASE_URL"]
-    supabase_key = st.secrets["SUPABASE_KEY"]
+# --- Nouveau bloc pour les notifications ---
+user_id = st.session_state.get("user_id")
 
-    js_code = f"""
-    <script type="module">
-      import {{ initializeApp }} from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
-      import {{ getMessaging, getToken }} from "https://www.gstatic.com/firebasejs/12.17.1/firebase-messaging.js";
+if user_id:
+    # 1. Vérifier si le token est déjà en base de données
+    try:
+        res = supabase.table("Joueurs").select("push_token").eq("id", user_id).execute()
+        has_token = res.data and res.data[0].get("push_token") is not None
+    except Exception:
+        has_token = False
 
-      const firebaseConfig = {{
-        apiKey: "AIzaSyCjh-8QKGlPXvaGebV4mUzOS1nZTsvic24",
-        authDomain: "notif-pronos.firebaseapp.com",
-        projectId: "notif-pronos",
-        storageBucket: "notif-pronos.firebasestorage.app",
-        messagingSenderId: "38774071291",
-        appId: "1:38774071291:web:9a651309225128598d355e"
-      }};
-
-      const app = initializeApp(firebaseConfig);
-      const messaging = getMessaging(app);
-
-      async function demanderPermission() {{
-        try {{
-          const permission = await Notification.requestPermission();
-          if (permission === 'granted') {{
-            const token = await getToken(messaging, {{
-              vapidKey: 'BOIFbJ36HvSEWbG_0ztnYhAgk297l2b_sLkkkFrq2-NK5PEswJm1aupdn6kGCG3-mJK-S5QLAU2lUZwpaqwN3aQ'
-            }});
-            
-            if (token) {{
-              // On injecte dynamiquement l'URL et la clé Supabase sécurisées par Python
-              fetch('{supabase_url}/rest/v1/Joueurs?id=eq.{user_id}', {{
-                method: 'PATCH',
-                headers: {{
-                  'Content-Type': 'application/json',
-                  'apikey': '{supabase_key}',
-                  'Authorization': 'Bearer {supabase_key}'
-                }},
-                body: JSON.stringify({{ push_token: token }})
-              }});
-            }}
-          }}
-        }} catch (error) {{
-          console.error("Erreur notifications :", error);
-        }}
-      }}
-
-      demanderPermission();
-    </script>
-    """
-    components.html(js_code, height=0)
+    # 2. Affichage conditionnel
+    if has_token:
+        st.success("✅ Notifications activées sur votre smartphone.")
+    else:
+        st.warning("⚠️ Vos notifications ne sont pas activées.")
+        
+        # Remplace par ton URL GitHub Pages réelle
+        github_url = "https://neko64neko.github.io/notif-pronos/"
+        
+        # On passe l'user_id dans l'URL pour que la page GitHub sache qui enregistrer
+        full_url = f"{github_url}?user_id={user_id}"
+        
+        st.markdown(
+            f'<a href="{full_url}" target="_blank">'
+            '<button style="background-color:#ff4b4b; color:white; padding:10px 20px; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">'
+            '🔔 Activer les notifications sur mon téléphone'
+            '</button></a>',
+            unsafe_allow_html=True
+        )
 
 # 1 - PARAMETRES ET CONNEXION
 import streamlit.components.v1 as components
