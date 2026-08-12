@@ -262,8 +262,6 @@ if st.session_state.user_id is None:
 # 5 - INTERFACE PRINCIPALE (UTILISATEUR CONNECTÉ)
 # =====================================================================
 else:
-    # --- 5.0 - ACTIVATION DES NOTIFICATIONS PUSH ---
-    injecter_script_notifications(st.session_state.user_id)
     
     # --- 5.1 - CONFIGURATION DES ONGLETS ACCESSIBLES ---
     icones_navigation = ["📊", "🏉", "📅"]
