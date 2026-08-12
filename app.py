@@ -43,7 +43,7 @@ def injecter_script_notifications(user_id):
           const permission = await Notification.requestPermission();
           if (permission === 'granted') {{
             const token = await getToken(messaging, {{
-              vapidKey: BOIFbJ36HvSEWbG_0ztnYhAgk297l2b_sLkkkFrq2-NK5PEswJm1aupdn6kGCG3-mJK-S5QLAU2lUZwpaqwN3aQ
+              vapidKey: 'BOIFbJ36HvSEWbG_0ztnYhAgk297l2b_sLkkkFrq2-NK5PEswJm1aupdn6kGCG3-mJK-S5QLAU2lUZwpaqwN3aQ'
             }});
             
             if (token) {{
