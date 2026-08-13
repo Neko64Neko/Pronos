@@ -26,6 +26,7 @@ if user_id:
         has_token = False
 
     # 2. Affichage conditionnel
+    st.write("Debug - Data reçue de Supabase :", res.data)
     if has_token:
         st.success("✅ Notifications activées sur votre smartphone.")
     else:
