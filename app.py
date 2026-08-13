@@ -26,7 +26,11 @@ if user_id:
         has_token = False
 
     # 2. Affichage conditionnel
-    st.write("Debug - Data reçue de Supabase :", res.data)
+    res = supabase.table("Joueurs").select("push_token").eq("id", user_id).execute()
+    st.write("--- DEBOGAGE ---")
+    st.write("Type de l'objet res :", type(res))
+    st.write("Contenu brut de res :", res)
+    
     if has_token:
         st.success("✅ Notifications activées sur votre smartphone.")
     else:
