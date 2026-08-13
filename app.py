@@ -11,48 +11,6 @@ from streamlit_autorefresh import st_autorefresh
 import urllib.parse
 import streamlit.components.v1 as components
 
-# =====================================================================
-# 0 - FONCTION POUR LES NOTIFICATIONS PUSH
-# =====================================================================
-# --- Nouveau bloc pour les notifications ---
-user_id = st.session_state.get("user_id")
-
-if user_id:
-    # 1. Vérifier si le token est déjà en base de données
-    try:
-        res = supabase.table("Joueurs").select("push_token").eq("id", user_id).execute()
-        has_token = res.data and res.data[0].get("push_token") is not None
-    except Exception:
-        has_token = False
-
-    # 2. Affichage conditionnel
-    try:
-        res = supabase.table("Joueurs").select("push_token").eq("id", user_id).execute()
-        st.write("--- DEBOGAGE ---")
-        st.write("Type de l'objet res :", type(res))
-        st.write("Contenu brut de res :", res)
-    except Exception as e:
-        st.error(f"Erreur lors de l'exécution de la requête : {e}")
-    
-    if has_token:
-        st.success("✅ Notifications activées sur votre smartphone.")
-    else:
-        st.warning("⚠️ Vos notifications ne sont pas activées.")
-        
-        # Remplace par ton URL GitHub Pages réelle
-        github_url = "https://neko64neko.github.io/notif-pronos/"
-        
-        # On passe l'user_id dans l'URL pour que la page GitHub sache qui enregistrer
-        full_url = f"{github_url}?user_id={user_id}"
-        
-        st.markdown(
-            f'<a href="{full_url}" target="_blank">'
-            '<button style="background-color:#ff4b4b; color:white; padding:10px 20px; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">'
-            '🔔 Activer les notifications sur mon téléphone'
-            '</button></a>',
-            unsafe_allow_html=True
-        )
-
 # 1 - PARAMETRES ET CONNEXION
 import streamlit.components.v1 as components
 
@@ -133,6 +91,48 @@ dict_surnoms = charger_surnoms_equipes()
 def get_nom_affiche(nom):
     """Renvoie le nom court s'il existe, sinon le nom d'origine de l'API"""
     return dict_surnoms.get(nom, nom)
+    
+# =====================================================================
+# 0 - FONCTION POUR LES NOTIFICATIONS PUSH
+# =====================================================================
+# --- Nouveau bloc pour les notifications ---
+user_id = st.session_state.get("user_id")
+
+if user_id:
+    # 1. Vérifier si le token est déjà en base de données
+    try:
+        res = supabase.table("Joueurs").select("push_token").eq("id", user_id).execute()
+        has_token = res.data and res.data[0].get("push_token") is not None
+    except Exception:
+        has_token = False
+
+    # 2. Affichage conditionnel
+    try:
+        res = supabase.table("Joueurs").select("push_token").eq("id", user_id).execute()
+        st.write("--- DEBOGAGE ---")
+        st.write("Type de l'objet res :", type(res))
+        st.write("Contenu brut de res :", res)
+    except Exception as e:
+        st.error(f"Erreur lors de l'exécution de la requête : {e}")
+    
+    if has_token:
+        st.success("✅ Notifications activées sur votre smartphone.")
+    else:
+        st.warning("⚠️ Vos notifications ne sont pas activées.")
+        
+        # Remplace par ton URL GitHub Pages réelle
+        github_url = "https://neko64neko.github.io/notif-pronos/"
+        
+        # On passe l'user_id dans l'URL pour que la page GitHub sache qui enregistrer
+        full_url = f"{github_url}?user_id={user_id}"
+        
+        st.markdown(
+            f'<a href="{full_url}" target="_blank">'
+            '<button style="background-color:#ff4b4b; color:white; padding:10px 20px; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">'
+            '🔔 Activer les notifications sur mon téléphone'
+            '</button></a>',
+            unsafe_allow_html=True
+        )
 
 # =====================================================================
 # 2 - SYSTEME DE SCRAPING GRATUIT ET AUTOMATIQUE
