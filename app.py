@@ -26,10 +26,13 @@ if user_id:
         has_token = False
 
     # 2. Affichage conditionnel
-    res = supabase.table("Joueurs").select("push_token").eq("id", user_id).execute()
-    st.write("--- DEBOGAGE ---")
-    st.write("Type de l'objet res :", type(res))
-    st.write("Contenu brut de res :", res)
+    try:
+        res = supabase.table("Joueurs").select("push_token").eq("id", user_id).execute()
+        st.write("--- DEBOGAGE ---")
+        st.write("Type de l'objet res :", type(res))
+        st.write("Contenu brut de res :", res)
+    except Exception as e:
+        st.error(f"Erreur lors de l'exécution de la requête : {e}")
     
     if has_token:
         st.success("✅ Notifications activées sur votre smartphone.")
