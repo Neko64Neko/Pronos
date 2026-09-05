@@ -406,7 +406,8 @@ else:
         try:
             tous_les_joueurs = supabase.table("Joueurs").select("*").execute().data
             pronostics_tous = supabase.table("Pronostics").select("*").execute().data
-            matchs_comptabilises = supabase.table("Matchs").select("*").in_("statut", ["FT", "LIVE"]).execute().data
+            # On récupère tous les matchs qui ont un score enregistré (plus besoin de filtrer par statut strict)
+            matchs_comptabilises = supabase.table("Matchs").select("*").not_.is_("score_dom", "null").execute().data
             questions_bonus = supabase.table("Questions_Bonus").select("*").execute().data
             reponses_bonus = supabase.table("Réponses_Questions").select("*").execute().data
 
