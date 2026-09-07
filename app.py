@@ -131,60 +131,65 @@ if user_id:
 # =====================================================================
     
     
-#2.3 - SAUVEGARDE AUTO PRONO (VERSION SILENCIEUSE)
+# 2.3 - SAUVEGARDE AUTO PRONO (VERSION UPSERT)
 def sauvegarder_prono_auto(match_id, equipe_dom, equipe_ext, user_id_cible):
-    """Sauvegarde instantanément le pronostic en arrière-plan avec une notification discrète."""
-    vrai_nom_gagnant = st.session_state.get(f"w_{match_id}_{user_id_cible}")
-    ecart = st.session_state.get(f"m_{match_id}_{user_id_cible}")
-    
-    if (not vrai_nom_gagnant or vrai_nom_gagnant == "...") and (not ecart or ecart == "..."):
-        return
+  """Sauvegarde instantanément le pronostic en arrière-plan avec .upsert()."""
+  vrai_nom_gagnant = st.session_state.get(f"w_{match_id}_{user_id_cible}")
+  ecart = st.session_state.get(f"m_{match_id}_{user_id_cible}")
 
-    val_gagnant = None
-    if vrai_nom_gagnant and vrai_nom_gagnant != "...":
-        val_gagnant = "home" if vrai_nom_gagnant == equipe_dom else ("away" if vrai_nom_gagnant == equipe_ext else "draw")
-        
-    val_ecart = None
-    if ecart and ecart != "...":
-        val_ecart = ecart
-        
-    try:
-        prono_existant = supabase.table("Pronostics").select("id").eq("user_id", user_id_cible).eq("match_id", match_id).execute().data
-        
-        donnees_prono = {
-            "user_id": user_id_cible, 
-            "match_id": match_id, 
-            "gagnant_prevu": val_gagnant, 
-            "ecart_prevu": val_ecart
-        }
-        
-        if prono_existant:
-            supabase.table("Pronostics").update(donnees_prono).eq("id", prono_existant[0]["id"]).execute()
-        else:
-            supabase.table("Pronostics").insert(donnees_prono).execute()
+  if (not vrai_nom_gagnant or vrai_nom_gagnant == "...") and (
+      not ecart or ecart == "..."
+  ):
+    return
 
-    except Exception as e:
-        st.error(f"Erreur sauvegarde automatique : {e}")
-        
-#2.4 - Sauvegarde Bonus AUTO
+  val_gagnant = None
+  if vrai_nom_gagnant and vrai_nom_gagnant != "...":
+    val_gagnant = (
+        "home"
+        if vrai_nom_gagnant == equipe_dom
+        else ("away" if vrai_nom_gagnant == equipe_ext else "draw")
+    )
+
+  val_ecart = None
+  if ecart and ecart != "...":
+    val_ecart = ecart
+
+  donnees_prono = {
+      "user_id": user_id_cible,
+      "match_id": match_id,
+      "gagnant_prevu": val_gagnant,
+      "ecart_prevu": val_ecart,
+  }
+
+  try:
+    supabase.table("Pronostics").upsert(
+        donnees_prono, on_conflict="user_id,match_id"
+    ).execute()
+  except Exception as e:
+    st.error(f"Erreur sauvegarde automatique : {e}")
+
+
+# 2.4 - Sauvegarde Bonus AUTO (VERSION UPSERT)
 def sauvegarder_bonus_auto(question_id, user_id, valeur_saisie=None):
-    """Enregistre automatiquement la réponse bonus d'un joueur."""
-    # Si la valeur n'est pas passée directement, on va la chercher dans le widget
-    if valeur_saisie is None:
-        key_widget = f"q_{question_id}_{user_id}"
-        valeur_saisie = st.session_state.get(key_widget, "")
-        
-    valeur_propre = str(valeur_saisie).strip()
-    
-    try:
-        rep_existante = supabase.table("Réponses_Questions").select("*").eq("user_id", user_id).eq("question_id", question_id).execute().data
-        
-        if rep_existante:
-            supabase.table("Réponses_Questions").update({"reponse_joueur": valeur_propre}).eq("id", rep_existante[0]['id']).execute()
-        else:
-            supabase.table("Réponses_Questions").insert({"user_id": user_id, "question_id": question_id, "reponse_joueur": valeur_propre}).execute()
-    except Exception as e:
-        st.error(f"Erreur lors de l'enregistrement automatique : {e}")
+  """Enregistre automatiquement la réponse bonus d'un joueur avec .upsert()."""
+  if valeur_saisie is None:
+    key_widget = f"q_{question_id}_{user_id}"
+    valeur_saisie = st.session_state.get(key_widget, "")
+
+  valeur_propre = str(valeur_saisie).strip()
+
+  donnees_bonus = {
+      "user_id": user_id,
+      "question_id": question_id,
+      "reponse_joueur": valeur_propre,
+  }
+
+  try:
+    supabase.table("Réponses_Questions").upsert(
+        donnees_bonus, on_conflict="user_id,question_id"
+    ).execute()
+  except Exception as e:
+    st.error(f"Erreur lors de l'enregistrement automatique : {e}")
         
 # =====================================================================
 # 3 - INITIALISATION ET GESTION DE LA SESSION
