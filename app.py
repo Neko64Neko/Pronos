@@ -388,164 +388,174 @@ else:
     except Exception as e:
         st.error(f"Erreur de chargement : {e}")
 
-# =====================================================================
-# 6 - CONTENU DE L'ONGLET 1 : CLASSEMENT GÉNÉRAL (LOGIQUE ET CLASSEMENT LIVE)
-# =====================================================================
-    if st.session_state.onglet_actif == "📊":
-        st.markdown(f"### 🏉 Bienvenue sur ton tableau de bord, **{st.session_state.pseudo}** !")
+
+    # 5.8 - CALCUL CENTRALISÉ DES SCORES ET DU CLASSEMENT
+    try:
+        pts_gagnant_cfg = float(st.session_state.get("pts_vainqueur", 1))
+        pts_ecart_cfg = float(st.session_state.get("pts_ecart", 2))
+        seuil_ose_cfg = int(st.session_state.get("pct_ose", 3))
+        pts_v_ose_cfg = float(st.session_state.get("pts_v_ose", 2))
+        pts_e_ose_cfg = float(st.session_state.get("pts_e_ose", 1))
+    except Exception:
+        pts_gagnant_cfg = 1.0
+        pts_ecart_cfg = 2.0
+        seuil_ose_cfg = 3
+        pts_v_ose_cfg = 2.0
+        pts_e_ose_cfg = 1.0
+    
+    def est_un_nul(val):
+        if not val:
+            return False
+        val_str = str(val).strip().lower()
+        return val_str in ["draw", "match nul", "nul", "n", "x", "egalite", "égalité"]
+    
+    try:
+        tous_les_joueurs = supabase.table("Joueurs").select("*").execute().data or []
+        pronostics_tous = supabase.table("Pronostics").select("*").execute().data or []
+        matchs_comptabilises = supabase.table("Matchs").select("*").not_.is_("score_dom", "null").execute().data or []
+        questions_bonus = supabase.table("Questions_Bonus").select("*").execute().data or []
+        reponses_bonus = supabase.table("Réponses_Questions").select("*").execute().data or []
+    
+        dict_matchs = {m['id']: m for m in matchs_comptabilises}
+        dict_reponses_bonus = {(r['user_id'], r['question_id']): r.get('reponse_joueur', '').strip().lower() for r in reponses_bonus}
         
-        # --- RÉCUPÉRATION DYNAMIQUE DE LA CONFIGURATION SUPABASE ---
-        try:
-            pts_gagnant_cfg = float(st.session_state.get("pts_vainqueur", 1))
-            pts_ecart_cfg = float(st.session_state.get("pts_ecart", 2))
-            seuil_ose_cfg = int(st.session_state.get("pct_ose", 3))
-            pts_v_ose_cfg = float(st.session_state.get("pts_v_ose", 2))
-            pts_e_ose_cfg = float(st.session_state.get("pts_e_ose", 1))
-        except Exception as e:
-            pts_gagnant_cfg = 1.0
-            pts_ecart_cfg = 2.0
-            seuil_ose_cfg = 3
-            pts_v_ose_cfg = 2.0
-            pts_e_ose_cfg = 1.0
-         
-        try:
-            tous_les_joueurs = supabase.table("Joueurs").select("*").execute().data
-            pronostics_tous = supabase.table("Pronostics").select("*").execute().data
-            # On récupère tous les matchs qui ont un score enregistré (plus besoin de filtrer par statut strict)
-            matchs_comptabilises = supabase.table("Matchs").select("*").not_.is_("score_dom", "null").execute().data
-            questions_bonus = supabase.table("Questions_Bonus").select("*").execute().data
-            reponses_bonus = supabase.table("Réponses_Questions").select("*").execute().data
-
-            dict_matchs = {m['id']: m for m in matchs_comptabilises}
-            dict_reponses_bonus = {(r['user_id'], r['question_id']): r.get('reponse_joueur', '').strip().lower() for r in reponses_bonus}
-            dict_points_bonus = {q['id']: (q.get('points_bonus') or q.get('points') or 0, str(q.get('reponse_correcte') or '').strip().lower()) for q in questions_bonus}
-
-            scores_calculateurs = {}
-            for j in tous_les_joueurs:
-                pts_manuels = float(j.get('points_manuels', 0) or 0)
-                scores_calculateurs[j['id']] = {
-                    "id": j['id'],
-                    "pseudo": j['pseudo'],
-                    "score_live": pts_manuels,  # Initialisé avec les points manuels pour impacter le classement
-                    "points_manuels": pts_manuels,
-                    "vainqueurs": 0,
-                    "ecarts": 0,
-                    "bonus": 0
-                }
-
-            # 3. Calcul des points sur les matchs (FT + LIVE)
-            for p in pronostics_tous:
+        dict_points_bonus = {}
+        for q in questions_bonus:
+            brut_pts = q.get('points_bonus') if q.get('points_bonus') is not None else q.get('points', 0)
+            rep_corr = str(q.get('reponse_correcte') or '').strip().lower()
+            mapping_points = {}
+            pts_fixe_defaut = 0.0
+            
+            if isinstance(brut_pts, str) and (":" in brut_pts or ";" in brut_pts):
+                for p in brut_pts.split(";"):
+                    if ":" in p:
+                        cle_eq, val_p = p.split(":", 1)
+                        try:
+                            mapping_points[cle_eq.strip().lower()] = float(val_p.strip())
+                        except ValueError:
+                            pass
+            else:
+                try:
+                    pts_fixe_defaut = float(brut_pts or 0)
+                except ValueError:
+                    pts_fixe_defaut = 0.0
+            dict_points_bonus[q['id']] = (pts_fixe_defaut, mapping_points, rep_corr)
+    
+        scores_calculateurs = {}
+        for j in tous_les_joueurs:
+            j_id = j['id']
+            pts_manuels = float(j.get('points_manuels', 0) or 0)
+            scores_calculateurs[j_id] = {
+                "id": j_id,
+                "pseudo": j['pseudo'],
+                "score_live": pts_manuels,
+                "points_manuels": pts_manuels,
+                "vainqueurs": 0,
+                "ecarts": 0,
+                "bonus": 0
+            }
+    
+        # Calcul des points matchs (avec dédoublonnage par utilisateur et par match)
+        pronos_par_match = {}
+        for pr in pronostics_tous:
+            m_id = pr.get('match_id')
+            u_id = pr.get('user_id')
+            if m_id and u_id:
+                if m_id not in pronos_par_match:
+                    pronos_par_match[m_id] = {}
+                pronos_par_match[m_id][u_id] = pr
+    
+        for m_id, match in dict_matchs.items():
+            sc_dom = match.get('score_dom')
+            sc_ext = match.get('score_ext')
+            if sc_dom is None or sc_ext is None:
+                continue
+    
+            vrai_gagnant = "home" if sc_dom > sc_ext else ("away" if sc_dom < sc_ext else "draw")
+            vrai_est_nul = est_un_nul(vrai_gagnant) or (sc_dom == sc_ext)
+            vrai_ecart_points = abs(sc_dom - sc_ext)
+    
+            if vrai_ecart_points <= 6: vraie_tranche = "1-6"
+            elif vrai_ecart_points <= 10: vraie_tranche = "7-10"
+            elif vrai_ecart_points <= 15: vraie_tranche = "11-15"
+            elif vrai_ecart_points <= 20: vraie_tranche = "16-20"
+            elif vrai_ecart_points <= 30: vraie_tranche = "21-30"
+            elif vrai_ecart_points <= 40: vraie_tranche = "31-40"
+            elif vrai_ecart_points <= 50: vraie_tranche = "41-50"
+            else: vraie_tranche = "51+"
+    
+            pronos_ce_match = list(pronos_par_match.get(m_id, {}).values())
+            mises_gagnant = sum(
+                1 for pr in pronos_ce_match 
+                if (vrai_est_nul and est_un_nul(pr.get('gagnant_prevu'))) or (not vrai_est_nul and pr.get('gagnant_prevu') == vrai_gagnant)
+            )
+    
+            for p in pronos_ce_match:
                 j_id = p['user_id']
-                m_id = p['match_id']
-                 
-                if j_id not in scores_calculateurs or m_id not in dict_matchs:
+                if j_id not in scores_calculateurs:
                     continue
-                     
-                match = dict_matchs[m_id]
-                sc_dom = match.get('score_dom')
-                sc_ext = match.get('score_ext')
-                 
-                if sc_dom is None or sc_ext is None:
-                    continue
-                     
-                vrai_gagnant = "home" if sc_dom > sc_ext else ("away" if sc_dom < sc_ext else "draw")
-                vrai_ecart_points = abs(sc_dom - sc_ext)
-                 
-                if vrai_ecart_points <= 6: vraie_tranche = "1-6"
-                elif vrai_ecart_points <= 10: vraie_tranche = "7-10"
-                elif vrai_ecart_points <= 15: vraie_tranche = "11-15"
-                elif vrai_ecart_points <= 20: vraie_tranche = "16-20"
-                elif vrai_ecart_points <= 30: vraie_tranche = "21-30"
-                elif vrai_ecart_points <= 40: vraie_tranche = "31-40"
-                elif vrai_ecart_points <= 50: vraie_tranche = "41-50"
-                else: vraie_tranche = "51+"
-
-                pronos_ce_match = [pr for pr in pronostics_tous if pr['match_id'] == m_id]
-                 
-                def est_un_nul(val):
-                    if not val:
-                        return False
-                    val_str = str(val).strip().lower()
-                    return val_str in ["draw", "match nul", "nul", "n", "x", "egalite", "égalité"]
-        
-                vrai_est_nul = est_un_nul(vrai_gagnant)
-                
-                if not vrai_est_nul and 'score_dom' in match and 'score_ext' in match:
-                    if match['score_dom'] is not None and match['score_ext'] is not None and match['score_dom'] == match['score_ext']:
-                        vrai_est_nul = True
-        
-                mises_gagnant = sum(
-                    1 for pr in pronos_ce_match 
-                    if (vrai_est_nul and est_un_nul(pr.get('gagnant_prevu'))) or (not vrai_est_nul and pr.get('gagnant_prevu') == vrai_gagnant)
-                )
-                 
-                points_ce_match = 0.0
-                 
+    
                 p_gagnant = p.get('gagnant_prevu')
                 p_est_nul = est_un_nul(p_gagnant)
                 a_bon_vainqueur = (vrai_est_nul and p_est_nul) or (not vrai_est_nul and p_gagnant == vrai_gagnant)
-        
+    
                 if a_bon_vainqueur:
                     a_bon_ecart = True if vrai_est_nul else (p.get('ecart_prevu') == vraie_tranche)
-        
-                    if mises_gagnant <= int(float(seuil_ose_cfg)):
-                        points_ce_match += float(pts_gagnant_cfg) + float(pts_v_ose_cfg)
-                        if a_bon_ecart:
-                            points_ce_match += float(pts_ecart_cfg) + float(pts_e_ose_cfg)
-                    else:
-                        points_ce_match += float(pts_gagnant_cfg)
-                        if a_bon_ecart:
-                            points_ce_match += float(pts_ecart_cfg)
-        
+                    is_ose = mises_gagnant <= seuil_ose_cfg
+    
+                    points_ce_match = float(pts_gagnant_cfg)
+                    if is_ose:
+                        points_ce_match += float(pts_v_ose_cfg)
+                    if a_bon_ecart:
+                        points_ce_match += float(pts_ecart_cfg)
+                        if is_ose:
+                            points_ce_match += float(pts_e_ose_cfg)
+    
                     scores_calculateurs[j_id]["score_live"] += points_ce_match
-                    
-                    # Comptabilisation des stats persos du joueur connecté (ou globalement si besoin)
+    
                     if j_id == st.session_state.user_id:
                         scores_calculateurs[j_id]["vainqueurs"] += 1
                         if a_bon_ecart:
                             scores_calculateurs[j_id]["ecarts"] += 1
+    
+        # Calcul des points questions bonus
+        for (j_id, q_id), rep_joueur in dict_reponses_bonus.items():
+            if j_id in scores_calculateurs and q_id in dict_points_bonus:
+                pts_fixe_defaut, mapping_points, rep_officielle = dict_points_bonus[q_id]
+                pts_attribues = 0.0
+    
+                if mapping_points:
+                    for cle_map, val_pts in mapping_points.items():
+                        if cle_map == rep_joueur:
+                            pts_attribues = val_pts
+                            break
+                elif rep_officielle and rep_joueur == rep_officielle:
+                    pts_attribues = pts_fixe_defaut
+    
+                if pts_attribues > 0:
+                    scores_calculateurs[j_id]["score_live"] += pts_attribues
+                    if j_id == st.session_state.user_id:
+                        scores_calculateurs[j_id]["bonus"] += pts_attribues
+    
+        tous_les_joueurs_ordonnes = list(scores_calculateurs.values())
+        tous_les_joueurs_ordonnes.sort(key=lambda x: (-x["score_live"], x["pseudo"].lower()))
+    
+    except Exception as e:
+        st.error(f"Erreur lors du calcul global des scores : {e}")
+        tous_les_joueurs_ordonnes = []
+        scores_calculateurs = {}
 
-        # 4. Calcul des points Questions Bonus
-            for (j_id, q_id), rep_joueur in dict_reponses_bonus.items():
-                if j_id in scores_calculateurs and q_id in dict_points_bonus:
-                    pts_config, rep_officielle = dict_points_bonus[q_id]
-                    
-                    rep_joueur_clean = str(rep_joueur).strip().lower() if rep_joueur else ""
-                    rep_officielle_clean = str(rep_officielle).strip().lower() if rep_officielle else ""
-                    
-                    if rep_officielle_clean and rep_joueur_clean == rep_officielle_clean:
-                        pts_attribues = 0
-                        pts_config_str = str(pts_config).strip().lower()
-                        
-                        if ":" in pts_config_str:
-                            segments = pts_config_str.split(";")
-                            for s in segments:
-                                if ":" in s:
-                                    cle_rep, val_pts = s.split(":")
-                                    if rep_officielle_clean == cle_rep.strip().lower():
-                                        try:
-                                            pts_attribues = float(val_pts.strip())
-                                        except ValueError:
-                                            pts_attribues = 0
-                                        break
-                        else:
-                            try:
-                                pts_attribues = float(pts_config_str)
-                            except ValueError:
-                                pts_attribues = 0
-
-                        if pts_attribues > 0:
-                            scores_calculateurs[j_id]["score_live"] += pts_attribues
-                            scores_calculateurs[j_id]["bonus"] += pts_attribues
-
-            # 5. Tri pour générer le classement dynamique
-            tous_les_joueurs_ordonnes = list(scores_calculateurs.values())
-            tous_les_joueurs_ordonnes.sort(key=lambda x: x["score_live"], reverse=True)
-
-            stats_joueur_connecte = scores_calculateurs.get(st.session_state.user_id, {"score_live": 0, "points_manuels": 0, "vainqueurs": 0, "ecarts": 0})
-            
-            # Recalcul précis des matchs osés réussis uniquement pour l'affichage des compteurs du joueur connecté
-            stats_oses = 0
+# =====================================================================
+# 6 - CONTENU DE L'ONGLET 1 : CLASSEMENT GÉNÉRAL
+# =====================================================================
+    if st.session_state.onglet_actif == "📊":
+        st.markdown(f"### 🏉 Bienvenue sur ton tableau de bord, **{st.session_state.pseudo}** !")
+        
+        stats_joueur_connecte = scores_calculateurs.get(st.session_state.user_id, {"score_live": 0, "points_manuels": 0, "vainqueurs": 0, "ecarts": 0})
+        
+        # Calcul spécifique des pronos osés pour les compteurs visuels du joueur connecté
+        stats_oses = 0
+        try:
             pronos_joueur = [p for p in pronostics_tous if p['user_id'] == st.session_state.user_id]
             for p in pronos_joueur:
                 m_id = p['match_id']
@@ -555,42 +565,29 @@ else:
                     if sd is not None and se is not None:
                         vg = "home" if sd > se else ("away" if sd < se else "draw")
                         vrai_ecart_points = abs(sd - se)
-                        if vrai_ecart_points <= 6: vraie_tranche_m = "1-6"
-                        elif vrai_ecart_points <= 10: vraie_tranche_m = "7-10"
-                        elif vrai_ecart_points <= 15: vraie_tranche_m = "11-15"
-                        elif vrai_ecart_points <= 20: vraie_tranche_m = "16-20"
-                        elif vrai_ecart_points <= 30: vraie_tranche_m = "21-30"
-                        elif vrai_ecart_points <= 40: vraie_tranche_m = "31-40"
-                        elif vrai_ecart_points <= 50: vraie_tranche_m = "41-50"
-                        else: vraie_tranche_m = "51+"
+                        vraie_tranche_m = "1-6" if vrai_ecart_points <= 6 else ("7-10" if vrai_ecart_points <= 10 else ("11-15" if vrai_ecart_points <= 15 else ("16-20" if vrai_ecart_points <= 20 else ("21-30" if vrai_ecart_points <= 30 else ("31-40" if vrai_ecart_points <= 40 else ("41-50" if vrai_ecart_points <= 50 else "51+"))))))
                         
                         if p['gagnant_prevu'] == vg:
                             pronos_m = [pr for pr in pronostics_tous if pr['match_id'] == m_id]
                             nb_gagnants = sum(1 for pm in pronos_m if pm['gagnant_prevu'] == vg)
-                            
-                            if nb_gagnants < seuil_ose_cfg:
+                            if nb_gagnants <= seuil_ose_cfg:
                                 stats_oses += 1
                                 if p['ecart_prevu'] == vraie_tranche_m and vg != "draw":
                                     stats_oses += 1
-
-            rang_joueur = "-"
-            for idx, j in enumerate(tous_les_joueurs_ordonnes):
-                if j['id'] == st.session_state.user_id:
-                    rang_joueur = idx + 1
-                    break
-
-        except Exception as e:
-            st.error(f"Erreur de calcul du classement en direct : {e}")
-            tous_les_joueurs_ordonnes = []
-            rang_joueur = "-"
-            stats_joueur_connecte = {"score_live": 0, "points_manuels": 0, "vainqueurs": 0, "ecarts": 0}
-            stats_oses = 0
-
+        except Exception:
+            pass
+    
+        rang_joueur = "-"
+        for idx, j in enumerate(tous_les_joueurs_ordonnes):
+            if j['id'] == st.session_state.user_id:
+                rang_joueur = idx + 1
+                break
+    
         suffixe = "er" if rang_joueur == 1 else "e"
         score_affiche = stats_joueur_connecte["score_live"]
         score_affiche = int(score_affiche) if isinstance(score_affiche, float) and score_affiche.is_integer() else score_affiche
         
-        # --- BLOC DES COMPTEURS VISUELS DE L'UTILISATEUR ---
+        # --- BLOC DES COMPTEURS VISUELS ---
         st.markdown(f"""
         <div style="background-color: #f0f4f8; border-radius: 16px; padding: 15px; border: 1px solid #d3e2f2; margin-bottom: 25px;">
             <div style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 10px;">
@@ -619,8 +616,8 @@ else:
             </div>
         </div>
         """.replace("\n", ""), unsafe_allow_html=True)
-
-        # --- TABLEAU DU CLASSEMENT GÉNÉRAL GÉNÉRÉ EN DIRECT ---
+    
+        # --- TABLEAU DU CLASSEMENT GÉNÉRAL ---
         st.subheader(" 🏆 Classement")
         if tous_les_joueurs_ordonnes:
             lignes_html = ""
@@ -636,10 +633,9 @@ else:
                     pseudo_affiche = joueur['pseudo']
                 
                 sc_j = joueur["score_live"]
-                pts_m = int(joueur["points_manuels"] or 0)  # <-- Conversion explicite en int ici
+                pts_m = int(joueur["points_manuels"] or 0)
                 sc_j_affiche = int(sc_j) if isinstance(sc_j, float) and sc_j.is_integer() else sc_j
                 
-                # Affichage combiné du score et des points manuels si présents
                 if pts_m != 0:
                     pts_m_str = f" ({pts_m:+d} 🎁)"
                     points_cellule = f"<b>{sc_j_affiche}</b> <span style='font-size: 11px; color: #d97706; font-weight: normal;'>{pts_m_str}</span>"
@@ -1073,37 +1069,16 @@ if st.session_state.onglet_actif == "🏉":
         st.warning("⚠️ Aucun joueur trouvé dans la base.")
 
 # =====================================================================
-# 8 - CONTENU DE L'ONGLET 3 : RÉSULTATS & DIRECT (AVEC MATCHS LIVE)
+# 8 - CONTENU DE L'ONGLET 3 : RÉSULTATS & DIRECT
 # =====================================================================
 elif st.session_state.onglet_actif == "📺":
     st.title("📺 Résultats & Matchs en Direct")
-
-    # --- RÉCUPÉRATION DYNAMIQUE DE LA CONFIGURATION SUPABASE ---
-    try:
-        config_supabase = supabase.table("Configuration").select("*").execute().data
-        config_data = config_supabase[0] if config_supabase else {}
-        pts_gagnant_cfg = float(config_data.get('pts_gagnant', 1))
-        pts_ecart_cfg = float(config_data.get('pts_ecart', 2))
-        seuil_ose_cfg = float(config_data.get('seuil_poursentage_ose', 3))
-        pts_v_ose_cfg = float(config_data.get('bonus_vainqueur_ose', 2))
-        pts_e_ose_cfg = float(config_data.get('bonus_ecart_ose', 1))
-    except Exception:
-        pts_gagnant_cfg = 1.0
-        pts_ecart_cfg = 2.0
-        seuil_ose_cfg = 3.0
-        pts_v_ose_cfg = 2.0
-        pts_e_ose_cfg = 1.0
     
     with st.spinner("Mise à jour des scores et du classement..."):
         try:
-            tous_les_joueurs = supabase.table("Joueurs").select("*").execute().data or []
             tous_matchs_bdd = supabase.table("Matchs").select("*").order("date_match", desc=True).execute().data or []
-            tous_les_pronos = supabase.table("Pronostics").select("*").execute().data or []
-            questions_bonus = supabase.table("Questions_Bonus").select("*").execute().data or []
-            reponses_bonus = supabase.table("Réponses_Questions").select("*").execute().data or []
             tous_equipes = supabase.table("Equipes").select("*").execute().data or []
             
-            # --- DICTIONNAIRES DE CORRESPONDANCE (LOGO_URL CIBLÉ) ---
             dict_noms_courts = {}
             dict_logos = {}
             for eq in tous_equipes:
@@ -1129,142 +1104,9 @@ elif st.session_state.onglet_actif == "📺":
                         if m['statut'] in ["FT", "inprogress"]:
                             matchs.append(m)
 
-            # --- FONCTION DE NORMALISATION POUR LES NULS ---
-            def est_un_nul(val):
-                if not val:
-                    return False
-                val_str = str(val).strip().lower()
-                return val_str in ["draw", "match nul", "nul", "n", "x", "egalite", "égalité"]
-
-            # --- CALCUL DU CLASSEMENT GÉNÉRAL EXACT (MATCHS + BONUS) AVEC SÉCURISATION ET DÉDOUBLONNAGE ---
-            scores_generaux = {str(j['id']).strip(): 0.0 for j in tous_les_joueurs}
-
-            if tous_les_joueurs:
-                # 1. Ajout des points bonus
-                dict_points_bonus = {}
-                for q in questions_bonus:
-                    q_id = q.get('id')
-                    brut_pts = q.get('points_bonus') if q.get('points_bonus') is not None else q.get('points', 0)
-                    rep_corr = str(q.get('reponse_correcte') or '').strip().lower()
-                    
-                    mapping_points = {}
-                    pts_fixe_defaut = 0.0
-                    
-                    if isinstance(brut_pts, str) and (":" in brut_pts or ";" in brut_pts):
-                        parts = brut_pts.split(";")
-                        for p in parts:
-                            if ":" in p:
-                                cle_eq, val_p = p.split(":", 1)
-                                try:
-                                    mapping_points[cle_eq.strip().lower()] = float(val_p.strip())
-                                except ValueError:
-                                    pass
-                    else:
-                        try:
-                            pts_fixe_defaut = float(brut_pts or 0)
-                        except ValueError:
-                            pts_fixe_defaut = 0.0
-                            
-                    dict_points_bonus[q_id] = (pts_fixe_defaut, mapping_points, rep_corr)
-                    
-                dict_reponses_bonus = {}
-                for r in reponses_bonus:
-                    u_id = str(r.get('user_id') or '').strip()
-                    q_id = r.get('question_id')
-                    rep_j = str(r.get('reponse_joueur') or '').strip().lower()
-                    dict_reponses_bonus[(u_id, q_id)] = rep_j
-                    
-                for j in tous_les_joueurs:
-                    j_id_str = str(j['id']).strip()
-                    pts_b_total = 0.0
-                    for q_id, (pts_fixe_defaut, mapping_points, rep_corr) in dict_points_bonus.items():
-                        rep_j = dict_reponses_bonus.get((j_id_str, q_id), "")
-                        
-                        if mapping_points:
-                            rep_j_clean = str(rep_j).strip().lower()
-                            for cle_map, valeur_pts in mapping_points.items():
-                                if cle_map == rep_j_clean:
-                                    pts_b_total += valeur_pts
-                                    break
-                        elif rep_corr and str(rep_j).strip().lower() == rep_corr:
-                            pts_b_total += pts_fixe_defaut
-                            
-                    scores_generaux[j_id_str] += pts_b_total
-
-                # 2. Ajout des points des matchs (avec dédoublonnage par utilisateur et par match)
-                matchs_comptabilises = [m for m in tous_matchs_bdd if m.get('statut') in ["FT", "inprogress"]]
-                if matchs_comptabilises and tous_les_pronos:
-                    pronos_par_match = {}
-                    for pr in tous_les_pronos:
-                        m_id = pr.get('match_id')
-                        u_id = str(pr.get('user_id') or '').strip()
-                        if m_id and u_id:
-                            if m_id not in pronos_par_match:
-                                pronos_par_match[m_id] = {}
-                            pronos_par_match[m_id][u_id] = pr  # Écrase les doublons éventuels
-
-                    for m in matchs_comptabilises:
-                        sc_dom = m.get('score_dom')
-                        sc_ext = m.get('score_ext')
-                        if sc_dom is None or sc_ext is None:
-                            continue
-                        
-                        m_id = m.get('id')
-                        dict_pronos_ce_match = pronos_par_match.get(m_id, {})
-                        pronos_ce_match = list(dict_pronos_ce_match.values())
-                        
-                        vrai_gagnant_brut = "home" if sc_dom > sc_ext else ("away" if sc_dom < sc_ext else "draw")
-                        vrai_est_nul = est_un_nul(vrai_gagnant_brut) or (sc_dom == sc_ext)
-                        
-                        diff = abs(sc_dom - sc_ext)
-                        if diff <= 6: vraie_tranche = "1-6"
-                        elif diff <= 10: vraie_tranche = "7-10"
-                        elif diff <= 15: vraie_tranche = "11-15"
-                        elif diff <= 20: vraie_tranche = "16-20"
-                        elif diff <= 30: vraie_tranche = "21-30"
-                        elif diff <= 40: vraie_tranche = "31-40"
-                        elif diff <= 50: vraie_tranche = "41-50"
-                        else: vraie_tranche = "51+"
-
-                        mises_gagnant = sum(
-                            1 for pr in pronos_ce_match 
-                            if (vrai_est_nul and est_un_nul(pr.get('gagnant_prevu'))) or (not vrai_est_nul and pr.get('gagnant_prevu') == vrai_gagnant_brut)
-                        )
-
-                        for pr in pronos_ce_match:
-                            j_id_str = str(pr.get('user_id') or '').strip()
-                            if j_id_str not in scores_generaux:
-                                continue
-                            
-                            g_prevu = pr.get('gagnant_prevu')
-                            ec_prevu = pr.get('ecart_prevu')
-                            p_est_nul = est_un_nul(g_prevu)
-                            a_bon_vainqueur = (vrai_est_nul and p_est_nul) or (not vrai_est_nul and g_prevu == vrai_gagnant_brut)
-
-                            if a_bon_vainqueur:
-                                a_bon_ecart = True if vrai_est_nul else (ec_prevu == vraie_tranche)
-                                
-                                is_ose = mises_gagnant <= int(float(seuil_ose_cfg))
-                                points_match_courant = float(pts_gagnant_cfg)
-                                if is_ose:
-                                    points_match_courant += float(pts_v_ose_cfg)
-                                
-                                if a_bon_ecart:
-                                    points_match_courant += float(pts_ecart_cfg)
-                                    if is_ose:
-                                        points_match_courant += float(pts_e_ose_cfg)
-                                
-                                scores_generaux[j_id_str] += points_match_courant
-
-            # Tri strict numérique décroissant (-score), puis alphabétique sur le pseudo en cas d'égalité
-            tous_les_joueurs_tries = sorted(
-                tous_les_joueurs, 
-                key=lambda j: (-float(scores_generaux.get(str(j['id']).strip(), 0.0)), str(j.get('pseudo', '')).strip().lower())
-            )
-            
             # --- SOUS-SECTION A : LES MATCHS ---
             st.subheader("🏉 Matchs Clos / En cours")
-            if matchs and tous_les_joueurs_tries:
+            if matchs and tous_les_joueurs_ordonnes:
                 for m in matchs:
                     label_statut = ""
                     if m.get('statut') == 'LIVE':
@@ -1273,7 +1115,6 @@ elif st.session_state.onglet_actif == "📺":
                         label_statut = " ⏳ EN COURS"
                     
                     date_affichee = formater_date_paris(m.get('date_match'))
-                    
                     sc_dom = m.get('score_dom') if m.get('score_dom') is not None else 0
                     sc_ext = m.get('score_ext') if m.get('score_ext') is not None else 0
                     
@@ -1320,19 +1161,9 @@ elif st.session_state.onglet_actif == "📺":
                         
                     with st.expander("🔍 Voir les pronostics des joueurs", expanded=False):
                         pronos = supabase.table("Pronostics").select("*").eq("match_id", m.get('id')).execute().data or []
+                        dict_pronos = {str(p.get('user_id') or '').strip(): p for p in pronos if p.get('user_id')}
                         
-                        # Dédoublonnage des pronostics de ce match spécifique
-                        dict_pronos = {}
-                        if pronos:
-                            for p in pronos:
-                                u_id = str(p.get('user_id') or '').strip()
-                                if u_id:
-                                    dict_pronos[u_id] = p
-                        
-                        vrai_est_nul = est_un_nul(vrai_gagnant_brut)
-                        if not vrai_est_nul and sc_dom == sc_ext:
-                            vrai_est_nul = True
-
+                        vrai_est_nul = est_un_nul(vrai_gagnant_brut) or (sc_dom == sc_ext)
                         pronos_ce_match = list(dict_pronos.values())
                         
                         mises_gagnant = sum(
@@ -1341,24 +1172,18 @@ elif st.session_state.onglet_actif == "📺":
                         )
                         
                         st.markdown("**Pronostics des joueurs (classés par ordre général) :**")
-                        
                         lignes_table_html = ""
                         
-                        for j in tous_les_joueurs_tries:
+                        for j in tous_les_joueurs_ordonnes:
                             j_id_str = str(j['id']).strip()
                             p = dict_pronos.get(j_id_str)
                             est_mon_compte = (j_id_str == str(st.session_state.get('user_id', '')).strip())
                             
-                            # Récupération et formatage du score général pour contrôle visuel
-                            score_j_courant = scores_generaux.get(j_id_str, 0.0)
+                            score_j_courant = scores_calculateurs.get(j_id_str, {}).get("score_live", 0.0)
                             score_aff = int(score_j_courant) if isinstance(score_j_courant, float) and score_j_courant.is_integer() else score_j_courant
                             
-                            if est_mon_compte:
-                                style_ligne_joueur = "font-weight: bold; background-color: #e0f2fe; border-left: 4px solid #0284c7;"
-                                pseudo_final = f"{j['pseudo']} <span style='font-size:11px; opacity:0.6;'>(Général: {score_aff} pts)</span>"
-                            else:
-                                style_ligne_joueur = ""
-                                pseudo_final = f"{j['pseudo']} <span style='font-size:11px; opacity:0.6;'>(Général: {score_aff} pts)</span>"
+                            style_ligne_joueur = "font-weight: bold; background-color: #e0f2fe; border-left: 4px solid #0284c7;" if est_mon_compte else ""
+                            pseudo_final = f"{j['pseudo']} <span style='font-size:11px; opacity:0.6;'>(Général: {score_aff} pts)</span>"
                             
                             if p:
                                 g_prevu = p.get('gagnant_prevu')
@@ -1368,13 +1193,7 @@ elif st.session_state.onglet_actif == "📺":
                                     affichage_pronostic = "<b>Match Nul</b>"
                                     ligne_ecart_html = ""
                                 else:
-                                    if g_prevu == "home":
-                                        nom_equipe_api = nom_dom_api
-                                    elif g_prevu == "away":
-                                        nom_equipe_api = nom_ext_api
-                                    else:
-                                        nom_equipe_api = str(g_prevu)
-                                    
+                                    nom_equipe_api = nom_dom_api if g_prevu == "home" else (nom_ext_api if g_prevu == "away" else str(g_prevu))
                                     clean_eq_key = str(nom_equipe_api).strip().lower()
                                     nom_court_equipe = dict_noms_courts.get(clean_eq_key, nom_equipe_api)
                                     logo_url = dict_logos.get(clean_eq_key, "")
@@ -1384,10 +1203,7 @@ elif st.session_state.onglet_actif == "📺":
                                     else:
                                         affichage_pronostic = f'<b>{nom_court_equipe}</b>'
                                     
-                                    if ec_prevu is not None and str(ec_prevu).strip() != "":
-                                        ligne_ecart_html = f"<br><span style='font-size:11px; color:#555555;'>{ec_prevu}</span>"
-                                    else:
-                                        ligne_ecart_html = ""
+                                    ligne_ecart_html = f"<br><span style='font-size:11px; color:#555555;'>{ec_prevu}</span>" if ec_prevu else ""
                                 
                                 pts = 0.0
                                 badge_ose = ""
@@ -1407,7 +1223,7 @@ elif st.session_state.onglet_actif == "📺":
                                     
                                     if a_bon_vainqueur:
                                         a_bon_ecart = True if vrai_est_nul else (ec_prevu == vraie_tranche)
-                                        is_ose = mises_gagnant <= int(float(seuil_ose_cfg))
+                                        is_ose = mises_gagnant <= seuil_ose_cfg
                                         
                                         pts = float(pts_gagnant_cfg)
                                         if is_ose:
@@ -1443,14 +1259,10 @@ elif st.session_state.onglet_actif == "📺":
                                     <td style="padding: 10px; font-size: 13px; color: #000000;">{pseudo_final}</td>
                                     <td style="padding: 10px; font-size: 13px; color: #000000; vertical-align: middle;">{affichage_pronostic}{badge_ose}{ligne_ecart_html}</td>
                                     <td style="padding: 10px; text-align: center; vertical-align: middle;">
-                                        <span style="color: {color_txt}; font-size: 11px; font-weight: bold;">
-                                            {texte_badge_resultat}
-                                        </span>
+                                        <span style="color: {color_txt}; font-size: 11px; font-weight: bold;">{texte_badge_resultat}</span>
                                     </td>
                                     <td style="padding: 10px; text-align: right; vertical-align: middle;">
-                                        <span style="background-color: {color_bg}; color: {color_txt}; padding: 4px 10px; border-radius: 12px; font-size: 13px; font-weight: bold; display: inline-block;">
-                                            {texte_points}
-                                        </span>
+                                        <span style="background-color: {color_bg}; color: {color_txt}; padding: 4px 10px; border-radius: 12px; font-size: 13px; font-weight: bold; display: inline-block;">{texte_points}</span>
                                     </td>
                                 </tr>
                                 """
@@ -1461,9 +1273,7 @@ elif st.session_state.onglet_actif == "📺":
                                     <td style="padding: 10px; font-size: 13px; font-style: italic; color: #555555; vertical-align: middle;">Aucun pronostic</td>
                                     <td style="padding: 10px; text-align: center; font-size: 11px; color: #64748b; vertical-align: middle;">❌ Absent</td>
                                     <td style="padding: 10px; text-align: right; vertical-align: middle;">
-                                        <span style="background-color: #f1f5f9; color: #64748b; padding: 4px 10px; border-radius: 12px; font-size: 13px; font-weight: bold; display: inline-block;">
-                                            0 pt
-                                        </span>
+                                        <span style="background-color: #f1f5f9; color: #64748b; padding: 4px 10px; border-radius: 12px; font-size: 13px; font-weight: bold; display: inline-block;">0 pt</span>
                                     </td>
                                 </tr>
                                 """
@@ -1479,9 +1289,7 @@ elif st.session_state.onglet_actif == "📺":
                                         <th style="padding: 8px 10px; font-size: 12px; color: #000000; text-align: right;">Points</th>
                                     </tr>
                                 </thead>
-                                <tbody>
-                                    {lignes_table_html}
-                                </tbody>
+                                <tbody>{lignes_table_html}</tbody>
                             </table>
                         </div>
                         """.replace("\n", ""), unsafe_allow_html=True)
@@ -1490,52 +1298,45 @@ elif st.session_state.onglet_actif == "📺":
             st.markdown("<hr style='border: 1px solid #e2e8f0; margin: 30px 0 20px 0;'>", unsafe_allow_html=True)
             st.subheader("🎯 Suivi des Questions Bonus")
             
-            questions_bonus = supabase.table("Questions_Bonus").select("*").execute().data
-            reponses_bonus = supabase.table("Réponses_Questions").select("*").execute().data
+            questions_bonus_res = supabase.table("Questions_Bonus").select("*").execute().data or []
+            reponses_bonus_res = supabase.table("Réponses_Questions").select("*").execute().data or []
             
-            if questions_bonus and tous_les_joueurs:
-                dict_reponses = {(str(r['user_id']).strip(), r['question_id']): r.get('reponse_joueur') for r in reponses_bonus} if reponses_bonus else {}
+            if questions_bonus_res and tous_les_joueurs:
+                dict_reponses = {(str(r['user_id']).strip(), r['question_id']): r.get('reponse_joueur') for r in reponses_bonus_res}
                 
-                for q in questions_bonus:
+                for q in questions_bonus_res:
                     st.markdown(f"##### ❓ {q['question']}")
                     
-                    question_fermee = False
+                    question_fermee = q.get('statut') == 'closed'
                     date_limite_str = q.get('date_limite')
                     if date_limite_str:
                         try:
                             if date_limite_str.endswith('Z'):
                                 date_limite_str = date_limite_str[:-1] + '+00:00'
                             dt_limite_utc = datetime.fromisoformat(date_limite_str)
-                            tz_paris = pytz.timezone('Europe/Paris')
-                            dt_limite_q = dt_limite_utc.astimezone(tz_paris)
-                            
+                            dt_limite_q = dt_limite_utc.astimezone(paris_tz)
                             if maintenant_paris.replace(tzinfo=None) >= dt_limite_q.replace(tzinfo=None):
                                 question_fermee = True
                         except Exception:
                             pass
                     
-                    if q.get('statut') == 'closed':
-                        question_fermee = True
-
                     if q.get('reponse_correcte'):
                         st.markdown(f"🎯 *Réponse officielle : `{q['reponse_correcte']}`*")
                     
                     if question_fermee:
                         for j in tous_les_joueurs:
                             rep_joueur = dict_reponses.get((str(j['id']).strip(), q['id']))
-                            
-                            if rep_joueur and rep_joueur.strip() != "":
+                            if rep_joueur and str(rep_joueur).strip() != "":
                                 st.markdown(f"👤 **{j['pseudo']}** : `{rep_joueur}`")
                             else:
                                 st.markdown(f"👤 **{j['pseudo']}** : <span style='color: #94a3b8; font-style: italic;'>❌ Pas de prono</span>", unsafe_allow_html=True)
                     else:
                         st.markdown("<span style='color: #64748b; font-style: italic; font-size: 0.9em;'>🔒 Les réponses des autres joueurs seront visibles une fois la date limite dépassée.</span>", unsafe_allow_html=True)
-                        
                         ma_rep = dict_reponses.get((str(st.session_state.user_id).strip(), q['id']))
-                        if ma_rep and ma_rep.strip() != "":
-                            st.markdown(f"👤 **{st.session_state.pseudo} ** : `{ma_rep}`")
+                        if ma_rep and str(ma_rep).strip() != "":
+                            st.markdown(f"👤 **{st.session_state.pseudo}** : `{ma_rep}`")
                         else:
-                            st.markdown(f"👤 **{st.session_state.pseudo} ** : <span style='color: #94a3b8; font-style: italic;'>❌ Tu n'as pas encore répondu</span>", unsafe_allow_html=True)
+                            st.markdown(f"👤 **{st.session_state.pseudo}** : <span style='color: #94a3b8; font-style: italic;'>❌ Tu n'as pas encore répondu</span>", unsafe_allow_html=True)
                             
                     st.markdown("---")
             else:
