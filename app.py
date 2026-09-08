@@ -1777,7 +1777,7 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
                 
                 st.metric(label="Requêtes envoyées à l'API", value=f"{current_count}/50")
             
-                col_api1, col_api2 = st.columns(2)
+                col_api1, col_api2, col_api3 = st.columns(3)
             
                 # Récupération de ta clé Supabase depuis tes secrets Streamlit existants
                 supabase_key = st.secrets["SUPABASE_KEY"]
@@ -1811,6 +1811,24 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
                                 
                                 if response.status_code == 200:
                                     st.success("Mise à jour du calendrier effectuée avec succès !")
+                                    time.sleep(1)
+                                    st.rerun()
+                                else:
+                                    st.error(f"Erreur (Code {response.status_code}) : {response.text}")
+                            except Exception as e:
+                                st.error(f"Erreur lors de l'appel : {e}")
+
+                with col_api3:
+                    if st.button("Compléter Journée"):
+                        with st.spinner("Exécution de complete_day..."):
+                            try:
+                                url = "https://puznnphyulbrnxjojnnc.supabase.co/functions/v1/complete-day"
+                                headers = {"Authorization": f"Bearer {supabase_key}"}
+                                
+                                response = requests.post(url, headers=headers)
+                                
+                                if response.status_code == 200:
+                                    st.success("Fonction complete_day exécutée avec succès !")
                                     time.sleep(1)
                                     st.rerun()
                                 else:
