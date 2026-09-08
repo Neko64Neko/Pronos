@@ -1137,10 +1137,10 @@ elif st.session_state.onglet_actif == "📺":
                 return val_str in ["draw", "match nul", "nul", "n", "x", "egalite", "égalité"]
 
             # --- CALCUL DU CLASSEMENT GÉNÉRAL EXACT (MATCHS + BONUS) ---
-            scores_generaux = {j['id']: 0.0 for j in tous_les_joueurs}
+            scores_generaux = {str(j['id']): 0.0 for j in tous_les_joueurs}
 
             if tous_les_joueurs:
-                # 1. Ajout des points bonus s'ils existent (Sécurisé pour points fixes ou format "Équipe:X")
+                # 1. Ajout des points bonus
                 dict_points_bonus = {}
                 for q in questions_bonus:
                     q_id = q.get('id')
@@ -1169,16 +1169,16 @@ elif st.session_state.onglet_actif == "📺":
                     
                 dict_reponses_bonus = {}
                 for r in reponses_bonus:
-                    u_id = r.get('user_id')
+                    u_id = str(r.get('user_id'))
                     q_id = r.get('question_id')
                     rep_j = str(r.get('reponse_joueur') or '').strip().lower()
                     dict_reponses_bonus[(u_id, q_id)] = rep_j
                     
                 for j in tous_les_joueurs:
-                    j_id = j['id']
+                    j_id_str = str(j['id'])
                     pts_b_total = 0.0
                     for q_id, (pts_fixe_defaut, mapping_points, rep_corr) in dict_points_bonus.items():
-                        rep_j = dict_reponses_bonus.get((j_id, q_id), "")
+                        rep_j = dict_reponses_bonus.get((j_id_str, q_id), "")
                         
                         if mapping_points:
                             rep_j_clean = str(rep_j).strip().lower()
@@ -1189,9 +1189,9 @@ elif st.session_state.onglet_actif == "📺":
                         elif rep_corr and str(rep_j).strip().lower() == rep_corr:
                             pts_b_total += pts_fixe_defaut
                             
-                    scores_generaux[j_id] += pts_b_total
+                    scores_generaux[j_id_str] += pts_b_total
 
-                # 2. Ajout des points des matchs (FT ou LIVE avec scores)
+                # 2. Ajout des points des matchs
                 matchs_comptabilises = [m for m in tous_matchs_bdd if m.get('statut') in ["FT", "inprogress"]]
                 if matchs_comptabilises and tous_les_pronos:
                     pronos_par_match = {}
@@ -1230,8 +1230,8 @@ elif st.session_state.onglet_actif == "📺":
                         )
 
                         for pr in pronos_ce_match:
-                            j_id = pr.get('user_id')
-                            if j_id not in scores_generaux:
+                            j_id_str = str(pr.get('user_id'))
+                            if j_id_str not in scores_generaux:
                                 continue
                             
                             g_prevu = pr.get('gagnant_prevu')
@@ -1252,12 +1252,13 @@ elif st.session_state.onglet_actif == "📺":
                                     if is_ose:
                                         points_match_courant += float(pts_e_ose_cfg)
                                 
-                                scores_generaux[j_id] += points_match_courant
+                                scores_generaux[j_id_str] += points_match_courant
 
-            # Tri strict : score décroissant (-score), puis pseudo croissant (A-Z) en cas d'égalité
+            # Tri stable par score décroissant (conserve l'ordre initial de la BDD en cas d'égalité, comme le classement général)
             tous_les_joueurs_tries = sorted(
                 tous_les_joueurs, 
-                key=lambda j: (-scores_generaux.get(j['id'], 0.0), j['pseudo'])
+                key=lambda j: scores_generaux.get(str(j['id']), 0.0),
+                reverse=True
             )
             
             # --- SOUS-SECTION A : LES MATCHS ---
@@ -1275,7 +1276,6 @@ elif st.session_state.onglet_actif == "📺":
                     sc_dom = m.get('score_dom') if m.get('score_dom') is not None else 0
                     sc_ext = m.get('score_ext') if m.get('score_ext') is not None else 0
                     
-                    # Récupération des noms courts et logos
                     nom_dom_api = m.get('equipe_dom')
                     nom_ext_api = m.get('equipe_ext')
                     
@@ -1319,7 +1319,8 @@ elif st.session_state.onglet_actif == "📺":
                         
                     with st.expander("🔍 Voir les pronostics des joueurs", expanded=False):
                         pronos = supabase.table("Pronostics").select("*").eq("match_id", m.get('id')).execute().data or []
-                        dict_pronos = {p['user_id']: p for p in pronos} if pronos else {}
+                        # Normalisation des clés en string pour éviter les problèmes de correspondance (int vs uuid/str)
+                        dict_pronos = {str(p['user_id']): p for p in pronos} if pronos else {}
                         
                         vrai_est_nul = est_un_nul(vrai_gagnant_brut)
                         if not vrai_est_nul and sc_dom == sc_ext:
@@ -1337,8 +1338,9 @@ elif st.session_state.onglet_actif == "📺":
                         lignes_table_html = ""
                         
                         for j in tous_les_joueurs_tries:
-                            p = dict_pronos.get(j['id'])
-                            est_mon_compte = (j['id'] == st.session_state.get('user_id'))
+                            j_id_str = str(j['id'])
+                            p = dict_pronos.get(j_id_str)
+                            est_mon_compte = (j_id_str == str(st.session_state.get('user_id')))
                             
                             if est_mon_compte:
                                 style_ligne_joueur = "font-weight: bold; background-color: #e0f2fe; border-left: 4px solid #0284c7;"
@@ -1379,7 +1381,7 @@ elif st.session_state.onglet_actif == "📺":
                                 pts = 0.0
                                 badge_ose = ""
                                 en_attente = False
-                                color_bg = "#fee2e2"  
+                                color_bg = "#fee2e2" 
                                 color_txt = "#991b1b"
                                 texte_badge_resultat = "❌ Faux"
                                 
@@ -1411,7 +1413,7 @@ elif st.session_state.onglet_actif == "📺":
                                             texte_badge_resultat = "✅ Bon vainqueur" + (" [OSÉ]" if is_ose else "")
                                             color_bg = "#dbeafe" if not is_ose else "#fde047"
                                             color_txt = "#1e40af" if not is_ose else "#713f12"
-                                        
+                                            
                                         if is_ose:
                                             badge_ose = " 🔥 OSÉ"
                                     else:
@@ -1481,7 +1483,7 @@ elif st.session_state.onglet_actif == "📺":
             reponses_bonus = supabase.table("Réponses_Questions").select("*").execute().data
             
             if questions_bonus and tous_les_joueurs:
-                dict_reponses = {(r['user_id'], r['question_id']): r.get('reponse_joueur') for r in reponses_bonus} if reponses_bonus else {}
+                dict_reponses = {(str(r['user_id']), r['question_id']): r.get('reponse_joueur') for r in reponses_bonus} if reponses_bonus else {}
                 
                 for q in questions_bonus:
                     st.markdown(f"##### ❓ {q['question']}")
@@ -1509,7 +1511,7 @@ elif st.session_state.onglet_actif == "📺":
                     
                     if question_fermee:
                         for j in tous_les_joueurs:
-                            rep_joueur = dict_reponses.get((j['id'], q['id']))
+                            rep_joueur = dict_reponses.get((str(j['id']), q['id']))
                             
                             if rep_joueur and rep_joueur.strip() != "":
                                 st.markdown(f"👤 **{j['pseudo']}** : `{rep_joueur}`")
@@ -1518,7 +1520,7 @@ elif st.session_state.onglet_actif == "📺":
                     else:
                         st.markdown("<span style='color: #64748b; font-style: italic; font-size: 0.9em;'>🔒 Les réponses des autres joueurs seront visibles une fois la date limite dépassée.</span>", unsafe_allow_html=True)
                         
-                        ma_rep = dict_reponses.get((st.session_state.user_id, q['id']))
+                        ma_rep = dict_reponses.get((str(st.session_state.user_id), q['id']))
                         if ma_rep and ma_rep.strip() != "":
                             st.markdown(f"👤 **{st.session_state.pseudo} ** : `{ma_rep}`")
                         else:
