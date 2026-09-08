@@ -1254,11 +1254,10 @@ elif st.session_state.onglet_actif == "📺":
                                 
                                 scores_generaux[j_id_str] += points_match_courant
 
-            # Tri stable par score décroissant (conserve l'ordre initial de la BDD en cas d'égalité, comme le classement général)
+            # Tri strict numérique décroissant (-score), puis alphabétique sur le pseudo en cas d'égalité
             tous_les_joueurs_tries = sorted(
                 tous_les_joueurs, 
-                key=lambda j: scores_generaux.get(str(j['id']), 0.0),
-                reverse=True
+                key=lambda j: (-float(scores_generaux.get(str(j['id']), 0.0)), str(j.get('pseudo', '')).lower())
             )
             
             # --- SOUS-SECTION A : LES MATCHS ---
