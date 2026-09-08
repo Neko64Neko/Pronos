@@ -1185,7 +1185,7 @@ elif st.session_state.onglet_actif == "📺":
                             score_aff = int(score_j_courant) if isinstance(score_j_courant, float) and score_j_courant.is_integer() else score_j_courant
                             
                             style_ligne_joueur = "font-weight: bold; background-color: #e0f2fe; border-left: 4px solid #0284c7;" if est_mon_compte else ""
-                            pseudo_final = f"{j['pseudo']} <span style='font-size:11px; opacity:0.6;'>(Général: {score_aff} pts)</span>"
+                            pseudo_final = f"{j['pseudo']} <span style='font-size:11px; opacity:0.6"
                             
                             if p:
                                 g_prevu = p.get('gagnant_prevu')
