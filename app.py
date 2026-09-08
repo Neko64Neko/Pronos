@@ -1136,7 +1136,7 @@ elif st.session_state.onglet_actif == "📺":
                 val_str = str(val).strip().lower()
                 return val_str in ["draw", "match nul", "nul", "n", "x", "egalite", "égalité"]
 
-            # --- CALCUL DU CLASSEMENT GÉNÉRAL EXACT (MATCHS + BONUS) AVEC SÉCURISATION DES ID ---
+            # --- CALCUL DU CLASSEMENT GÉNÉRAL EXACT (MATCHS + BONUS) AVEC SÉCURISATION ET DÉDOUBLONNAGE ---
             scores_generaux = {str(j['id']).strip(): 0.0 for j in tous_les_joueurs}
 
             if tous_les_joueurs:
@@ -1191,16 +1191,17 @@ elif st.session_state.onglet_actif == "📺":
                             
                     scores_generaux[j_id_str] += pts_b_total
 
-                # 2. Ajout des points des matchs
+                # 2. Ajout des points des matchs (avec dédoublonnage par utilisateur et par match)
                 matchs_comptabilises = [m for m in tous_matchs_bdd if m.get('statut') in ["FT", "inprogress"]]
                 if matchs_comptabilises and tous_les_pronos:
                     pronos_par_match = {}
                     for pr in tous_les_pronos:
                         m_id = pr.get('match_id')
-                        if m_id:
+                        u_id = str(pr.get('user_id') or '').strip()
+                        if m_id and u_id:
                             if m_id not in pronos_par_match:
-                                pronos_par_match[m_id] = []
-                            pronos_par_match[m_id].append(pr)
+                                pronos_par_match[m_id] = {}
+                            pronos_par_match[m_id][u_id] = pr  # Écrase les doublons éventuels
 
                     for m in matchs_comptabilises:
                         sc_dom = m.get('score_dom')
@@ -1209,7 +1210,8 @@ elif st.session_state.onglet_actif == "📺":
                             continue
                         
                         m_id = m.get('id')
-                        pronos_ce_match = pronos_par_match.get(m_id, [])
+                        dict_pronos_ce_match = pronos_par_match.get(m_id, {})
+                        pronos_ce_match = list(dict_pronos_ce_match.values())
                         
                         vrai_gagnant_brut = "home" if sc_dom > sc_ext else ("away" if sc_dom < sc_ext else "draw")
                         vrai_est_nul = est_un_nul(vrai_gagnant_brut) or (sc_dom == sc_ext)
@@ -1318,14 +1320,20 @@ elif st.session_state.onglet_actif == "📺":
                         
                     with st.expander("🔍 Voir les pronostics des joueurs", expanded=False):
                         pronos = supabase.table("Pronostics").select("*").eq("match_id", m.get('id')).execute().data or []
-                        # Normalisation des clés en string avec strip pour éviter les décalages d'ID
-                        dict_pronos = {str(p['user_id']).strip(): p for p in pronos} if pronos else {}
+                        
+                        # Dédoublonnage des pronostics de ce match spécifique
+                        dict_pronos = {}
+                        if pronos:
+                            for p in pronos:
+                                u_id = str(p.get('user_id') or '').strip()
+                                if u_id:
+                                    dict_pronos[u_id] = p
                         
                         vrai_est_nul = est_un_nul(vrai_gagnant_brut)
                         if not vrai_est_nul and sc_dom == sc_ext:
                             vrai_est_nul = True
 
-                        pronos_ce_match = pronos if pronos else []
+                        pronos_ce_match = list(dict_pronos.values())
                         
                         mises_gagnant = sum(
                             1 for pr in pronos_ce_match 
@@ -1341,12 +1349,16 @@ elif st.session_state.onglet_actif == "📺":
                             p = dict_pronos.get(j_id_str)
                             est_mon_compte = (j_id_str == str(st.session_state.get('user_id', '')).strip())
                             
+                            # Récupération et formatage du score général pour contrôle visuel
+                            score_j_courant = scores_generaux.get(j_id_str, 0.0)
+                            score_aff = int(score_j_courant) if isinstance(score_j_courant, float) and score_j_courant.is_integer() else score_j_courant
+                            
                             if est_mon_compte:
                                 style_ligne_joueur = "font-weight: bold; background-color: #e0f2fe; border-left: 4px solid #0284c7;"
-                                pseudo_final = f"{j['pseudo']}"
+                                pseudo_final = f"{j['pseudo']} <span style='font-size:11px; opacity:0.6;'>(Général: {score_aff} pts)</span>"
                             else:
                                 style_ligne_joueur = ""
-                                pseudo_final = j['pseudo']
+                                pseudo_final = f"{j['pseudo']} <span style='font-size:11px; opacity:0.6;'>(Général: {score_aff} pts)</span>"
                             
                             if p:
                                 g_prevu = p.get('gagnant_prevu')
