@@ -1822,7 +1822,7 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
                     if st.button("Compléter Journée"):
                         with st.spinner("Exécution de complete_day..."):
                             try:
-                                url = "https://puznnphyulbrnxjojnnc.supabase.co/functions/v1/complete-day"
+                                url = "https://puznnphyulbrnxjojnnc.supabase.co/functions/v1/complete_day"
                                 headers = {"Authorization": f"Bearer {supabase_key}"}
                                 
                                 response = requests.post(url, headers=headers)
