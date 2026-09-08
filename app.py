@@ -519,23 +519,25 @@ else:
                             scores_calculateurs[j_id]["ecarts"] += 1
     
         # Calcul des points questions bonus
-        for (j_id, q_id), rep_joueur in dict_reponses_bonus.items():
-            if j_id in scores_calculateurs and q_id in dict_points_bonus:
-                pts_fixe_defaut, mapping_points, rep_officielle = dict_points_bonus[q_id]
-                pts_attribues = 0.0
-    
-                if mapping_points:
-                    for cle_map, val_pts in mapping_points.items():
-                        if cle_map == rep_joueur:
-                            pts_attribues = val_pts
-                            break
-                elif rep_officielle and rep_joueur == rep_officielle:
-                    pts_attribues = pts_fixe_defaut
-    
-                if pts_attribues > 0:
-                    scores_calculateurs[j_id]["score_live"] += pts_attribues
-                    if j_id == st.session_state.user_id:
-                        scores_calculateurs[j_id]["bonus"] += pts_attribues
+            for (j_id, q_id), rep_joueur in dict_reponses_bonus.items():
+                if j_id in scores_calculateurs and q_id in dict_points_bonus:
+                    pts_fixe_defaut, mapping_points, rep_officielle = dict_points_bonus[q_id]
+                    pts_attribues = 0.0
+        
+                    # Sécurité renforcée : on n'attribue des points que si une réponse officielle est explicitement renseignée
+                    if rep_officielle and rep_officielle != "":
+                        if mapping_points:
+                            for cle_map, val_pts in mapping_points.items():
+                                if cle_map == rep_joueur:
+                                    pts_attribues = val_pts
+                                    break
+                        elif rep_joueur == rep_officielle:
+                            pts_attribues = pts_fixe_defaut
+        
+                    if pts_attribues > 0:
+                        scores_calculateurs[j_id]["score_live"] += pts_attribues
+                        if j_id == st.session_state.user_id:
+                            scores_calculateurs[j_id]["bonus"] += pts_attribues
     
         tous_les_joueurs_ordonnes = list(scores_calculateurs.values())
         tous_les_joueurs_ordonnes.sort(key=lambda x: (-x["score_live"], x["pseudo"].lower()))
