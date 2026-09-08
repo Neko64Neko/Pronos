@@ -876,7 +876,7 @@ if st.session_state.onglet_actif == "🏉":
                     return get_nom_affiche(equipe)
             
                 try:
-                    matchs_potentiels = supabase.table("Matchs").select("*").neq("statut", "FT").execute().data
+                    matchs_potentiels = supabase.table("Matchs").select("*").neq("statut", "Ended").execute().data
                     matchs_visibles = []
                     
                     droits_admin_totalement_actifs = (
@@ -1100,10 +1100,10 @@ elif st.session_state.onglet_actif == "📺":
                         dt_match_utc = datetime.fromisoformat(date_clean)
                         dt_match_paris = dt_match_utc.astimezone(paris_tz)
                         
-                        if m['statut'] in ["FT", "inprogress"] or maintenant_paris.replace(tzinfo=None) >= dt_match_paris.replace(tzinfo=None):
+                        if m['statut'] in ["Ended", "inprogress"] or maintenant_paris.replace(tzinfo=None) >= dt_match_paris.replace(tzinfo=None):
                             matchs.append(m)
                     except Exception:
-                        if m['statut'] in ["FT", "inprogress"]:
+                        if m['statut'] in ["Ended", "inprogress"]:
                             matchs.append(m)
 
             # --- SOUS-SECTION A : LES MATCHS ---
@@ -1430,7 +1430,7 @@ elif st.session_state.onglet_actif == "⚙️" and st.session_state.is_admin:
                             with col_s_ext:
                                 s_e = st.number_input("Ext", min_value=0, value=m.get('score_ext', 0) if m.get('score_ext') is not None else 0, key=f"se_{m['id']}", step=1)
                             with col_stat:
-                                opt_statut = ["NS", "inprogress", "FT"]
+                                opt_statut = ["NS", "inprogress", "Ended"]
                                 idx_statut = opt_statut.index(m['statut']) if m['statut'] in opt_statut else 0
                                 st_m = st.selectbox("Statut", opt_statut, index=idx_statut, key=f"stat_{m['id']}")
                             with col_save:
